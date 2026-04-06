@@ -6,7 +6,40 @@ This system was built and used by [santifer](https://santifer.io) to evaluate 74
 
 The portfolio that goes with this system is also open source: [cv-santiago](https://github.com/santifer/cv-santiago).
 
-**It will work out of the box, but it's designed to be made yours.** If the archetypes don't match your career, the modes are in the wrong language, or the scoring doesn't fit your priorities -- just ask. You (Claude) can edit any file in this system. The user says "change the archetypes to data engineering roles" and you do it. That's the whole point.
+**It will work out of the box, but it's designed to be made yours.** If the archetypes don't match your career, the modes are in the wrong language, or the scoring doesn't fit your priorities -- just ask. You (Claude) can edit the user's files. The user says "change the archetypes to data engineering roles" and you do it. That's the whole point.
+
+## Data Contract (CRITICAL)
+
+There are two layers. Read `DATA_CONTRACT.md` for the full list.
+
+**User Layer (NEVER auto-updated, personalization goes HERE):**
+- `cv.md`, `config/profile.yml`, `modes/_profile.md`, `article-digest.md`, `portals.yml`
+- `data/*`, `reports/*`, `output/*`, `interview-prep/*`
+
+**System Layer (auto-updatable, DON'T put user data here):**
+- `modes/_shared.md`, `modes/oferta.md`, all other modes
+- `CLAUDE.md`, `*.mjs` scripts, `dashboard/*`, `templates/*`, `batch/*`
+
+**THE RULE: When the user asks to customize anything (archetypes, narrative, negotiation scripts, proof points, location policy, comp targets), ALWAYS write to `modes/_profile.md` or `config/profile.yml`. NEVER edit `modes/_shared.md` for user-specific content.** This ensures system updates don't overwrite their customizations.
+
+## Update Check
+
+On the first message of each session, run the update checker silently:
+
+```bash
+node update-system.mjs check
+```
+
+Parse the JSON output:
+- `{"status": "update-available", "local": "1.0.0", "remote": "1.1.0", "changelog": "..."}` → tell the user:
+  > "career-ops update available (v{local} → v{remote}). Your data (CV, profile, tracker, reports) will NOT be touched. Want me to update?"
+  If yes → run `node update-system.mjs apply`. If no → run `node update-system.mjs dismiss`.
+- `{"status": "up-to-date"}` → say nothing
+- `{"status": "dismissed"}` → say nothing
+- `{"status": "offline"}` → say nothing
+
+The user can also say "check for updates" or "update career-ops" at any time to force a check.
+To rollback: `node update-system.mjs rollback`
 
 ## What is career-ops
 
@@ -32,7 +65,10 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 
 1. Does `cv.md` exist?
 2. Does `config/profile.yml` exist (not just profile.example.yml)?
-3. Does `portals.yml` exist (not just templates/portals.example.yml)?
+3. Does `modes/_profile.md` exist (not just _profile.template.md)?
+4. Does `portals.yml` exist (not just templates/portals.example.yml)?
+
+If `modes/_profile.md` is missing, copy from `modes/_profile.template.md` silently. This is the user's customization file — it will never be overwritten by updates.
 
 **If ANY of these is missing, enter onboarding mode.** Do NOT proceed with evaluations, scans, or any other mode until the basics are in place. Guide the user step by step:
 
