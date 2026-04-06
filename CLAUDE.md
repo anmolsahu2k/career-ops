@@ -146,6 +146,8 @@ This system is designed to be customized by YOU (Claude). When the user asks you
 2. `browser_snapshot` to read content
 3. Only footer/navbar without JD = closed. Title + description + Apply = active.
 
+**Exception for batch workers (`claude -p`):** Playwright is not available in headless pipe mode. Use WebFetch as fallback and mark the report header with `**Verification:** unconfirmed (batch mode)`. The user can verify manually later.
+
 ---
 
 ## Stack and Conventions
