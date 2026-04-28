@@ -210,6 +210,9 @@ def main(argv=None):
             print(f"  cleared {cleared} stale jobspy TSVs", file=sys.stderr)
 
     try:
+        # python-jobspy >= 1.x rejects `is_remote=None` via pydantic; omit the
+        # kwarg to fall back to the library default (returns both remote and
+        # on-site postings, which is what we want).
         jobs = scrape_jobs(
             site_name=sites,
             search_term=args.keyword,
@@ -217,7 +220,6 @@ def main(argv=None):
             results_wanted=args.limit,
             hours_old=args.hours_old,
             country_indeed="USA",
-            is_remote=None,
         )
     except Exception as exc:  # broad: jobspy raises various site-specific exceptions
         msg = str(exc).lower()
