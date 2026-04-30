@@ -59,6 +59,12 @@ const SCORE_AUTO_LETTER_THRESHOLD = 4.0;
 
 const ARGV = process.argv.slice(2);
 const DRY_RUN = ARGV.includes('--dry-run');
+// --skip-portal-scan: don't run scan.mjs at all. Use this in cloud sandboxes
+// whose egress proxy denies outbound HTTPS to Greenhouse/Ashby/Lever (every
+// portal returns HTTP 403). The aggregator-intake.py + jobspy-ingest.py paths
+// still cover discovery; locally, run scan.mjs manually for full Greenhouse/
+// Ashby/Lever coverage (`node scan.mjs`). Default behavior unchanged.
+const SKIP_PORTAL_SCAN = ARGV.includes('--skip-portal-scan');
 
 // ---- date helpers (Pittsburgh-correct via TZ env) -------------------------
 
@@ -541,9 +547,23 @@ async function main() {
     log(`digest ${DIGEST_PATH} already exists; this run will append a re-run stanza`);
   }
 
-  // 1. portal scan
+  // 1. portal scan (skipped when --skip-portal-scan is set, e.g. in cloud
+  // sandbox where Greenhouse/Ashby/Lever outbound is policy-blocked).
   const preLines = readScanHistoryLineCount();
-  const scanResult = runPortalScan();
+  let scanResult;
+  if (SKIP_PORTAL_SCAN) {
+    log('skipping scan.mjs (--skip-portal-scan)');
+    scanResult = {
+      name: 'scan.mjs',
+      exit: 0,
+      stdoutTail: 'skipped via --skip-portal-scan flag',
+      newRows: 0,
+      preBytes: 0,
+      skipped: true,
+    };
+  } else {
+    scanResult = runPortalScan();
+  }
   scanResult.newOffers = readScanHistoryNewRows(preLines);
 
   // 2. simplify diff

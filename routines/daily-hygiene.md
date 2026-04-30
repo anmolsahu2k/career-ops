@@ -13,18 +13,20 @@ You are running the W9 daily tracker hygiene job for Anmol Sahu's career-ops pip
 ## Steps
 
 1. `export TZ=America/New_York`.
-2. Run `node scripts/daily-hygiene-cron.mjs`. This chains:
-   - `node check-liveness.mjs` for each tracker URL → flags dead postings.
-   - `node followup-cadence.mjs --summary` → flags `Applied` rows >7 days silent.
+2. Install Node deps: `npm install --no-audit --no-fund --silent`. The cloud sandbox starts fresh each run (`persist_session: false`), so dependencies must be installed every run.
+3. Install the Playwright Chromium binary: `npx playwright install --with-deps chromium`. `check-liveness.mjs` requires Playwright to dynamically render dynamic JD pages; without this step the liveness check exits 1 with `ERR_MODULE_NOT_FOUND: Cannot find package 'playwright'`. The install is ~250MB and only browsers are downloaded; system-deps via `--with-deps` is best-effort and may print warnings if apt is unavailable, which is fine.
+4. Run `node scripts/daily-hygiene-cron.mjs`. This chains:
+   - `node check-liveness.mjs` for each tracker URL, flags dead postings.
+   - `node followup-cadence.mjs --summary`, flags `Applied` rows >7 days silent.
    - Cross-ref previous day's `data/daily-digest-{YYYY-MM-DD}.md` to detect duplicates between W1 surfacing and existing tracker.
    - `node verify-pipeline.mjs` for integrity.
-3. The wrapper writes `data/hygiene-{YYYY-MM-DD}.md` summarizing all four sub-steps. Read it.
-4. **Do the status writes the wrapper can't do.** check-liveness.mjs only flags; it does NOT auto-mark `Status: Discarded`. You should:
+5. The wrapper writes `data/hygiene-{YYYY-MM-DD}.md` summarizing all four sub-steps. Read it.
+6. **Do the status writes the wrapper can't do.** check-liveness.mjs only flags; it does NOT auto-mark `Status: Discarded`. You should:
    - Find every URL in the wrapper output that's labeled `expired` AND is the only URL for that tracker row.
    - Update `data/applications.md` to set `Status: Discarded` on those rows. Use only canonical states from `templates/states.yml`. No markdown bold, no dates in the status field.
    - For URLs labeled `uncertain`, leave the status alone and add a one-line note in the hygiene log flagging "needs human verification".
-5. Append a "Status updates by routine" section to `data/hygiene-{YYYY-MM-DD}.md` listing what you changed and why.
-6. Commit to a `claude/daily-hygiene-{YYYY-MM-DD}` branch with message `daily hygiene {YYYY-MM-DD}: N discarded, M flagged uncertain`. Push.
+7. Append a "Status updates by routine" section to `data/hygiene-{YYYY-MM-DD}.md` listing what you changed and why.
+8. Commit to the session's auto-assigned `claude/<harness-name>` branch with message `daily hygiene {YYYY-MM-DD}: N discarded, M flagged uncertain`. Push. (The local git proxy only forwards pushes to its designated branch; `claude/daily-hygiene-{date}` will be rejected with HTTP 403.)
 
 ## Hard rules
 

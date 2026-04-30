@@ -14,7 +14,7 @@ You are running the W1 daily candidate scan for Anmol Sahu's career-ops job-sear
 
 1. Set timezone: `export TZ=America/New_York` (so all dates are Pittsburgh-correct).
 2. Install Node deps: `npm install --no-audit --no-fund --silent`. The cloud sandbox starts fresh each run (`persist_session: false`), so `js-yaml` (required by `scan.mjs`) must be installed every run; without this, `scan.mjs` exits 1 and only `aggregator-intake.py` covers the day.
-3. Run the existing wrapper: `node scripts/daily-scan-cron.mjs`. This orchestrates `scan.mjs` + `scripts/aggregator-intake.py` + best-effort `scripts/jobspy-ingest.py` + the `merge-tracker.mjs → dedup-tracker.mjs → normalize-statuses.mjs → verify-pipeline.mjs` chain.
+3. Run the existing wrapper: `node scripts/daily-scan-cron.mjs --skip-portal-scan`. This orchestrates `scripts/aggregator-intake.py` + best-effort `scripts/jobspy-ingest.py` + the `merge-tracker.mjs → dedup-tracker.mjs → normalize-statuses.mjs → verify-pipeline.mjs` chain. The `--skip-portal-scan` flag bypasses `scan.mjs` (Greenhouse / Ashby / Lever direct API hits) because the cloud sandbox egress proxy denies outbound HTTPS to those job-board hosts; all portal scans return HTTP 403. Local runs without the flag retain full portal coverage; the user runs `node scan.mjs` locally to fill the gap.
 4. If `verify-pipeline.mjs` exits non-zero, abort. Surface the error in the run output and commit nothing.
 5. Score every new candidate row that has status `Evaluated` and score `0.0/5` (i.e., aggregator-surfaced, not yet scored). For each:
    - Read the candidate's URL and fetch the JD via WebFetch.
