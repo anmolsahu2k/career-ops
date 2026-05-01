@@ -64,6 +64,17 @@ SOURCES = [
         "name": "simplifyjobs-summer2026",
         "url": "https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/README.md",
     },
+    {
+        # PrepAIJobs uses 5-col schema: Company | Role | Location | Apply | Posted
+        # with emoji headers (find_col matches via case-insensitive substring).
+        "name": "prepaijobs-summer2026",
+        "url": "https://raw.githubusercontent.com/PrepAIJobs/Summer2026-Internships/main/README.md",
+    },
+    {
+        # summer2026internships uses 4-col schema: Company | Role | Location | Link.
+        "name": "summer2026internships",
+        "url": "https://raw.githubusercontent.com/summer2026internships/Summer2026-Internships/main/README.md",
+    },
 ]
 
 # Role allow-list: must contain at least one of these case-insensitive tokens.
