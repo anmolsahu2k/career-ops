@@ -1,10 +1,23 @@
-# Personal data (user fills these)
-cv.md
-data/applications.md
+# Personal data
+# NOTE: These were excluded in santifer/career-ops (upstream) so system updates
+# wouldn't clobber user data. In our private fork (anmolsahu2k/career-ops), we
+# COMMIT these so cloud routines (Claude Code Routines, see routines/) can read
+# the tracker and update it. Pulling from santifer upstream is still safe because
+# upstream doesn't have these files at all, so a rebase can't overwrite them.
+
+# cv.md                                # NOW TRACKED — needed by routines for scoring
+# data/applications.md                 # NOW TRACKED — the live tracker
+# reports/*.md                         # NOW TRACKED — eval reports + cover letters
+# config/profile.yml                   # NOW TRACKED — needed for archetype mapping
+# portals.yml                          # NOW TRACKED — search config, daily-scan reads it
+
+# Truly transient stuff that should never be committed
+data/.liveness-urls-*.txt
+data/applications.md.bak
 data/pipeline.md
 data/scan-history.tsv
-reports/*.md
-!reports/.gitkeep
+data/cron-stdout.log
+data/daily-scan-*.log
 output/*
 !output/.gitkeep
 batch/logs/*
@@ -15,17 +28,24 @@ batch/tracker-additions/**/*.tsv
 !batch/tracker-additions/.gitkeep
 jds/*
 !jds/.gitkeep
-
-# Writing samples (user's personal files — never committed)
+# Writing samples (user's personal files, never committed)
 writing-samples/*
 !writing-samples/README.md
 
-# User config and customization (never auto-updated)
-config/profile.yml
-portals.yml
-modes/_profile.md
 .update-dismissed
 .update-lock
+
+# Sensitive: copy of the workspace-root work-experience honesty file (never to GitHub)
+# (lives at workspace root, not under career-ops/, so this is belt-and-suspenders)
+**/Work\ experience-Project\ based*.md
+
+# User profile customization stays gitignored — it has narrative weighting
+# that's iterative; routines should not auto-touch it.
+modes/_profile.md
+
+# Python bytecode
+__pycache__/
+*.pyc
 
 # Secrets (never commit — use .env.example as template)
 .env

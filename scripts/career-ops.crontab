@@ -1,0 +1,26 @@
+# career-ops Phase 3 cron schedule
+# Pittsburgh time (America/New_York). All wrappers also pin TZ internally.
+#
+# Install:    crontab /Users/anmolsahu2k/Stuff/Create/Amazon/career-ops/scripts/career-ops.crontab
+# Uninstall:  crontab -r
+# Inspect:    crontab -l
+# Logs:       career-ops/data/daily-scan-{YYYY-MM-DD}.log, hygiene-{YYYY-MM-DD}.md, news-tasks-{YYYY-Www}.md
+#
+# If you already have other cron entries, DO NOT use this file directly. Append these
+# three lines to your existing crontab via `crontab -e` instead, or `crontab` overwrites
+# whatever you had.
+
+# Daily candidate scan, 7:03am Pittsburgh (off-minute to avoid herd effects)
+3 7 * * * /opt/homebrew/bin/node /Users/anmolsahu2k/Stuff/Create/Amazon/career-ops/scripts/daily-scan-cron.mjs >> /Users/anmolsahu2k/Stuff/Create/Amazon/career-ops/data/cron-stdout.log 2>&1
+
+# Daily tracker hygiene, 8:07am Pittsburgh
+7 8 * * * /opt/homebrew/bin/node /Users/anmolsahu2k/Stuff/Create/Amazon/career-ops/scripts/daily-hygiene-cron.mjs >> /Users/anmolsahu2k/Stuff/Create/Amazon/career-ops/data/cron-stdout.log 2>&1
+
+# Weekly company news manifest, Sunday 6:13pm Pittsburgh
+13 18 * * 0 /opt/homebrew/bin/node /Users/anmolsahu2k/Stuff/Create/Amazon/career-ops/scripts/weekly-news-cron.mjs >> /Users/anmolsahu2k/Stuff/Create/Amazon/career-ops/data/cron-stdout.log 2>&1
+
+# OPTIONAL (not installed by default — user must explicitly opt in):
+# Weekly news LLM fill-in via headless Claude, Sunday 6:43pm Pittsburgh, 30min after manifest writes.
+# To enable: append the line below to your crontab via `crontab -e`. Adds a recurring autonomous Claude invocation,
+# so it costs API tokens every week. Spec at career-ops/scripts/weekly-news-fill-prompt.md.
+# 43 18 * * 0 cd /Users/anmolsahu2k/Stuff/Create/Amazon && /Users/anmolsahu2k/.local/bin/claude -p "$(cat /Users/anmolsahu2k/Stuff/Create/Amazon/career-ops/scripts/weekly-news-fill-prompt.md)" >> /Users/anmolsahu2k/Stuff/Create/Amazon/career-ops/data/cron-stdout.log 2>&1

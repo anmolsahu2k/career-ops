@@ -5,6 +5,10 @@
  * Handles multiple TSV formats:
  * - 9-col: num\tdate\tcompany\trole\tstatus\tscore\tpdf\treport\tnotes
  * - 8-col: num\tdate\tcompany\trole\tstatus\tscore\tpdf\treport (no notes)
+ *
+ * Cover letter info is embedded in the Notes field with a prefix:
+ *   "CL: [link](path)" or "CL+Q: [link](path)" or "Form Qs: [link](path)"
+ *   "CL: pending" / "CL: n/a" / "CL: pending verify"
  * - Pipe-delimited (markdown table row): | col | col | ... |
  *
  * Dedup: company normalized + role fuzzy match + report number match
