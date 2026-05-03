@@ -148,7 +148,7 @@ Analyze the job posting for signals that indicate whether this is a real, active
 
 ### 1. Guardar report .md
 
-Guardar evaluación completa en `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
+Guardar evaluación completa en `reports/{company-slug}/{###}-{role-slug}-{YYYY-MM-DD}.md`.
 
 - `{###}` = siguiente número secuencial (3 dígitos, zero-padded)
 - `{company-slug}` = nombre de empresa en lowercase, sin espacios (usar guiones)
@@ -207,7 +207,7 @@ Guardar evaluación completa en `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 - Score: promedio de match (1-5)
 - Estado: `Evaluada`
 - PDF: ❌ (o ✅ si auto-pipeline generó PDF)
-- Report: link relativo al report .md (ej: `[001](reports/001-company-2026-01-01.md)`)
+- Report: link relativo al report .md (ej: `[001](reports/company/001-company-2026-01-01.md)`)
 
 **Formato del tracker:**
 

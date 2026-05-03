@@ -281,10 +281,16 @@ if (shared.includes('_profile.md')) {
 }
 
 // ── 9. CLAUDE.md INTEGRITY ──────────────────────────────────────
+// The workspace CLAUDE.md was promoted to top level on 2026-05-02 (Anmol's
+// project memory). The upstream tool's CLAUDE.md was preserved at
+// _meta/CLAUDE.career-ops-tool.md. The required-sections check below
+// targets the tool doc, not the workspace memory.
 
 console.log('\n9. CLAUDE.md integrity');
 
-const claude = readFile('CLAUDE.md');
+const TOOL_CLAUDE_MD = '_meta/CLAUDE.career-ops-tool.md';
+const claudePath = fileExists(TOOL_CLAUDE_MD) ? TOOL_CLAUDE_MD : 'CLAUDE.md';
+const claude = readFile(claudePath);
 const requiredSections = [
   'Data Contract', 'Update Check', 'Ethical Use',
   'Offer Verification', 'Canonical States', 'TSV Format',
@@ -293,9 +299,9 @@ const requiredSections = [
 
 for (const section of requiredSections) {
   if (claude.includes(section)) {
-    pass(`CLAUDE.md has section: ${section}`);
+    pass(`${claudePath} has section: ${section}`);
   } else {
-    fail(`CLAUDE.md missing section: ${section}`);
+    fail(`${claudePath} missing section: ${section}`);
   }
 }
 

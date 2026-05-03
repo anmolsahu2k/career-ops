@@ -100,7 +100,7 @@ Außerdem aufnehmen:
 
 ### 1. Report .md speichern
 
-Die vollständige Bewertung in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md` ablegen.
+Die vollständige Bewertung in `reports/{company-slug}/{###}-{role-slug}-{YYYY-MM-DD}.md` ablegen.
 
 - `{###}` = nächste fortlaufende Nummer (3-stellig, mit führenden Nullen)
 - `{company-slug}` = Firmenname in Kleinbuchstaben, ohne Leerzeichen (Bindestriche verwenden)
@@ -156,7 +156,7 @@ Die vollständige Bewertung in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md` ab
 - Score: Match-Durchschnitt (1-5)
 - Status: `Evaluated`
 - PDF: ❌ (oder ✅, wenn Auto-Pipeline ein PDF erzeugt hat)
-- Report: relativer Link zur Report-Datei (z. B. `[001](reports/001-company-2026-01-01.md)`)
+- Report: relativer Link zur Report-Datei (z. B. `[001](reports/company/001-company-2026-01-01.md)`)
 
 **Tracker-Format:**
 

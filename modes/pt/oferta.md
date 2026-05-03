@@ -101,7 +101,7 @@ Incluir também:
 
 ### 1. Salvar report .md
 
-Salvar avaliação completa em `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
+Salvar avaliação completa em `reports/{company-slug}/{###}-{role-slug}-{YYYY-MM-DD}.md`.
 
 - `{###}` = próximo número sequencial (3 dígitos, zero-padded)
 - `{company-slug}` = nome da empresa em lowercase, sem espaços (usar hifens)
@@ -157,7 +157,7 @@ Salvar avaliação completa em `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 - Score: média do match (1-5)
 - Status: `Evaluated`
 - PDF: ❌ (ou ✅ se a auto-pipeline gerou PDF)
-- Report: link relativo ao report .md (ex: `[001](reports/001-company-2026-01-01.md)`)
+- Report: link relativo ao report .md (ex: `[001](reports/company/001-company-2026-01-01.md)`)
 
 **Formato do tracker:**
 

@@ -103,7 +103,7 @@ JD の要件にマッピングした 6-10 の STAR+R ストーリー（STAR + **
 
 ### 1. report を .md として保存
 
-完全な評価を `reports/{###}-{company-slug}-{YYYY-MM-DD}.md` に保存。
+完全な評価を `reports/{company-slug}/{###}-{role-slug}-{YYYY-MM-DD}.md` に保存。
 
 - `{###}` = 次の連番（3 桁、ゼロパディング）
 - `{company-slug}` = 企業名を小文字に、スペースなし（ハイフン使用）
@@ -159,7 +159,7 @@ JD の要件にマッピングした 6-10 の STAR+R ストーリー（STAR + **
 - スコア：マッチの平均（1-5）
 - ステータス：`Evaluated`
 - PDF：❌（または auto-pipeline が PDF を生成した場合は ✅）
-- Report：report .md への相対リンク（例：`[001](reports/001-company-2026-01-01.md)`）
+- Report：report .md への相対リンク（例：`[001](reports/company/001-company-2026-01-01.md)`）
 
 **tracker のフォーマット：**
 

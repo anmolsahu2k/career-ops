@@ -101,7 +101,7 @@ Inclure aussi :
 
 ### 1. Sauvegarder le report .md
 
-Sauvegarder l'evaluation complete dans `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
+Sauvegarder l'evaluation complete dans `reports/{company-slug}/{###}-{role-slug}-{YYYY-MM-DD}.md`.
 
 - `{###}` = prochain numero sequentiel (3 chiffres, zero-padded)
 - `{company-slug}` = nom d'entreprise en minuscules, sans espaces (utiliser des tirets)
@@ -157,7 +157,7 @@ Sauvegarder l'evaluation complete dans `reports/{###}-{company-slug}-{YYYY-MM-DD
 - Score : moyenne du match (1-5)
 - Statut : `Evaluated`
 - PDF : non (ou oui si l'auto-pipeline a genere un PDF)
-- Report : lien relatif vers le fichier report (ex : `[001](reports/001-company-2026-01-01.md)`)
+- Report : lien relatif vers le fichier report (ex : `[001](reports/company/001-company-2026-01-01.md)`)
 
 **Format du tracker :**
 

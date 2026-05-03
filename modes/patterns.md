@@ -48,7 +48,7 @@ If the script returns `error`, display the error message and exit.
 
 ## Step 2 — Generate Report
 
-Write the report to `reports/pattern-analysis-{YYYY-MM-DD}.md`.
+Write the report to `reports/_misc/pattern-analysis-{YYYY-MM-DD}.md` (cross-cutting; not tied to a single company).
 
 ### Report Structure
 

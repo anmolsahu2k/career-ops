@@ -65,3 +65,7 @@ bun.lock
 .claude/memory/
 career-dashboard
 package-lock.json
+
+*.tsv
+
+reports/*.md

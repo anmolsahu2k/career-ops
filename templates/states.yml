@@ -7,6 +7,12 @@
 # no dates, no extra text. Dates go in the date column.
 
 states:
+  - id: triaged
+    label: Triaged
+    aliases: [triage, scored]
+    description: Title+company-keyword score assigned by triage script; per-JD eval not yet done. Promote to Evaluated after WebFetch+report.
+    dashboard_group: evaluated
+
   - id: evaluated
     label: Evaluated
     aliases: [evaluada]

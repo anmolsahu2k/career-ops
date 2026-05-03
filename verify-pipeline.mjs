@@ -34,7 +34,7 @@ mkdirSync(join(CAREER_OPS, 'data'), { recursive: true });
 mkdirSync(REPORTS_DIR, { recursive: true });
 
 const CANONICAL_STATUSES = [
-  'evaluated', 'applied', 'responded', 'interview',
+  'triaged', 'evaluated', 'applied', 'responded', 'interview',
   'offer', 'rejected', 'discarded', 'skip',
 ];
 

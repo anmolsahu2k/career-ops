@@ -1,368 +1,140 @@
-# Career-Ops -- AI Job Search Pipeline
+# CLAUDE.md
 
-## Origin
+Context for Claude Code sessions in this workspace. Anmol's Summer 2026 internship search ops.
 
-This system was built and used by [santifer](https://santifer.io) to evaluate 740+ job offers, generate 100+ tailored CVs, and land a Head of Applied AI role. The archetypes, scoring logic, negotiation scripts, and proof point structure all reflect his specific career search in AI/automation roles.
+## Who
 
-The portfolio that goes with this system is also open source: [cv-santiago](https://github.com/santifer/cv-santiago).
+Anmol Sahu. CMU MISM-BIDA (Heinz, Master of Information Systems Management with Business Intelligence and Data Analytics track, expected Dec 2026, CGPA 3.75). F-1 visa, CPT-eligible (Master's CPT Canvas course already enrolled, code GNYPT8). 2.5 yrs SDE at Byju's. Active projects: Highmark cancer-staging (XGBoost on 6M+ claims), Cloudify (multi-agent OpenAI+Claude cloud migration, TartanHacks 2026), EEG Classification (CMU 11-685, multi-head CNN+Transformer + CLIP retrieval on PSC HPC). 6 hackathon wins (~$22K).
 
-**It will work out of the box, but it's designed to be made yours.** If the archetypes don't match your career, the modes are in the wrong language, or the scoring doesn't fit your priorities -- just ask. You (AI Agent) can edit the user's files. The user says "change the archetypes to data engineering roles" and you do it. That's the whole point.
+Source-of-truth CV: [cv.md](cv.md). Submission resumes are the user's PDFs in [resumes/](resumes/) (`SDE Anmol's Resume(27-04-26)-LATEST.pdf`, `MLE Anmol's Resume(27-04-26)-LATEST.pdf`).
 
-## Data Contract (CRITICAL)
+## What's been done
 
-There are two layers. Read `DATA_CONTRACT.md` for the full list.
+**Live status board:** [STATUS.md](STATUS.md) — phase-by-phase checkboxes with deliverable links. Update STATUS.md and this section together when a workstream lands or trips a stop condition.
 
-**User Layer (NEVER auto-updated, personalization goes HERE):**
-- `cv.md`, `config/profile.yml`, `modes/_profile.md`, `article-digest.md`, `portals.yml`
-- `data/*`, `reports/*`, `output/*`, `interview-prep/*`
+- **Amazon SDE Intern Summer 2026** (job 3143461, Payments org): final-round complete Apr 8; received ambiguous AMER-AUTA-RC-admin email Apr 24 — likely admin auto-response, status PENDING per memory. 12-month SDE cooling-off would apply if real reject.
+- **Career-Ops installed** at []() — Claude Code-powered job pipeline with Go TUI dashboard (9-col schema).
+- **23 roles evaluated** (21 Applied, 2 SKIP) plus **40 raw aggregator candidates surfaced 2026-04-27** by W11 Group 1 aggregator-intake (status `Evaluated`, score `0.0/5`, no eval report yet — pointer is to `reports/pending.md` placeholder). Total tracker rows: 63. Tracker: [data/applications.md](data/applications.md). Eval reports + cover letters (for the original 23) under [reports/](reports/).
+- **12 faculty cold emails drafted** at [faculty_emails/](faculty_emails/) (00-OIE deferred per user; 01-12 Tier-1 PIs). W2 will sharpen each P2 with a 2025-26 paper hook before send.
+- **EEG_Classification README updated** at `/Users/anmolsahu2k/Stuff/Create/EEG_Classification/README.md` to reflect actual committed work (multi-head CNN+Transformer, Task 2 CLIP retrieval w/ 6 loss variants, PSC Bridges-2 HPC infra). User to push.
+- **Master plan** at `/Users/anmolsahu2k/.claude/plans/okay-so-now-what-eventual-scone.md` (v3 status + v2 preserved).
+- **Phase 1 of _meta/HANDOFF-now-phase-execution.md done (2026-04-27)**: W3 cover-letter audit ([cover-letter-audit.md](data/cover-letter-audit.md)), W4 resume gap audit ([resume-gap-audit.md](data/resume-gap-audit.md)), W5 GitHub polish ([cloudify](data/github-polish-cloudify.md) + [eeg](data/github-polish-eeg.md)), W12 application-tactics extension + audit ([extended playbook](templates/application-tactics.md), [audit](data/application-tactics-audit.md)), W10 Next.js portfolio at [portfolio/](portfolio/) (build verified). No stop conditions tripped.
+- **Phase 2 of _meta/HANDOFF-now-phase-execution.md done (2026-04-27)**: W2 faculty deep-reads (all 12 P2s rewritten with 2025-26 paper hooks, [data/faculty-deep-read-log.md](data/faculty-deep-read-log.md); user should re-skim emails 05/10/11 where P1 first sentence was also touched); W11 Group 1 (3 adapter scripts under `scripts/` + aggregator run = 40 new tracker rows from speedyapply/vanshb03/SimplifyJobs READMEs); W11 Group 2 (`portals.yml` 947→1070 lines: 6 niche AI/ML boards, 9 new slugs from career-copilot diff, Asana from hiring-without-whiteboards verified); W11 Group 3 (eval template + interview-prep templates: [eval-report.md](templates/eval-report.md), [star-plus-r-framework.md](templates/star-plus-r-framework.md), [5ws-storytelling.md](templates/5ws-storytelling.md), [pre-interview-checklist.md](templates/pre-interview-checklist.md)).
+- **Phase 3 of _meta/HANDOFF-now-phase-execution.md code done (2026-04-27)**: W1 [scripts/daily-scan-cron.mjs](scripts/daily-scan-cron.mjs), W8 [scripts/weekly-news-cron.mjs](scripts/weekly-news-cron.mjs), W9 [scripts/daily-hygiene-cron.mjs](scripts/daily-hygiene-cron.mjs) (live-tested) all written and verified.
+- **Cloud routines decommissioned (2026-05-03)**: All three Claude Code Routines (W1 scan, W8 news, W9 hygiene) disabled and queued for web-UI deletion at https://claude.ai/code/routines. Root cause: cloud sandbox egress proxy blocks Greenhouse/Ashby/Lever portal APIs (W1), and the sandbox Chromium has no trusted CA store so 100% of HTTPS URLs returned `ERR_CERT_AUTHORITY_INVALID` and got false-flagged uncertain (W9). Net useful signal across the routines' entire run history: zero. The remote routine branch `claude/w9-daily-hygiene` was deleted (its valuable infra commits skip-portal-scan flag, AI portal expansion, scan filter widening had already been pulled into the working tree; the rest was stale flat-path reports superseded by the per-company reorg). Going forward: run [scripts/daily-scan-cron.mjs](scripts/daily-scan-cron.mjs) and [scripts/daily-hygiene-cron.mjs](scripts/daily-hygiene-cron.mjs) locally on demand. Routine prompt sources retained in [routines/](routines/) for reference.
 
-**System Layer (auto-updatable, DON'T put user data here):**
-- `modes/_shared.md`, `modes/oferta.md`, all other modes
-- `CLAUDE.md`, `*.mjs` scripts, `dashboard/*`, `templates/*`, `batch/*`
+## Hard rules (saved in memory; do not violate)
 
-**THE RULE: When the user asks to customize anything (archetypes, narrative, negotiation scripts, proof points, location policy, comp targets), ALWAYS write to `modes/_profile.md` or `config/profile.yml`. NEVER edit `modes/_shared.md` for user-specific content.** This ensures system updates don't overwrite their customizations.
+1. **No em-dashes or en-dashes** in any candidate-facing content (resumes, cover letters, form answers, faculty emails, alumni outreach). Use commas, periods, colons, or rephrase.
+2. **Do NOT generate CV PDFs.** User submits own resume. Provide evaluations, Block H form answers, and cover letters only.
+3. **Do NOT include the F-1/CPT/Heinz/OIE/May 12/June 1 explainer paragraph** in cover letters, form answers, faculty emails, or alumni outreach. If start date is asked, just say "Available June 2026."
+4. **Generate cover letters only on explicit request.** Do NOT auto-draft cover letters during evaluation, even for top-tier (≥4.0) roles. The two trigger sources are: (a) the user explicitly asks ("write a cover letter for X"); (b) the user presses `u` on a row in the Go TUI dashboard, which shells out to `claude -p` and writes the letter directly. (Previous default was auto-draft; reversed because most evaluated roles never get applied to and the auto-drafts piled up unused.)
+5. **Target roles**: SDE Intern, AI Intern, MLE Intern, Data Science Intern, Data Engineer Intern, Data Analyst Intern, plus adjacent. US-based (in-person or remote-US) primary; India remote acceptable but no CPT for India remote work.
 
-## Update Check
+## Tracker schema (do NOT change)
 
-On the first message of each session, run the update checker silently:
-
-```bash
-node update-system.mjs check
-```
-
-Parse the JSON output:
-- `{"status": "update-available", "local": "1.0.0", "remote": "1.1.0", "changelog": "..."}` → tell the user:
-  > "career-ops update available (v{local} → v{remote}). Your data (CV, profile, tracker, reports) will NOT be touched. Want me to update?"
-  If yes → run `node update-system.mjs apply`. If no → run `node update-system.mjs dismiss`.
-- `{"status": "up-to-date"}` → say nothing
-- `{"status": "dismissed"}` → say nothing
-- `{"status": "offline"}` → say nothing
-- `{"status": "no-remote-version"}` → say nothing (checker reached GitHub but neither VERSION nor the latest release tag parsed as semver — treat as a silent non-failure, same as offline)
-
-The user can also say "check for updates" or "update career-ops" at any time to force a check.
-To rollback: `node update-system.mjs rollback`
-
-## What is career-ops
-
-AI-powered job search automation built on Claude Code: pipeline tracking, offer evaluation, CV generation, portal scanning, batch processing.
-
-### Main Files
-
-| File | Function |
-|------|----------|
-| `data/applications.md` | Application tracker |
-| `data/pipeline.md` | Inbox of pending URLs |
-| `data/scan-history.tsv` | Scanner dedup history |
-| `portals.yml` | Query and company config |
-| `templates/cv-template.html` | HTML template for CVs |
-| `templates/cv-template.tex` | LaTeX/Overleaf template for CVs |
-| `generate-pdf.mjs` | Playwright: HTML to PDF |
-| `generate-latex.mjs` | LaTeX CV validator + pdflatex compiler |
-| `article-digest.md` | Compact proof points from portfolio (optional) |
-| `interview-prep/story-bank.md` | Accumulated STAR+R stories across evaluations |
-| `interview-prep/{company}-{role}.md` | Company-specific interview intel reports |
-| `analyze-patterns.mjs` | Pattern analysis script (JSON output) |
-| `followup-cadence.mjs` | Follow-up cadence calculator (JSON output) |
-| `data/follow-ups.md` | Follow-up history tracker |
-| `scan.mjs` | Zero-token portal scanner — hits Greenhouse/Ashby/Lever APIs directly, zero LLM cost |
-| `check-liveness.mjs` | Job posting liveness checker |
-| `liveness-core.mjs` | Shared liveness logic (expired signals win over generic Apply text) |
-| `reports/` | Evaluation reports (format: `{###}-{company-slug}-{YYYY-MM-DD}.md`). Blocks A-F + G (Posting Legitimacy). Header includes `**Legitimacy:** {tier}`. |
-
-### OpenCode Commands
-
-When using [OpenCode](https://opencode.ai), the following slash commands are available (defined in `.opencode/commands/`):
-
-| Command | Claude Code Equivalent | Description |
-|---------|------------------------|-------------|
-| `/career-ops` | `/career-ops` | Show menu or evaluate JD with args |
-| `/career-ops-pipeline` | `/career-ops pipeline` | Process pending URLs from inbox |
-| `/career-ops-evaluate` | `/career-ops oferta` | Evaluate job offer (A-F scoring) |
-| `/career-ops-compare` | `/career-ops ofertas` | Compare and rank multiple offers |
-| `/career-ops-contact` | `/career-ops contacto` | LinkedIn outreach (find contacts + draft) |
-| `/career-ops-deep` | `/career-ops deep` | Deep company research |
-| `/career-ops-pdf` | `/career-ops pdf` | Generate ATS-optimized CV |
-| `/career-ops-latex` | `/career-ops latex` | Export CV as LaTeX/Overleaf .tex |
-| `/career-ops-training` | `/career-ops training` | Evaluate course/cert against goals |
-| `/career-ops-project` | `/career-ops project` | Evaluate portfolio project idea |
-| `/career-ops-tracker` | `/career-ops tracker` | Application status overview |
-| `/career-ops-apply` | `/career-ops apply` | Live application assistant |
-| `/career-ops-scan` | `/career-ops scan` | Scan portals for new offers |
-| `/career-ops-batch` | `/career-ops batch` | Batch processing with parallel workers |
-| `/career-ops-patterns` | `/career-ops patterns` | Analyze rejection patterns and improve targeting |
-| `/career-ops-followup` | `/career-ops followup` | Follow-up cadence tracker |
-
-**Note:** OpenCode commands invoke the same `.claude/skills/career-ops/SKILL.md` skill used by Claude Code. The `modes/*` files are shared between both platforms.
-
-### Gemini CLI Commands
-
-When using the [Gemini CLI](https://github.com/google-gemini/gemini-cli), the following slash commands are available (defined in `.gemini/commands/`):
-
-| Command | Claude Code Equivalent | Description |
-|---------|------------------------|-------------|
-| `/career-ops` | `/career-ops` | Show menu or evaluate JD with args |
-| `/career-ops-pipeline` | `/career-ops pipeline` | Process pending URLs from inbox |
-| `/career-ops-evaluate` | `/career-ops oferta` | Evaluate job offer (A-G scoring) |
-| `/career-ops-compare` | `/career-ops ofertas` | Compare and rank multiple offers |
-| `/career-ops-contact` | `/career-ops contacto` | LinkedIn outreach (find contacts + draft) |
-| `/career-ops-deep` | `/career-ops deep` | Deep company research |
-| `/career-ops-pdf` | `/career-ops pdf` | Generate ATS-optimized CV |
-| `/career-ops-training` | `/career-ops training` | Evaluate course/cert against goals |
-| `/career-ops-project` | `/career-ops project` | Evaluate portfolio project idea |
-| `/career-ops-tracker` | `/career-ops tracker` | Application status overview |
-| `/career-ops-apply` | `/career-ops apply` | Live application assistant |
-| `/career-ops-scan` | `/career-ops scan` | Scan portals for new offers |
-| `/career-ops-batch` | `/career-ops batch` | Batch processing with parallel workers |
-| `/career-ops-patterns` | `/career-ops patterns` | Analyze rejection patterns and improve targeting |
-| `/career-ops-followup` | `/career-ops followup` | Follow-up cadence tracker |
-
-**Note:** Gemini CLI commands are defined in `.gemini/commands/*.toml`. The project context is auto-loaded from `GEMINI.md`. All `modes/*` files are shared across Claude Code, OpenCode, and Gemini CLI.
-
-### First Run — Onboarding (IMPORTANT)
-
-**Before doing ANYTHING else, check if the system is set up.** Run these checks silently every time a session starts:
-
-1. Does `cv.md` exist?
-2. Does `config/profile.yml` exist (not just profile.example.yml)?
-3. Does `modes/_profile.md` exist (not just _profile.template.md)?
-4. Does `portals.yml` exist (not just templates/portals.example.yml)?
-
-If `modes/_profile.md` is missing, copy from `modes/_profile.template.md` silently. This is the user's customization file — it will never be overwritten by updates.
-
-**If ANY of these is missing, enter onboarding mode.** Do NOT proceed with evaluations, scans, or any other mode until the basics are in place. Guide the user step by step:
-
-#### Step 1: CV (required)
-If `cv.md` is missing, ask:
-> "I don't have your CV yet. You can either:
-> 1. Paste your CV here and I'll convert it to markdown
-> 2. Paste your LinkedIn URL and I'll extract the key info
-> 3. Tell me about your experience and I'll draft a CV for you
->
-> Which do you prefer?"
-
-Create `cv.md` from whatever they provide. Make it clean markdown with standard sections (Summary, Experience, Projects, Education, Skills).
-
-#### Step 2: Profile (required)
-If `config/profile.yml` is missing, copy from `config/profile.example.yml` and then ask:
-> "I need a few details to personalize the system:
-> - Your full name and email
-> - Your location and timezone
-> - What roles are you targeting? (e.g., 'Senior Backend Engineer', 'AI Product Manager')
-> - Your salary target range
->
-> I'll set everything up for you."
-
-Fill in `config/profile.yml` with their answers. For archetypes and targeting narrative, store the user-specific mapping in `modes/_profile.md` or `config/profile.yml` rather than editing `modes/_shared.md`.
-
-#### Step 3: Portals (recommended)
-If `portals.yml` is missing:
-> "I'll set up the job scanner with 45+ pre-configured companies. Want me to customize the search keywords for your target roles?"
-
-Copy `templates/portals.example.yml` → `portals.yml`. If they gave target roles in Step 2, update `title_filter.positive` to match.
-
-#### Step 4: Tracker
-If `data/applications.md` doesn't exist, create it:
-```markdown
-# Applications Tracker
+[data/applications.md](data/applications.md) is **9 columns**, parsed by the Go dashboard binary as `fields[5]=Status, fields[6]=PDF, fields[7]=Report, fields[8]=Notes`. Do not add a 10th column — the dashboard breaks.
 
 | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
-|---|------|---------|------|-------|--------|-----|--------|-------|
-```
 
-#### Step 5: Get to know the user (important for quality)
+Embed cover-letter info inside Notes column with prefixes:
+- `CL: [filename](path)` — cover letter only
+- `CL+Q: [filename](path)` — cover letter + form answers combined
+- `Form Qs: [filename](path)` — form answers only (where no separate cover letter is needed)
 
-After the basics are set up, proactively ask for more context. The more you know, the better your evaluations will be:
+Eval report files MUST include a `**URL:**` line (not `**Apply:**`) — the dashboard's O-key URL-open regex is `^\*\*URL:\*\*\s*(https?://\S+)`.
 
-> "The basics are ready. But the system works much better when it knows you well. Can you tell me more about:
-> - What makes you unique? What's your 'superpower' that other candidates don't have?
-> - What kind of work excites you? What drains you?
-> - Any deal-breakers? (e.g., no on-site, no startups under 20 people, no Java shops)
-> - Your best professional achievement — the one you'd lead with in an interview
-> - Any projects, articles, or case studies you've published?
->
-> The more context you give me, the better I filter. Think of it as onboarding a recruiter — the first week I need to learn about you, then I become invaluable."
-
-Store any insights the user shares in `config/profile.yml` (under narrative), `modes/_profile.md`, or in `article-digest.md` if they share proof points. Do not put user-specific archetypes or framing into `modes/_shared.md`.
-
-**After every evaluation, learn.** If the user says "this score is too high, I wouldn't apply here" or "you missed that I have experience in X", update your understanding in `modes/_profile.md`, `config/profile.yml`, or `article-digest.md`. The system should get smarter with every interaction without putting personalization into system-layer files.
-
-#### Step 6: Ready
-Once all files exist, confirm:
-> "You're all set! You can now:
-> - Paste a job URL to evaluate it
-> - Run `/career-ops scan` (or `/career-ops-scan` if using OpenCode) to search portals
-> - Run `/career-ops` to see all commands
->
-> Everything is customizable — just ask me to change anything.
->
-> Tip: Having a personal portfolio dramatically improves your job search. If you don't have one yet, the author's portfolio is also open source: github.com/santifer/cv-santiago — feel free to fork it and make it yours."
-
-Then suggest automation:
-> "Want me to scan for new offers automatically? I can set up a recurring scan every few days so you don't miss anything. Just say 'scan every 3 days' and I'll configure it."
-
-If the user accepts, use the `/loop` or `/schedule` skill (if available) to set up a recurring `/career-ops scan` (or `/career-ops-scan` if using OpenCode). If those aren't available, suggest adding a cron job or remind them to run `/career-ops scan` (or `/career-ops-scan` if using OpenCode) periodically.
-
-### Personalization
-
-This system is designed to be customized by YOU (AI Agent). When the user asks you to change archetypes, translate modes, adjust scoring, add companies, or modify negotiation scripts -- do it directly. You read the same files you use, so you know exactly what to edit.
-
-**Common customization requests:**
-- "Change the archetypes to [backend/frontend/data/devops] roles" → edit `modes/_profile.md` or `config/profile.yml`
-- "Translate the modes to English" → edit all files in `modes/`
-- "Add these companies to my portals" → edit `portals.yml`
-- "Update my profile" → edit `config/profile.yml`
-- "Change the CV template design" → edit `templates/cv-template.html`
-- "Adjust the scoring weights" → edit `modes/_profile.md` for user-specific weighting, or edit `modes/_shared.md` and `batch/batch-prompt.md` only when changing the shared system defaults for everyone
-
-### Language Modes
-
-Default modes are in `modes/` (English). Additional language-specific modes are available:
-
-- **German (DACH market):** `modes/de/` — native German translations with DACH-specific vocabulary (13. Monatsgehalt, Probezeit, Kündigungsfrist, AGG, Tarifvertrag, etc.). Includes `_shared.md`, `angebot.md` (evaluation), `bewerben.md` (apply), `pipeline.md`.
-- **French (Francophone market):** `modes/fr/` — native French translations with France/Belgium/Switzerland/Luxembourg-specific vocabulary (CDI/CDD, convention collective SYNTEC, RTT, mutuelle, prévoyance, 13e mois, intéressement/participation, titres-restaurant, CSE, portage salarial, etc.). Includes `_shared.md`, `offre.md` (evaluation), `postuler.md` (apply), `pipeline.md`.
-- **Japanese (Japan market):** `modes/ja/` — native Japanese translations with Japan-specific vocabulary (正社員, 業務委託, 賞与, 退職金, みなし残業, 年俸制, 36協定, 通勤手当, 住宅手当, etc.). Includes `_shared.md`, `kyujin.md` (evaluation), `oubo.md` (apply), `pipeline.md`.
-
-**When to use German modes:** If the user is targeting German-language job postings, lives in DACH, or asks for German output. Either:
-1. User says "use German modes" → read from `modes/de/` instead of `modes/`
-2. User sets `language.modes_dir: modes/de` in `config/profile.yml` → always use German modes
-3. You detect a German JD → suggest switching to German modes
-
-**When to use French modes:** If the user is targeting French-language job postings, lives in France/Belgium/Switzerland/Luxembourg/Quebec, or asks for French output. Either:
-1. User says "use French modes" → read from `modes/fr/` instead of `modes/`
-2. User sets `language.modes_dir: modes/fr` in `config/profile.yml` → always use French modes
-3. You detect a French JD → suggest switching to French modes
-
-**When to use Japanese modes:** If the user is targeting Japanese-language job postings, lives in Japan, or asks for Japanese output. Either:
-1. User says "use Japanese modes" → read from `modes/ja/` instead of `modes/`
-2. User sets `language.modes_dir: modes/ja` in `config/profile.yml` → always use Japanese modes
-3. You detect a Japanese JD → suggest switching to Japanese modes
-
-**When NOT to:** If the user applies to English-language roles, even at French, German, or Japanese companies, use the default English modes.
-
-### Skill Modes
-
-| If the user... | Mode |
-|----------------|------|
-| Pastes JD or URL | auto-pipeline (evaluate + report + PDF + tracker) |
-| Asks to evaluate offer | `oferta` |
-| Asks to compare offers | `ofertas` |
-| Wants LinkedIn outreach | `contacto` |
-| Asks for company research | `deep` |
-| Preps for interview at specific company | `interview-prep` |
-| Wants to generate CV/PDF | `pdf` |
-| Evaluates a course/cert | `training` |
-| Evaluates portfolio project | `project` |
-| Asks about application status | `tracker` |
-| Fills out application form | `apply` |
-| Searches for new offers | `scan` |
-| Processes pending URLs | `pipeline` |
-| Batch processes offers | `batch` |
-| Asks about rejection patterns or wants to improve targeting | `patterns` |
-| Asks about follow-ups or application cadence | `followup` |
-
-### CV Source of Truth
-
-- `cv.md` in project root is the canonical CV
-- `article-digest.md` has detailed proof points (optional)
-- **NEVER hardcode metrics** -- read them from these files at evaluation time
-
----
-
-## Ethical Use -- CRITICAL
-
-**This system is designed for quality, not quantity.** The goal is to help the user find and apply to roles where there is a genuine match -- not to spam companies with mass applications.
-
-- **NEVER submit an application without the user reviewing it first.** Fill forms, draft answers, generate PDFs -- but always STOP before clicking Submit/Send/Apply. The user makes the final call.
-- **Strongly discourage low-fit applications.** If a score is below 4.0/5, explicitly recommend against applying. The user's time and the recruiter's time are both valuable. Only proceed if the user has a specific reason to override the score.
-- **Quality over speed.** A well-targeted application to 5 companies beats a generic blast to 50. Guide the user toward fewer, better applications.
-- **Respect recruiters' time.** Every application a human reads costs someone's attention. Only send what's worth reading.
-
----
-
-## Offer Verification -- MANDATORY
-
-**NEVER trust WebSearch/WebFetch to verify if an offer is still active.** ALWAYS use Playwright:
-1. `browser_navigate` to the URL
-2. `browser_snapshot` to read content
-3. Only footer/navbar without JD = closed. Title + description + Apply = active.
-
-**Exception for batch workers (`claude -p`):** Playwright is not available in headless pipe mode. Use WebFetch as fallback and mark the report header with `**Verification:** unconfirmed (batch mode)`. The user can verify manually later.
-
----
-
-## CI/CD and Quality
-
-- **GitHub Actions** run on every PR: `test-all.mjs` (63+ checks), auto-labeler (risk-based: 🔴 core-architecture, ⚠️ agent-behavior, 📄 docs), welcome bot for first-time contributors
-- **Branch protection** on `main`: status checks must pass before merge. No direct pushes to main (except admin bypass).
-- **Dependabot** monitors npm, Go modules, and GitHub Actions for security updates
-- **Contributing process**: issue first → discussion → PR with linked issue → CI passes → maintainer review → merge
-
-## Community and Governance
-
-- **Code of Conduct**: Contributor Covenant 2.1 with enforcement actions (see `CODE_OF_CONDUCT.md`)
-- **Governance**: BDFL model with contributor ladder — Participant → Contributor → Triager → Reviewer → Maintainer (see `GOVERNANCE.md`)
-- **Security**: private vulnerability reporting via email (see `SECURITY.md`)
-- **Support**: help questions go to Discord/Discussions, not issues (see `SUPPORT.md`)
-- **Discord**: https://discord.gg/8pRpHETxa4
-
-## Stack and Conventions
-
-- Node.js (mjs modules), Playwright (PDF + scraping), YAML (config), HTML/CSS (template), Markdown (data), Canva MCP (optional visual CV)
-- Scripts in `.mjs`, configuration in YAML
-- Output in `output/` (gitignored), Reports in `reports/`
-- JDs in `jds/` (referenced as `local:jds/{file}` in pipeline.md)
-- Batch in `batch/` (gitignored except scripts and prompt)
-- Report numbering: sequential 3-digit zero-padded, max existing + 1
-- **RULE: After each batch of evaluations, run `node merge-tracker.mjs`** to merge tracker additions and avoid duplications.
-- **RULE: NEVER create new entries in applications.md if company+role already exists.** Update the existing entry.
-
-### TSV Format for Tracker Additions
-
-Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slug}.tsv`. Single line, 9 tab-separated columns:
+## Career-Ops layout
 
 ```
-{num}\t{date}\t{company}\t{role}\t{status}\t{score}/5\t{pdf_emoji}\t[{num}](reports/{num}-{slug}-{date}.md)\t{note}
+career-ops/
+  config/profile.yml         # Anmol-specific config + internship_constraints
+  cv.md                       # source-of-truth CV
+  data/
+    applications.md           # 9-col tracker
+    intern_shortlist.md       # initial scan top 25
+    simplifyjobs_summer2026_picks.md
+    alumni_outreach_priorities.md
+  modes/_profile.md           # intern-specific archetypes
+  portals.yml                 # intern-friendly filters
+  reports/
+    {company-slug}/           # one folder per company (slug = lowercased, hyphenated company name)
+      {NN}-{role-slug}-{YYYY-MM-DD}.md           # eval report
+      {NN}-{role-slug}-cover-letter.md           # cover letter (top-tier roles only)
+      {NN}-{role-slug}-application-questions.md  # form Qs (when applicable)
+    pending.md                # shared SKIP/placeholder sentinel (do NOT move into a company folder)
+    _misc/                    # non-numeric files (e.g., shared alumni outreach)
+  templates/
+    alumni-outreach.md        # 5 LinkedIn DM variants
+    faculty-cold-email.md     # per-archetype framing
+    application-tactics.md    # recurring app-form questions
+  merge-tracker.mjs           # 9-col tracker merger (do not change schema)
+  scripts/                    # build helpers (CV PDF gen DEPRECATED — see rule 2)
 ```
 
-**Column order (IMPORTANT -- status BEFORE score):**
-1. `num` -- sequential number (integer)
-2. `date` -- YYYY-MM-DD
-3. `company` -- short company name
-4. `role` -- job title
-5. `status` -- canonical status (e.g., `Evaluated`)
-6. `score` -- format `X.X/5` (e.g., `4.2/5`)
-7. `pdf` -- `✅` or `❌`
-8. `report` -- markdown link `[num](reports/...)`
-9. `notes` -- one-line summary
+## Workflow when surfacing new candidates
 
-**Note:** In applications.md, score comes BEFORE status. The merge script handles this column swap automatically.
+1. Scan via Greenhouse / Ashby / Lever / SimplifyJobs / Workday (Workday mostly blocked).
+2. For each candidate: write `reports/{company-slug}/{NN}-{role-slug}-{date}.md` with `**URL:**` header, score (1-5), pros/cons, fit narrative. Reuse the existing `reports/{company-slug}/` folder if the company already has reports; create it if not. `{company-slug}` is the lowercased, hyphenated company name (matches the slugifier in `scripts/reorg-reports-by-company.py`).
+3. Do NOT auto-draft a cover letter. Cover letters are generated only when the user asks, or when the user presses `u` in the dashboard (which shells out to `claude -p` and writes the file directly at `reports/{company-slug}/{NN}-{company-slug}-{role-slug}-cover-letter.md`). Application-questions files (`-application-questions.md`) follow the same on-request rule.
+4. Append a row to [data/applications.md](data/applications.md). Leave Notes empty for the cover-letter prefix until a letter actually exists; once written, add `CL:` / `CL+Q:` / `Form Qs:` prefix in Notes.
+5. Pick correct resume per role: **SDE PDF** for SDE/backend/infra, **MLE PDF** for AI/ML/DS/applied-scientist roles. Note in Notes column.
 
-### Pipeline Integrity
+### Dashboard `u` keybinding (cover letter)
 
-1. **NEVER edit applications.md to ADD new entries** -- Write TSV in `batch/tracker-additions/` and `merge-tracker.mjs` handles the merge.
-2. **YES you can edit applications.md to UPDATE status/notes of existing entries.**
-3. All reports MUST include `**URL:**` in the header (between Score and PDF). Include `**Legitimacy:** {tier}` (see Block G in `modes/oferta.md`).
-4. All statuses MUST be canonical (see `templates/states.yml`).
-5. Health check: `node verify-pipeline.mjs`
-6. Normalize statuses: `node normalize-statuses.mjs`
-7. Dedup: `node dedup-tracker.mjs`
+In the Go TUI dashboard at `dashboard/`, pressing `u` (lowercase) on a selected row:
+- **If a cover letter already exists** for that row (canonical or legacy filename matching `reports/<company-slug>/<NN>-*-cover-letter.md`): opens it in the in-terminal viewer, same as Enter does for eval reports.
+- **If no cover letter exists**: shells out to `claude --permission-mode acceptEdits -p "<prompt>"` from the workspace root. CLAUDE.md auto-loads, so the standing rules apply. The prompt instructs claude to write the letter at the canonical path and exit. After completion the dashboard auto-opens the new file in the viewer; on failure it surfaces the error in the flash bar. While generation is running (~30-60s), additional `u` presses on any row are debounced. Implementation: [dashboard/internal/data/cover_letter.go](dashboard/internal/data/cover_letter.go), key handler in [dashboard/internal/ui/screens/pipeline.go](dashboard/internal/ui/screens/pipeline.go).
 
-### Canonical States (applications.md)
+## Useful API endpoints (intern-friendly filters)
 
-**Source of truth:** `templates/states.yml`
+- Greenhouse: `https://boards-api.greenhouse.io/v1/boards/{slug}/jobs` — filter for "intern" / "summer 2026" / "student"
+- Ashby: `https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true`
+- Lever: `https://api.lever.co/v0/postings/{slug}?mode=json`
+- SimplifyJobs/Summer2026-Internships GitHub README is the highest-signal aggregator.
 
-| State | When to use |
-|-------|-------------|
-| `Evaluated` | Report completed, pending decision |
-| `Applied` | Application sent |
-| `Responded` | Company responded |
-| `Interview` | In interview process |
-| `Offer` | Offer received |
-| `Rejected` | Rejected by company |
-| `Discarded` | Discarded by candidate or offer closed |
-| `SKIP` | Doesn't fit, don't apply |
+Many slugs 404 (snowflake, doordash, notion, ramp, plaid, openai, huggingface, sierra, etc.) — these don't expose public boards. Check Greenhouse/Ashby first; fall back to scraping the careers page only if needed.
 
-**RULES:**
-- No markdown bold (`**`) in status field
-- No dates in status field (use the date column)
-- No extra text (use the notes column)
+## Memory files (auto-loaded)
+
+`/Users/anmolsahu2k/.claude/projects/-Users-anmolsahu2k-Stuff-Create-Amazon/memory/MEMORY.md` indexes:
+
+- `project_amazon_interview.md` — Amazon status PENDING
+- `user_profile.md` — Anmol's background
+- `feedback_interview_honesty.md` — Byju's bullets need real-detail prep before phone screens
+- `reference_oie_cpt.md` — CPT facts (10-day, no backdating, no independent-study)
+- `feedback_no_em_dashes.md` — rule 1
+- `feedback_no_cv_pdf.md` — rule 2
+- `feedback_no_cpt_explainer.md` — rule 3
+- `feedback_default_cover_letter.md` — rule 4
+- `project_target_roles.md` — rule 5
+- `project_eeg_classification.md` — EEG project portfolio asset details
+
+## Known gotchas
+
+- **Cover-letter scrubbing**: when you regenerate a cover letter, run a final pass for em-dashes (`—`, `–`) and any auto-introduced CPT/Heinz explainer.
+- **Job-location verification**: don't trust the company name. Some Cohere, Mistral, Perplexity reqs are EU-only or Toronto-only — pull the JD location field before recommending. (This burned us once.)
+- **Bash for-loops**: when iterating slug lists, inline the list in the for-loop. `slugs="..."` then `for s in $slugs` treats the whole string as one token in some shells.
+- **Tracker dashboard updates flow back to applications.md**: if user updates status in the dashboard, the .md file changes too. Don't assume my last-known state is current — re-read before mutating.
+
+## Outstanding user actions (as of last interaction)
+
+1. Push EEG_Classification README update (`git -C /Users/anmolsahu2k/Stuff/Create/EEG_Classification/ add README.md && git commit && git push`).
+2. Update SDE/MLE PDF resumes per [data/resume-gap-audit.md](data/resume-gap-audit.md) — start with the rank-prediction honesty rewrite.
+3. Send 12 faculty cold emails (Saturday batch of 5+4, Sunday batch of 3). W2 sharpened all 12 P2s with 2025-26 paper hooks; re-skim emails 05/10/11 specifically (P1 first sentence was also touched to introduce paper citations).
+4. Send 35-40 alumni LinkedIn messages across 21 applied companies.
+5. Watch ATS confirmation emails within 48h; flag silent submissions for resubmit.
+6. **May 1 decision checkpoint**: ≥2 first-round interviews OR ≥1 faculty positive reply. If miss → expand India track.
+7. **May 8 checkpoint**: ≥1 verbal offer OR ≥2 final-rounds. If miss → activate course-credit research fallback.
+8. (optional) `pip install python-jobspy` so the daily-scan-cron JobSpy step exits 0 instead of being permanently skipped.
+9. Review [data/applications.md](data/applications.md) — 40 raw aggregator candidates from W11 need triage (status `Evaluated`, score `0.0/5`, no eval report yet). Promote interesting ones into standard auto-pipeline; mark others `SKIP`.
+10. Review [data/hygiene-2026-05-03.md](data/hygiene-2026-05-03.md) — first real local liveness pass (104 URLs across 303 rows). Distribution: 56 active, 20 expired, 28 uncertain. The 20 expired rows have already been auto-flipped to `Status: Discarded` (2026-05-03). Of the 28 uncertain: 13 are LinkedIn auth-wall artifacts (treat as alive); ~15 non-LinkedIn need spot-check. PsiQuantum confirmed ACTIVE via Greenhouse API; Aurora #712 and Snyk inconclusive without browser session (open in browser to verify before treating as expired).
+11. **Run `node scripts/daily-scan-cron.mjs` and `node scripts/daily-hygiene-cron.mjs` locally daily** as the morning routine, since cloud routines are decommissioned. `scan.mjs` adds ~295 candidates/day from direct portals; `aggregator-intake.py` adds ~35; `check-liveness.mjs` flags expired/uncertain URLs (with working CA store locally, unlike the broken cloud sandbox).
+
+## What I am NOT to do without explicit ask
+
+- Generate or rebuild CV PDFs.
+- Send the OIE inquiry email (deferred until offer in hand).
+- Push commits to any repo.
+- Send alumni or faculty messages — drafts only; user sends.
+- Change the tracker schema.
