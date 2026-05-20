@@ -255,8 +255,7 @@ career-ops/
 ├── reports/                     # Evaluation reports (gitignored)
 ├── output/                      # Generated PDFs (gitignored)
 ├── fonts/                       # Space Grotesk + DM Sans
-├── docs/                        # Setup, customization, architecture
-└── examples/                    # Sample CV, report, proof points
+└── docs/                        # Setup, customization, architecture
 ```
 
 ## Tech Stack
