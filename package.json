@@ -14,7 +14,10 @@
     "update": "node update-system.mjs apply",
     "rollback": "node update-system.mjs rollback",
     "liveness": "node check-liveness.mjs",
+    "liveness:bulk": "node liveness-parallel.mjs",
+    "liveness:batch": "node liveness-parallel.mjs --from-batch",
     "scan": "node scan.mjs",
+    "scan:spa": "node scan-spa.mjs",
     "gemini:eval": "node gemini-eval.mjs"
   },
   "keywords": [
@@ -36,5 +39,10 @@
     "dotenv": "^16.4.5",
     "js-yaml": "^4.1.1",
     "playwright": "^1.58.1"
+  },
+  "devDependencies": {
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "rebrowser-playwright": "^1.52.0"
   }
 }

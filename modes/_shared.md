@@ -114,6 +114,7 @@ After detecting archetype, read `modes/_profile.md` for the user's specific fram
 8b. Case study URLs in PDF Professional Summary (recruiter may only read this).
 9. **Tracker additions as TSV** -- NEVER edit applications.md directly. Write TSV in `batch/tracker-additions/`.
 10. **Include `**URL:**` in every report header.**
+11. **Include `**Resume:**` in every report header.** Use one of: `SDE PDF`, `MLE PDF`, `N/A (off-target)`. SDE PDF for SDE / backend / infra / SRE / QA roles; MLE PDF for AI / ML / DS / DE / applied-scientist roles. `N/A` only when score is ≤2.0 and the recommendation is Discard. The tracker Notes column must carry the same pick (`Submit SDE resume` / `Submit MLE resume`).
 
 ### Tools
 
@@ -121,7 +122,7 @@ After detecting archetype, read `modes/_profile.md` for the user's specific fram
 |------|-----|
 | WebSearch | Comp research, trends, company culture, LinkedIn contacts, fallback for JDs |
 | WebFetch | Fallback for extracting JDs from static pages |
-| Playwright | Verify offers (browser_navigate + browser_snapshot). **NEVER 2+ agents with Playwright in parallel.** |
+| Playwright | Verify offers (browser_navigate + browser_snapshot), extract JDs from SPAs (Workday/iCIMS/Lever-403/Ashby) when WebFetch returns empty. **Parallel OK.** Two patterns are safe: (a) one shared Chromium with N concurrent pages — see [liveness-parallel.mjs](liveness-parallel.mjs) at CONCURRENCY=20; (b) N parallel agents each launching their own Chromium — costs ~150MB RAM per browser but works. The old "never 2+ agents" rule was retired 2026-05-04 after empirical verification across the 742-URL liveness sweep and aggregator-intake batches. |
 | Read | cv.md, _profile.md, article-digest.md, cv-template.html |
 | Write | Temporary HTML for PDF, applications.md, reports .md |
 | Edit | Update tracker |

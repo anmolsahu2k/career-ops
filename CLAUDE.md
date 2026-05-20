@@ -8,20 +8,9 @@ Anmol Sahu. CMU MISM-BIDA (Heinz, Master of Information Systems Management with 
 
 Source-of-truth CV: [cv.md](cv.md). Submission resumes are the user's PDFs in [resumes/](resumes/) (`SDE Anmol's Resume(27-04-26)-LATEST.pdf`, `MLE Anmol's Resume(27-04-26)-LATEST.pdf`).
 
-## What's been done
+## Current state
 
-**Live status board:** [STATUS.md](STATUS.md) — phase-by-phase checkboxes with deliverable links. Update STATUS.md and this section together when a workstream lands or trips a stop condition.
-
-- **Amazon SDE Intern Summer 2026** (job 3143461, Payments org): final-round complete Apr 8; received ambiguous AMER-AUTA-RC-admin email Apr 24 — likely admin auto-response, status PENDING per memory. 12-month SDE cooling-off would apply if real reject.
-- **Career-Ops installed** at []() — Claude Code-powered job pipeline with Go TUI dashboard (9-col schema).
-- **23 roles evaluated** (21 Applied, 2 SKIP) plus **40 raw aggregator candidates surfaced 2026-04-27** by W11 Group 1 aggregator-intake (status `Evaluated`, score `0.0/5`, no eval report yet — pointer is to `reports/pending.md` placeholder). Total tracker rows: 63. Tracker: [data/applications.md](data/applications.md). Eval reports + cover letters (for the original 23) under [reports/](reports/).
-- **12 faculty cold emails drafted** at [faculty_emails/](faculty_emails/) (00-OIE deferred per user; 01-12 Tier-1 PIs). W2 will sharpen each P2 with a 2025-26 paper hook before send.
-- **EEG_Classification README updated** at `/Users/anmolsahu2k/Stuff/Create/EEG_Classification/README.md` to reflect actual committed work (multi-head CNN+Transformer, Task 2 CLIP retrieval w/ 6 loss variants, PSC Bridges-2 HPC infra). User to push.
-- **Master plan** at `/Users/anmolsahu2k/.claude/plans/okay-so-now-what-eventual-scone.md` (v3 status + v2 preserved).
-- **Phase 1 of _meta/HANDOFF-now-phase-execution.md done (2026-04-27)**: W3 cover-letter audit ([cover-letter-audit.md](data/cover-letter-audit.md)), W4 resume gap audit ([resume-gap-audit.md](data/resume-gap-audit.md)), W5 GitHub polish ([cloudify](data/github-polish-cloudify.md) + [eeg](data/github-polish-eeg.md)), W12 application-tactics extension + audit ([extended playbook](templates/application-tactics.md), [audit](data/application-tactics-audit.md)), W10 Next.js portfolio at [portfolio/](portfolio/) (build verified). No stop conditions tripped.
-- **Phase 2 of _meta/HANDOFF-now-phase-execution.md done (2026-04-27)**: W2 faculty deep-reads (all 12 P2s rewritten with 2025-26 paper hooks, [data/faculty-deep-read-log.md](data/faculty-deep-read-log.md); user should re-skim emails 05/10/11 where P1 first sentence was also touched); W11 Group 1 (3 adapter scripts under `scripts/` + aggregator run = 40 new tracker rows from speedyapply/vanshb03/SimplifyJobs READMEs); W11 Group 2 (`portals.yml` 947→1070 lines: 6 niche AI/ML boards, 9 new slugs from career-copilot diff, Asana from hiring-without-whiteboards verified); W11 Group 3 (eval template + interview-prep templates: [eval-report.md](templates/eval-report.md), [star-plus-r-framework.md](templates/star-plus-r-framework.md), [5ws-storytelling.md](templates/5ws-storytelling.md), [pre-interview-checklist.md](templates/pre-interview-checklist.md)).
-- **Phase 3 of _meta/HANDOFF-now-phase-execution.md code done (2026-04-27)**: W1 [scripts/daily-scan-cron.mjs](scripts/daily-scan-cron.mjs), W8 [scripts/weekly-news-cron.mjs](scripts/weekly-news-cron.mjs), W9 [scripts/daily-hygiene-cron.mjs](scripts/daily-hygiene-cron.mjs) (live-tested) all written and verified.
-- **Cloud routines decommissioned (2026-05-03)**: All three Claude Code Routines (W1 scan, W8 news, W9 hygiene) disabled and queued for web-UI deletion at https://claude.ai/code/routines. Root cause: cloud sandbox egress proxy blocks Greenhouse/Ashby/Lever portal APIs (W1), and the sandbox Chromium has no trusted CA store so 100% of HTTPS URLs returned `ERR_CERT_AUTHORITY_INVALID` and got false-flagged uncertain (W9). Net useful signal across the routines' entire run history: zero. The remote routine branch `claude/w9-daily-hygiene` was deleted (its valuable infra commits skip-portal-scan flag, AI portal expansion, scan filter widening had already been pulled into the working tree; the rest was stale flat-path reports superseded by the per-company reorg). Going forward: run [scripts/daily-scan-cron.mjs](scripts/daily-scan-cron.mjs) and [scripts/daily-hygiene-cron.mjs](scripts/daily-hygiene-cron.mjs) locally on demand. Routine prompt sources retained in [routines/](routines/) for reference.
+State (what's done, what's pending, decommissioned workstreams, outstanding user actions, phase tables) lives in [STATUS.md](STATUS.md). Update STATUS.md (not this file) when a workstream lands or a stop condition trips. This file stays as conventions only.
 
 ## Hard rules (saved in memory; do not violate)
 
@@ -30,6 +19,8 @@ Source-of-truth CV: [cv.md](cv.md). Submission resumes are the user's PDFs in [r
 3. **Do NOT include the F-1/CPT/Heinz/OIE/May 12/June 1 explainer paragraph** in cover letters, form answers, faculty emails, or alumni outreach. If start date is asked, just say "Available June 2026."
 4. **Generate cover letters only on explicit request.** Do NOT auto-draft cover letters during evaluation, even for top-tier (≥4.0) roles. The two trigger sources are: (a) the user explicitly asks ("write a cover letter for X"); (b) the user presses `u` on a row in the Go TUI dashboard, which shells out to `claude -p` and writes the letter directly. (Previous default was auto-draft; reversed because most evaluated roles never get applied to and the auto-drafts piled up unused.)
 5. **Target roles**: SDE Intern, AI Intern, MLE Intern, Data Science Intern, Data Engineer Intern, Data Analyst Intern, plus adjacent. US-based (in-person or remote-US) primary; India remote acceptable but no CPT for India remote work.
+6. **No cron jobs / no schedules.** Everything is user-triggered. There is no `crontab`, no Claude Code Routines, no daily-*-cron scripts. If a workflow needs to run periodically, the user invokes it manually.
+7. **Scan and evaluation can run together OR separately.** `scan.mjs` writes new candidates to `data/scan-results-{YYYY-MM-DD}.tsv`. The skill may either (a) dispatch evaluation agents inline in the same invocation and delete the TSV before returning (auto-pipeline), or (b) stop after scan and leave the TSV on disk so the user can trigger evaluation in a follow-up invocation. Pasting URLs/JD text directly to `/career-ops` always runs the inline auto-pipeline (no scan step). When scan-only mode leaves a TSV on disk, a later evaluation invocation consumes it, dispatches evaluation agents, and deletes it before returning. `data/pipeline.md` is still NOT used as an inbox; the on-disk TSV is the only handoff format between scan and evaluation.
 
 ## Tracker schema (do NOT change)
 
@@ -37,10 +28,10 @@ Source-of-truth CV: [cv.md](cv.md). Submission resumes are the user's PDFs in [r
 
 | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
 
-Embed cover-letter info inside Notes column with prefixes:
-- `CL: [filename](path)` — cover letter only
-- `CL+Q: [filename](path)` — cover letter + form answers combined
-- `Form Qs: [filename](path)` — form answers only (where no separate cover letter is needed)
+Embed cover-letter pointer inside Notes column with the `CL:` prefix:
+- `CL: [filename](path)` — cover letter exists at this path
+
+Form-answer files and combined letter+answers files: just link them inline in Notes as free text, no special prefix. (Historical rows still use `CL+Q:` and `Form Qs:` — leave them alone, they parse fine as free text. Don't introduce new ones.)
 
 Eval report files MUST include a `**URL:**` line (not `**Apply:**`) — the dashboard's O-key URL-open regex is `^\*\*URL:\*\*\s*(https?://\S+)`.
 
@@ -74,11 +65,27 @@ career-ops/
 
 ## Workflow when surfacing new candidates
 
-1. Scan via Greenhouse / Ashby / Lever / SimplifyJobs / Workday (Workday mostly blocked).
-2. For each candidate: write `reports/{company-slug}/{NN}-{role-slug}-{date}.md` with `**URL:**` header, score (1-5), pros/cons, fit narrative. Reuse the existing `reports/{company-slug}/` folder if the company already has reports; create it if not. `{company-slug}` is the lowercased, hyphenated company name (matches the slugifier in `scripts/reorg-reports-by-company.py`).
-3. Do NOT auto-draft a cover letter. Cover letters are generated only when the user asks, or when the user presses `u` in the dashboard (which shells out to `claude -p` and writes the file directly at `reports/{company-slug}/{NN}-{company-slug}-{role-slug}-cover-letter.md`). Application-questions files (`-application-questions.md`) follow the same on-request rule.
-4. Append a row to [data/applications.md](data/applications.md). Leave Notes empty for the cover-letter prefix until a letter actually exists; once written, add `CL:` / `CL+Q:` / `Form Qs:` prefix in Notes.
-5. Pick correct resume per role: **SDE PDF** for SDE/backend/infra, **MLE PDF** for AI/ML/DS/applied-scientist roles. Note in Notes column.
+This is a user-triggered flow. Per Rule 6, there is no scheduled scan. Per Rule 7, scan and evaluation may run inline together (one invocation) or be split across two invocations (scan-only first, evaluation later) — the on-disk TSV is the handoff format.
+
+1. **User triggers** `/career-ops scan` (or pastes URLs/JD text directly to `/career-ops`, which skips the scan step and runs auto-pipeline on the pasted URLs).
+2. **Scan** companies with public APIs (Greenhouse / Ashby / Lever) via `scan.mjs` (zero-token HTTP+JSON). For SPA / Cloudflare-protected boards (Workable, custom careers pages with no JSON API), append `node scan-spa.mjs` which uses shared-Chromium Playwright. Both append to the same `data/scan-results-{YYYY-MM-DD}.tsv`. To add a new SPA target, set its `portals.yml` entry to `scan_method: playwright` + `playwright_provider: <workable|generic>`; new provider extractors live in [scan-spa.mjs](scan-spa.mjs).
+3. **Title-level filter** in the same invocation: drop sales/GTM/marketing/HR/legal/finance/senior/staff/principal/non-target geo without writing per-URL reports. Log dropped rows in `data/scan-history.tsv` with status `skipped_filter`.
+4. **Decision point — inline or split:**
+   - **Inline (default):** continue immediately to step 5 in the same invocation.
+   - **Scan-only (split mode):** stop here, leaving `data/scan-results-{YYYY-MM-DD}.tsv` on disk. Report counts (rows scanned, rows that survived the filter) and exit. The user runs `/career-ops` again later to consume the TSV; the next invocation MUST detect any pre-existing `data/scan-results-*.tsv` files and resume from step 5 against them before doing anything else.
+5. **Evaluation** of the survivors: dispatch parallel agents (typically batches of 5 URLs), each running auto-pipeline per URL — fetch JD, score A-F, write `reports/{company-slug}/{NN}-{role-slug}-{date}.md` with `**URL:**` header, write a 9-column tracker line to `batch/tracker-additions/`. `{company-slug}` is the lowercased, hyphenated company name (matches the slugifier in `scripts/reorg-reports-by-company.py`).
+6. **Merge** `batch/tracker-additions/*.tsv` into [data/applications.md](data/applications.md). Run `node verify-pipeline.mjs` for schema integrity.
+7. **Delete** `data/scan-results-{YYYY-MM-DD}.tsv` — evaluation is not complete until the TSV is gone. (In split mode this delete happens in the follow-up invocation, not the scan-only one.)
+8. **Pick correct resume** per role: **SDE PDF** for SDE/backend/infra, **MLE PDF** for AI/ML/DS/applied-scientist. Note in Notes column.
+9. Cover letters: do NOT auto-draft. Generated only when the user asks, or when the user presses `u` in the dashboard (which shells out to `claude -p` and writes the file at `reports/{company-slug}/{NN}-{company-slug}-{role-slug}-cover-letter.md`). Application-questions files (`-application-questions.md`) follow the same on-request rule. Tracker Notes column gets the `CL:` prefix only after a letter actually exists.
+
+### Handshake (manual on-website, decided 2026-05-05)
+
+Anmol applies to Handshake postings directly via the Handshake web UI (CMU SSO at `https://app.joinhandshake.com/job-search`). **Not part of the discovery sweep.** The previous snippet/server/CSV discovery flow is decommissioned; its `scripts/` source files (`handshake-server.mjs`, `handshake-export-snippet.js`, `handshake-ingest.py`) were removed in the 2026-05-20 scripts cleanup. The `extensions/handshake-jd-copy/` browser extension remains on disk.
+
+**Tracking model:** Handshake sends a per-application confirmation email to anmolsah@andrew.cmu.edu after every submission. Tracker rows for Handshake-sourced applications get added later from those emails (manually or via a future Gmail watcher), not via a discovery sweep at the start of the funnel. This matches CLAUDE.md Rule 6 ("everything is user-triggered") and avoids the auth-walled JD-fetch problem the snippet flow had.
+
+**Implication for `/career-ops scan`:** the scan command does NOT include any Handshake source. If you want to surface a Handshake posting for evaluation, copy the URL/JD into `/career-ops` manually (Rule 7 auto-pipeline path).
 
 ### Dashboard `u` keybinding (cover letter)
 
@@ -91,24 +98,24 @@ In the Go TUI dashboard at `dashboard/`, pressing `u` (lowercase) on a selected 
 - Greenhouse: `https://boards-api.greenhouse.io/v1/boards/{slug}/jobs` — filter for "intern" / "summer 2026" / "student"
 - Ashby: `https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true`
 - Lever: `https://api.lever.co/v0/postings/{slug}?mode=json`
+- Workday (POST): `https://{tenant}.{wdN}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs` with body `{"appliedFacets":{},"limit":20,"offset":N,"searchText":""}` — returns `{jobPostings:[], total:N}`. scan.mjs paginates parallel, capped at 50 pages = 1000 jobs. To add a Workday tenant, set `careers_url` to `https://{tenant}.{wdN}.myworkdayjobs.com/{site}` and `api:` to the `/wday/cxs/...` URL. Approach ported from kbhujbal/go-get-jobs.
 - SimplifyJobs/Summer2026-Internships GitHub README is the highest-signal aggregator.
 
 Many slugs 404 (snowflake, doordash, notion, ramp, plaid, openai, huggingface, sierra, etc.) — these don't expose public boards. Check Greenhouse/Ashby first; fall back to scraping the careers page only if needed.
 
 ## Memory files (auto-loaded)
 
-`/Users/anmolsahu2k/.claude/projects/-Users-anmolsahu2k-Stuff-Create-Amazon/memory/MEMORY.md` indexes:
+`/Users/anmolsahu2k/.claude/projects/-Users-anmolsahu2k-Stuff-Create-career-ops/memory/MEMORY.md` indexes:
 
 - `project_amazon_interview.md` — Amazon status PENDING
 - `user_profile.md` — Anmol's background
 - `feedback_interview_honesty.md` — Byju's bullets need real-detail prep before phone screens
 - `reference_oie_cpt.md` — CPT facts (10-day, no backdating, no independent-study)
-- `feedback_no_em_dashes.md` — rule 1
-- `feedback_no_cv_pdf.md` — rule 2
-- `feedback_no_cpt_explainer.md` — rule 3
-- `feedback_default_cover_letter.md` — rule 4
-- `project_target_roles.md` — rule 5
 - `project_eeg_classification.md` — EEG project portfolio asset details
+- `feedback_changelog_per_turn.md` — append CHANGELOG entry every workspace-changing turn
+- `feedback_status_doc_maintenance.md` — state lives in STATUS.md only; CLAUDE.md is conventions-only
+
+Hard rules 1-5 live as numbered rules in this file (above) and are NOT mirrored into auto memory. Per the official Claude Code memory doc, CLAUDE.md is for user-stated rules and auto memory is for Claude-discovered learnings — mirroring user-stated rules into memory creates drift risk without adding enforcement.
 
 ## Known gotchas
 
@@ -116,20 +123,6 @@ Many slugs 404 (snowflake, doordash, notion, ramp, plaid, openai, huggingface, s
 - **Job-location verification**: don't trust the company name. Some Cohere, Mistral, Perplexity reqs are EU-only or Toronto-only — pull the JD location field before recommending. (This burned us once.)
 - **Bash for-loops**: when iterating slug lists, inline the list in the for-loop. `slugs="..."` then `for s in $slugs` treats the whole string as one token in some shells.
 - **Tracker dashboard updates flow back to applications.md**: if user updates status in the dashboard, the .md file changes too. Don't assume my last-known state is current — re-read before mutating.
-
-## Outstanding user actions (as of last interaction)
-
-1. Push EEG_Classification README update (`git -C /Users/anmolsahu2k/Stuff/Create/EEG_Classification/ add README.md && git commit && git push`).
-2. Update SDE/MLE PDF resumes per [data/resume-gap-audit.md](data/resume-gap-audit.md) — start with the rank-prediction honesty rewrite.
-3. Send 12 faculty cold emails (Saturday batch of 5+4, Sunday batch of 3). W2 sharpened all 12 P2s with 2025-26 paper hooks; re-skim emails 05/10/11 specifically (P1 first sentence was also touched to introduce paper citations).
-4. Send 35-40 alumni LinkedIn messages across 21 applied companies.
-5. Watch ATS confirmation emails within 48h; flag silent submissions for resubmit.
-6. **May 1 decision checkpoint**: ≥2 first-round interviews OR ≥1 faculty positive reply. If miss → expand India track.
-7. **May 8 checkpoint**: ≥1 verbal offer OR ≥2 final-rounds. If miss → activate course-credit research fallback.
-8. (optional) `pip install python-jobspy` so the daily-scan-cron JobSpy step exits 0 instead of being permanently skipped.
-9. Review [data/applications.md](data/applications.md) — 40 raw aggregator candidates from W11 need triage (status `Evaluated`, score `0.0/5`, no eval report yet). Promote interesting ones into standard auto-pipeline; mark others `SKIP`.
-10. Review [data/hygiene-2026-05-03.md](data/hygiene-2026-05-03.md) — first real local liveness pass (104 URLs across 303 rows). Distribution: 56 active, 20 expired, 28 uncertain. The 20 expired rows have already been auto-flipped to `Status: Discarded` (2026-05-03). Of the 28 uncertain: 13 are LinkedIn auth-wall artifacts (treat as alive); ~15 non-LinkedIn need spot-check. PsiQuantum confirmed ACTIVE via Greenhouse API; Aurora #712 and Snyk inconclusive without browser session (open in browser to verify before treating as expired).
-11. **Run `node scripts/daily-scan-cron.mjs` and `node scripts/daily-hygiene-cron.mjs` locally daily** as the morning routine, since cloud routines are decommissioned. `scan.mjs` adds ~295 candidates/day from direct portals; `aggregator-intake.py` adds ~35; `check-liveness.mjs` flags expired/uncertain URLs (with working CA store locally, unlike the broken cloud sandbox).
 
 ## What I am NOT to do without explicit ask
 

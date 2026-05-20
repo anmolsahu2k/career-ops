@@ -131,8 +131,12 @@ func BuildCoverLetterPrompt(app model.CareerApplication, target string) string {
 	b.WriteString("Apply all rules from CLAUDE.md (auto-loaded for this directory): ")
 	b.WriteString("no em-dashes or en-dashes, no F-1/CPT/Heinz/OIE explainer, no CV PDF generation. ")
 	b.WriteString("Reference cv.md as the source-of-truth resume. ")
-	b.WriteString("Length 250-350 words, paragraph form (no bullets unless the JD form specifically asks). ")
-	b.WriteString("End with a clear close.\n")
+	b.WriteString("Follow templates/cover-letter.md exactly. ")
+	b.WriteString("Body-only format: NO header metadata block (no `# NN Cover Letter` heading, no `**URL:**`, no `**Resume:**`, no `---` separator, no `## Cover Letter` section heading), ")
+	b.WriteString("NO contact block, NO date line, NO recipient address, NO greeting (no `Hi X team,` / `Dear Y,`), ")
+	b.WriteString("NO closing meta-line (no `Resume attached.`), NO sign-off (no `Sincerely,` / `Thanks,` / name-at-bottom), NO `## Things deliberately NOT included` audit footer. ")
+	b.WriteString("The file starts on the first body paragraph and ends on the last body paragraph, nothing else. ")
+	b.WriteString("Length 250-350 words, flowing paragraphs (one paragraph = one continuous markdown line, blank line between paragraphs, no triple-backtick code fence, no hard wraps).\n")
 	return b.String()
 }
 

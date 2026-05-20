@@ -33,9 +33,11 @@ const STATES_FILE = existsSync(join(CAREER_OPS, 'templates/states.yml'))
 mkdirSync(join(CAREER_OPS, 'data'), { recursive: true });
 mkdirSync(REPORTS_DIR, { recursive: true });
 
+// SKIP removed 2026-05-10 — legacy term migrated to Discarded across the tracker.
+// Anything still emitting SKIP is a bug; flag it as an error.
 const CANONICAL_STATUSES = [
   'triaged', 'evaluated', 'applied', 'responded', 'interview',
-  'offer', 'rejected', 'discarded', 'skip',
+  'offer', 'rejected', 'discarded',
 ];
 
 const ALIASES = {
@@ -181,6 +183,124 @@ for (const e of entries) {
   }
 }
 if (boldScores === 0) ok('No bold in scores');
+
+// --- Check 8: Required headers in eval reports (Issue 13 prevention) ---
+// Per modes/_shared.md rule 11, every eval report must have **URL:** and **Resume:**
+let missingUrlHeader = 0;
+let missingResumeHeader = 0;
+function walkReports(dir) {
+  const out = [];
+  if (!existsSync(dir)) return out;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === '_misc') continue;
+      out.push(...walkReports(p));
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      // Eval reports only — skip CL / Q files / pending stub
+      if (entry.name.includes('-cover-letter') ||
+          entry.name.includes('-application-questions') ||
+          entry.name.includes('-application-answers') ||
+          entry.name.includes('-form-answers') ||
+          entry.name === 'pending.md') continue;
+      if (!/^\d+-/.test(entry.name)) continue;
+      out.push(p);
+    }
+  }
+  return out;
+}
+const evalReports = walkReports(REPORTS_DIR);
+for (const path of evalReports) {
+  const body = readFileSync(path, 'utf-8');
+  if (!/^\*\*URL:\*\*/m.test(body)) {
+    warn(`${path.replace(CAREER_OPS + '/', '')}: missing **URL:** header (dashboard O-key won't work)`);
+    missingUrlHeader++;
+  }
+  if (!/^\*\*Resume:\*\*/m.test(body)) {
+    warn(`${path.replace(CAREER_OPS + '/', '')}: missing **Resume:** header (per modes/_shared.md rule 11)`);
+    missingResumeHeader++;
+  }
+}
+if (missingUrlHeader === 0) ok(`All ${evalReports.length} eval reports have **URL:** header`);
+if (missingResumeHeader === 0) ok(`All ${evalReports.length} eval reports have **Resume:** header`);
+
+// --- Check 9: Tracker date == report file date (Issue 12 prevention) ---
+// Only enforced for pre-apply rows. Post-apply rows (Applied/Responded/
+// Interview/Offer/Rejected) carry the apply-day stamp in their Date column
+// — the dashboard rewrites it on status transition so the Progress chart
+// attributes activity to the actual apply day. For those rows, Date != file
+// date is expected and correct.
+const PRE_APPLY = new Set(['triaged', 'evaluated', 'discarded']);
+let dateMismatches = 0;
+for (const e of entries) {
+  const m = e.report.match(/reports\/[^/]+\/\d+-.+?-(\d{4}-\d{2}-\d{2})\.md/);
+  if (!m) continue;
+  const norm = e.status.replace(/\*\*/g, '').replace(/\s+\d{4}-\d{2}-\d{2}.*$/, '').trim().toLowerCase();
+  if (!PRE_APPLY.has(norm)) continue;  // post-apply: skip the check
+  if (m[1] !== e.date) {
+    warn(`#${e.num}: tracker Date=${e.date} but report file=${m[1]} (pre-apply row, dates should match)`);
+    dateMismatches++;
+  }
+}
+if (dateMismatches === 0) ok('Tracker Date matches report file date on all pre-apply rows');
+
+// --- Check 10: Orphan cover letters / Q-files (Issues 6+8 prevention) ---
+let orphanCls = 0;
+let orphanQs = 0;
+const referencedCls = new Set();
+const referencedQs = new Set();
+for (const e of entries) {
+  for (const m of e.notes.matchAll(/\(reports\/[^)]+-cover-letter\.md\)/g)) {
+    referencedCls.add(m[0].slice(1, -1));
+  }
+  for (const m of e.notes.matchAll(/\(reports\/[^)]+(?:-application-questions|-application-answers|-form-answers)\.md\)/g)) {
+    referencedQs.add(m[0].slice(1, -1));
+  }
+}
+function walkSpecial(dir, suffixRe) {
+  const out = [];
+  if (!existsSync(dir)) return out;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...walkSpecial(p, suffixRe));
+    else if (suffixRe.test(entry.name)) out.push(p.replace(CAREER_OPS + '/', ''));
+  }
+  return out;
+}
+const allCls = walkSpecial(REPORTS_DIR, /-cover-letter\.md$/);
+const allQs = walkSpecial(REPORTS_DIR, /-(application-questions|application-answers|form-answers)\.md$/);
+for (const cl of allCls) if (!referencedCls.has(cl)) { warn(`Orphan cover letter: ${cl}`); orphanCls++; }
+for (const q of allQs) if (!referencedQs.has(q)) { warn(`Orphan form-answer file: ${q}`); orphanQs++; }
+if (orphanCls === 0) ok(`All ${allCls.length} cover letters referenced in tracker`);
+if (orphanQs === 0) ok(`All ${allQs.length} form-answer files referenced in tracker`);
+
+// --- Check 11: Brand-alias in tracker (Issue 11 prevention) ---
+// If portals.yml has company_aliases, check that no row uses a subsidiary slug.
+let aliasViolations = 0;
+const portalsPath = join(CAREER_OPS, 'portals.yml');
+if (existsSync(portalsPath)) {
+  const aliases = {};
+  const portalLines = readFileSync(portalsPath, 'utf-8').split('\n');
+  let inAliases = false;
+  for (const line of portalLines) {
+    if (/^company_aliases:\s*$/.test(line)) { inAliases = true; continue; }
+    if (inAliases) {
+      if (/^\S/.test(line) && !/^#/.test(line)) break;
+      const m = line.match(/^\s+([a-z0-9-]+):\s*([a-z0-9-]+)\s*(#.*)?$/);
+      if (m) aliases[m[1]] = m[2];
+    }
+  }
+  for (const e of entries) {
+    const m = e.report.match(/reports\/([^/]+)\//);
+    if (!m) continue;
+    const folderSlug = m[1];
+    if (aliases[folderSlug]) {
+      warn(`#${e.num}: report under subsidiary slug "${folderSlug}" — should be under canonical "${aliases[folderSlug]}"`);
+      aliasViolations++;
+    }
+  }
+}
+if (aliasViolations === 0) ok('No brand-alias slug violations');
 
 // --- Summary ---
 console.log('\n' + '='.repeat(50));

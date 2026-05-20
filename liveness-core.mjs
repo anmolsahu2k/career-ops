@@ -34,7 +34,42 @@ const APPLY_PATTERNS = [
   /easy apply/i,
   /start application/i,
   /ich bewerbe mich/i,
+  // Workday and other ATS often label the apply CTA as something other than
+  // "Apply" until you sign in. Without these the classifier flags 80+ live
+  // Workday postings as "uncertain".
+  /\bautofill (with|from)\b/i,
+  /autofill resume/i,
+  /\bi(?:'|’)m interested\b/i,
+  /express interest/i,
+  /\bget started\b/i,
+  /\bcontinue\b/i,
+  /\bsign in (?:to|and) apply\b/i,
+  /\bcreate (an )?account\b/i,
+  /\bview job\b/i,
+  /\brefer (a )?friend\b/i,
 ];
+
+// Hosts known to be JS-rendered (SPA). Liveness checker bumps the SPA
+// hydration wait for these so apply buttons appear before classification.
+const SPA_HOSTS = [
+  /myworkdayjobs\.com/i,
+  /\.icims\.com/i,
+  /jobs\.lever\.co/i,
+  /ashbyhq\.com/i,
+  /greenhouse\.io/i,
+  /workable\.com/i,
+  /bamboohr\.com/i,
+  /\.smartrecruiters\.com/i,
+  /successfactors\.com/i,
+  /taleo\.net/i,
+  /metacareers\.com/i,
+  /apply\.careers\.microsoft\.com/i,
+  /lifeattiktok\.com/i,
+];
+
+export function isSpaHost(url = '') {
+  return SPA_HOSTS.some((p) => p.test(url));
+}
 
 const MIN_CONTENT_CHARS = 300;
 

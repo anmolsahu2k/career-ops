@@ -40,7 +40,6 @@ When using [Gemini CLI](https://github.com/google-gemini/gemini-cli), the follow
 | Command | Claude Code Equivalent | Description |
 |---------|------------------------|-------------|
 | `/career-ops` | `/career-ops` | Show menu or evaluate JD |
-| `/career-ops-pipeline` | `/career-ops pipeline` | Process pending URLs from inbox |
 | `/career-ops-evaluate` | `/career-ops oferta` | Evaluate job offer (A-G scoring) |
 | `/career-ops-compare` | `/career-ops ofertas` | Compare and rank multiple offers |
 | `/career-ops-contact` | `/career-ops contacto` | LinkedIn outreach |
@@ -85,8 +84,7 @@ If `modes/_profile.md` is missing, copy from `modes/_profile.template.md` silent
 | Evaluates portfolio project | read `modes/project.md` |
 | Asks about application status | read `modes/tracker.md` |
 | Fills out application form | read `modes/_shared.md` + `modes/apply.md` |
-| Searches for new offers | read `modes/_shared.md` + `modes/scan.md` |
-| Processes pending URLs | read `modes/_shared.md` + `modes/pipeline.md` |
+| Searches for new offers | read `modes/_shared.md` + `modes/scan.md` (scan + eval inline; no triage state) |
 | Batch processes offers | read `modes/_shared.md` + `modes/batch.md` |
 | Asks about rejection patterns | read `modes/patterns.md` |
 | Asks about follow-ups | read `modes/followup.md` |
@@ -96,8 +94,8 @@ If `modes/_profile.md` is missing, copy from `modes/_profile.template.md` silent
 | File | Function |
 |------|----------|
 | `data/applications.md` | Application tracker |
-| `data/pipeline.md` | Inbox of pending URLs |
 | `portals.yml` | Query and company config |
+| `data/scan-results-{date}.tsv` | Transient scan output, consumed by inline eval pass (no inbox/triage state) |
 | `templates/cv-template.html` | HTML template for CVs |
 | `generate-pdf.mjs` | Playwright: HTML to PDF |
 | `article-digest.md` | Proof points from portfolio (optional) |

@@ -17,6 +17,7 @@ type ViewerClosedMsg struct{}
 // ViewerModel implements an integrated file viewer screen.
 type ViewerModel struct {
 	lines        []string
+	displayRows  []string // pre-rendered, word-wrapped rows that drive scrolling
 	title        string
 	scrollOffset int
 	width        int
@@ -31,13 +32,15 @@ func NewViewerModel(t theme.Theme, path, title string, width, height int) Viewer
 		content = []byte("Error reading file: " + err.Error())
 	}
 
-	return ViewerModel{
+	m := ViewerModel{
 		lines:  strings.Split(string(content), "\n"),
 		title:  title,
 		width:  width,
 		height: height,
 		theme:  t,
 	}
+	m.rebuildDisplay()
+	return m
 }
 
 func (m ViewerModel) Init() tea.Cmd {
@@ -45,7 +48,12 @@ func (m ViewerModel) Init() tea.Cmd {
 }
 
 func (m *ViewerModel) Resize(width, height int) {
-	m.width = width
+	if m.width != width {
+		m.width = width
+		m.height = height
+		m.rebuildDisplay()
+		return
+	}
 	m.height = height
 }
 
@@ -57,7 +65,7 @@ func (m ViewerModel) Update(msg tea.Msg) (ViewerModel, tea.Cmd) {
 			return m, func() tea.Msg { return ViewerClosedMsg{} }
 
 		case "down", "j":
-			maxScroll := len(m.lines) - m.bodyHeight()
+			maxScroll := len(m.displayRows) - m.bodyHeight()
 			if maxScroll < 0 {
 				maxScroll = 0
 			}
@@ -72,7 +80,7 @@ func (m ViewerModel) Update(msg tea.Msg) (ViewerModel, tea.Cmd) {
 
 		case "pgdown", "ctrl+d":
 			jump := m.bodyHeight() / 2
-			maxScroll := len(m.lines) - m.bodyHeight()
+			maxScroll := len(m.displayRows) - m.bodyHeight()
 			if maxScroll < 0 {
 				maxScroll = 0
 			}
@@ -92,7 +100,7 @@ func (m ViewerModel) Update(msg tea.Msg) (ViewerModel, tea.Cmd) {
 			m.scrollOffset = 0
 
 		case "end", "G":
-			maxScroll := len(m.lines) - m.bodyHeight()
+			maxScroll := len(m.displayRows) - m.bodyHeight()
 			if maxScroll < 0 {
 				maxScroll = 0
 			}
@@ -100,8 +108,13 @@ func (m ViewerModel) Update(msg tea.Msg) (ViewerModel, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		if m.width != msg.Width {
+			m.width = msg.Width
+			m.height = msg.Height
+			m.rebuildDisplay()
+		} else {
+			m.height = msg.Height
+		}
 	}
 
 	return m, nil
@@ -164,11 +177,11 @@ func (m ViewerModel) renderHeader() string {
 	_ = lineInfo
 
 	scroll := right.Render(func() string {
-		if len(m.lines) == 0 {
+		if len(m.displayRows) == 0 {
 			return ""
 		}
 		pct := 0
-		maxScroll := len(m.lines) - m.bodyHeight()
+		maxScroll := len(m.displayRows) - m.bodyHeight()
 		if maxScroll > 0 {
 			pct = m.scrollOffset * 100 / maxScroll
 		}
@@ -196,54 +209,132 @@ func (m ViewerModel) renderBody() string {
 	bh := m.bodyHeight()
 	padStyle := lipgloss.NewStyle().Padding(0, 2)
 
-	if len(m.lines) == 0 {
+	if len(m.displayRows) == 0 {
 		emptyStyle := lipgloss.NewStyle().Foreground(m.theme.Subtext)
 		return padStyle.Render(emptyStyle.Render("(empty file)"))
 	}
 
 	end := m.scrollOffset + bh
-	if end > len(m.lines) {
-		end = len(m.lines)
+	if end > len(m.displayRows) {
+		end = len(m.displayRows)
 	}
-	visible := m.lines[m.scrollOffset:end]
-
-	// Render with table block detection
-	var styled []string
-	i := 0
-	for i < len(visible) {
-		if isTableLine(visible[i]) {
-			// Collect consecutive table lines
-			tableStart := i
-			for i < len(visible) && isTableLine(visible[i]) {
-				i++
-			}
-			tableLines := visible[tableStart:i]
-
-			// Also look ahead in full document for remaining table rows
-			// that may be just beyond the visible window, to get correct column widths
-			fullTableStart := m.scrollOffset + tableStart
-			fullTableEnd := fullTableStart
-			for fullTableEnd < len(m.lines) && isTableLine(m.lines[fullTableEnd]) {
-				fullTableEnd++
-			}
-			fullTable := m.lines[fullTableStart:fullTableEnd]
-
-			// Compute column widths from the full table, render only visible rows
-			colWidths := computeColumnWidths(fullTable, m.width-6)
-			rendered := m.renderTableBlock(tableLines, colWidths, fullTableStart)
-			styled = append(styled, rendered...)
-		} else {
-			styled = append(styled, m.styleLine(visible[i]))
-			i++
-		}
-	}
+	visible := append([]string(nil), m.displayRows[m.scrollOffset:end]...)
 
 	// Pad to fill height
-	for len(styled) < bh {
-		styled = append(styled, "")
+	for len(visible) < bh {
+		visible = append(visible, "")
 	}
 
-	return padStyle.Render(strings.Join(styled, "\n"))
+	return padStyle.Render(strings.Join(visible, "\n"))
+}
+
+// rebuildDisplay computes the flat list of pre-rendered display rows from
+// m.lines, applying word-wrapping to non-table content and the existing table
+// renderer to table blocks. Scrolling operates over this slice so that the
+// user never needs to scroll horizontally — every byte of the source file is
+// reachable by scrolling vertically.
+func (m *ViewerModel) rebuildDisplay() {
+	m.displayRows = m.displayRows[:0]
+	if len(m.lines) == 0 {
+		return
+	}
+
+	// Available content width (account for renderBody's Padding(0, 2) on each
+	// side and a small safety margin so styled glyphs never overshoot).
+	contentWidth := m.width - 4
+	if contentWidth < 10 {
+		// Fallback for very narrow / pre-sized states: render lines as-is.
+		for _, line := range m.lines {
+			m.displayRows = append(m.displayRows, m.styleLine(line))
+		}
+		return
+	}
+
+	i := 0
+	for i < len(m.lines) {
+		if isTableLine(m.lines[i]) {
+			tableStart := i
+			for i < len(m.lines) && isTableLine(m.lines[i]) {
+				i++
+			}
+			tableLines := m.lines[tableStart:i]
+			colWidths := computeColumnWidths(tableLines, m.width-6)
+			rendered := m.renderTableBlock(tableLines, colWidths, tableStart)
+			m.displayRows = append(m.displayRows, rendered...)
+			continue
+		}
+
+		for _, wrapped := range wrapLine(m.lines[i], contentWidth) {
+			m.displayRows = append(m.displayRows, m.styleLine(wrapped))
+		}
+		i++
+	}
+
+	// Clamp scrollOffset in case wrapping shrank the document below the
+	// previous offset (e.g., terminal got wider).
+	if maxScroll := len(m.displayRows) - m.bodyHeight(); m.scrollOffset > maxScroll {
+		if maxScroll < 0 {
+			maxScroll = 0
+		}
+		m.scrollOffset = maxScroll
+	}
+}
+
+// wrapLine word-wraps a single source line to the given visual width,
+// preserving leading whitespace on continuation rows so that wrapped bullet
+// or quote bodies stay visually aligned. Words longer than the wrap width
+// are hard-broken so URLs and similar tokens still fit.
+func wrapLine(line string, width int) []string {
+	if width <= 0 {
+		return []string{line}
+	}
+	runes := []rune(line)
+	if len(runes) <= width {
+		return []string{line}
+	}
+
+	indent := ""
+	for _, r := range runes {
+		if r == ' ' || r == '\t' {
+			indent += string(r)
+			continue
+		}
+		break
+	}
+	bodyWidth := width - len([]rune(indent))
+	if bodyWidth < 10 {
+		bodyWidth = width
+		indent = ""
+	}
+
+	body := runes[len([]rune(indent)):]
+	var out []string
+	start := 0
+	for start < len(body) {
+		if len(body)-start <= bodyWidth {
+			out = append(out, indent+string(body[start:]))
+			break
+		}
+		end := start + bodyWidth
+		breakAt := -1
+		for j := end; j > start; j-- {
+			if body[j] == ' ' {
+				breakAt = j
+				break
+			}
+		}
+		if breakAt == -1 {
+			out = append(out, indent+string(body[start:end]))
+			start = end
+		} else {
+			out = append(out, indent+string(body[start:breakAt]))
+			start = breakAt + 1
+		}
+	}
+	if len(out) == 0 {
+		return []string{line}
+	}
+	return out
 }
 
 // isTableLine checks if a line is part of a markdown table.

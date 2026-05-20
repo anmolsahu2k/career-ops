@@ -7,8 +7,9 @@ When the user asks to prep for an interview at a specific company+role, or when 
 1. **Company name** and **role title** (required)
 2. **Evaluation report** in `reports/` (if exists) — read for archetype, gaps, matched proof points
 3. **Story bank** at `interview-prep/story-bank.md` — read for existing prepared stories
-4. **CV** at `cv.md` + `article-digest.md` — read for proof points
-5. **Profile** at `config/profile.yml` + `modes/_profile.md` — read for candidate context
+4. **STAR+R framework** at `templates/star-plus-r-framework.md` — canonical scaffold for behavioral answers; the forced Reflection step is non-negotiable
+5. **CV** at `cv.md` + `article-digest.md` — read for proof points
+6. **Profile** at `config/profile.yml` + `modes/_profile.md` — read for candidate context
 
 ## Step 1 — Research
 

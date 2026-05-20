@@ -261,8 +261,10 @@ console.log('\n8. Mode file integrity');
 const expectedModes = [
   '_shared.md', '_profile.template.md', 'oferta.md', 'pdf.md', 'scan.md',
   'batch.md', 'apply.md', 'auto-pipeline.md', 'contacto.md', 'deep.md',
-  'ofertas.md', 'pipeline.md', 'project.md', 'tracker.md', 'training.md',
+  'ofertas.md', 'project.md', 'tracker.md', 'training.md',
 ];
+// Note: pipeline.md mode removed in Anmol's workspace per no-triage-state rule.
+// Scan + evaluation always run together; there is no inbox/triage queue.
 
 for (const mode of expectedModes) {
   if (fileExists(`modes/${mode}`)) {

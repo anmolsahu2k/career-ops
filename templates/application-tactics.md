@@ -476,4 +476,4 @@ surface, and which company-specific details to cite are mine.
 - Do not say "available pending visa logistics" or "subject to CPT processing." June 2026 stands alone.
 - Do not lie about AI tool use on a form that asked.
 - Do not fake a permanent address near a target office to look "local." Pittsburgh through Dec 2026 is the honest answer.
-- Do not promise to relocate to a country you cannot get a visa for in 6 weeks (e.g., Toronto for a Canadian-HQ company without a Canadian work permit). Pre-empt this in the cover letter (see Cohere precedent in `reports/002-cohere-cover-letter.md`).
+- Do not promise to relocate to a country you cannot get a visa for in 6 weeks (e.g., Toronto for a Canadian-HQ company without a Canadian work permit). Pre-empt this in the cover letter (see Cohere precedent in `reports/cohere/002-cohere-cover-letter.md`).

@@ -1,6 +1,6 @@
 # Scripts Reference
 
-All scripts live in the project root as `.mjs` modules and are exposed via `npm run <name>`.
+The core pipeline scripts live in the project root as `.mjs` modules and are exposed via `npm run <name>`. The discovery-ingest scripts (which pull candidates from aggregators and job boards) live in [scripts/](../scripts/) and are invoked directly with `python3` — see [Discovery ingest scripts](#discovery-ingest-scripts-scripts) at the bottom.
 
 ## Quick Reference
 
@@ -180,10 +180,33 @@ Each URL gets a verdict: `active`, `expired`, or `uncertain` with a reason.
 
 ## scan
 
-Zero-token portal scanner. Hits ATS APIs (Greenhouse, Ashby, Lever) and career pages directly — no LLM tokens consumed. Reads `portals.yml` for target companies and search queries, outputs matching listings to stdout and optionally appends to `data/pipeline.md`.
+Zero-token portal scanner. Hits ATS APIs (Greenhouse, Ashby, Lever) and career pages directly — no LLM tokens consumed. Reads `portals.yml` for target companies and search queries, outputs matching listings to stdout, and writes new candidates to a transient `data/scan-results-{YYYY-MM-DD}.tsv` for immediate inline evaluation by the calling skill (no triage state — see Anmol's CLAUDE.md Hard Rule 7).
 
 ```bash
 npm run scan
 ```
 
 **Exit codes:** `0` scan completed, `1` configuration error or no portals.yml found.
+
+---
+
+## Discovery ingest scripts (`scripts/`)
+
+These Python scripts pull candidate rows from aggregators and job boards. They are user-triggered (no cron, per CLAUDE.md Rule 6), invoked directly with `python3`, and each routes its raw rows through the shared filter chain in `discovery_filters.py` before writing `*.tsv` placeholders into `batch/tracker-additions/`. See [docs/ARCHITECTURE.md](ARCHITECTURE.md) for the per-source mechanism, volume, and flags.
+
+| Script | Source | Notes |
+|--------|--------|-------|
+| `aggregator-intake.py` | 8 public GitHub README aggregators | Highest-volume source; parses markdown/HTML job tables. |
+| `jobspy-ingest.py` | LinkedIn / Indeed / Google Jobs | Wraps python-jobspy; heavy URL churn at the liveness gate. |
+| `hiringcafe-ingest.py` | hiring.cafe | Rich payload (visa, comp, workplace type). Exposes `visa_sponsorship`. |
+| `adzuna-ingest.py` | Adzuna REST API | Needs `ADZUNA_APP_ID` + `ADZUNA_APP_KEY` env vars. |
+| `startupjobs-ingest.py` | startup.jobs | Playwright via subprocess; low yield (GTM/non-US heavy). |
+| `yc-ingest.py` | YC Work at a Startup | Playwright scrape of `/internships`. |
+| `hn-hiring-ingest.py` | HN "Ask HN: Who is hiring?" | Parses monthly thread via Algolia + items API. |
+| `levels-ingest.py` | levels.fyi/jobs/internships | Route is FTE-heavy; most rows dropped by the filter. |
+
+**Shared / utility:**
+
+- `discovery_filters.py` — canonical filter chain, dedup, and NN allocation imported by the ingest scripts above. Not run directly.
+- `prune-by-liveness.py` — post-liveness-gate cleanup; deletes expired placeholder TSVs and flags uncertain rows.
+- `reorg-reports-by-company.py` — canonical company-slug normalizer (cited by CLAUDE.md and `templates/cover-letter.md`); idempotent report reorganizer, dry-run by default.

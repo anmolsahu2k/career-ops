@@ -37,7 +37,6 @@ npx playwright install chromium
 | Portal scan | `modes/_shared.md` + `modes/scan.md` |
 | PDF generation | `modes/_shared.md` + `modes/pdf.md` |
 | Live application help | `modes/_shared.md` + `modes/apply.md` |
-| Pipeline inbox processing | `modes/_shared.md` + `modes/pipeline.md` |
 | Tracker status | `modes/tracker.md` |
 | Deep company research | `modes/deep.md` |
 | Training / certification review | `modes/training.md` |

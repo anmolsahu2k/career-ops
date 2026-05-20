@@ -37,8 +37,40 @@ const VERIFY = process.argv.includes('--verify');
 mkdirSync(join(CAREER_OPS, 'data'), { recursive: true });
 mkdirSync(ADDITIONS_DIR, { recursive: true });
 
-// Canonical states and aliases
-const CANONICAL_STATES = ['Triaged', 'Evaluated', 'Applied', 'Responded', 'Interview', 'Offer', 'Rejected', 'Discarded', 'SKIP'];
+// Canonical states. SKIP is intentionally NOT included here — it was the legacy
+// term and got migrated to Discarded in 2026-05-10 cleanup. Anything that scores
+// `SKIP` from a TSV will fall through to the warning-and-default-to-Evaluated path.
+const CANONICAL_STATES = ['Triaged', 'Evaluated', 'Applied', 'Responded', 'Interview', 'Offer', 'Rejected', 'Discarded'];
+
+// Brand-alias map: subsidiary slug -> canonical parent slug.
+// Loaded lazily from portals.yml so a single source of truth drives both
+// scan.mjs (URL-dedup) and merge-tracker.mjs (company-string dedup +
+// folder routing). Kills the cross-folder duplicate class observed in the
+// 2026-05-09 audit (Issue 11).
+let _companyAliases = null;
+function loadCompanyAliases() {
+  if (_companyAliases) return _companyAliases;
+  _companyAliases = {};
+  const portalsPath = join(CAREER_OPS, 'portals.yml');
+  if (!existsSync(portalsPath)) return _companyAliases;
+  const lines = readFileSync(portalsPath, 'utf-8').split('\n');
+  let inAliases = false;
+  for (const line of lines) {
+    if (/^company_aliases:\s*$/.test(line)) { inAliases = true; continue; }
+    if (inAliases) {
+      // Stop at next top-level key
+      if (/^\S/.test(line) && !/^#/.test(line)) break;
+      const m = line.match(/^\s+([a-z0-9-]+):\s*([a-z0-9-]+)\s*(#.*)?$/);
+      if (m) _companyAliases[m[1]] = m[2];
+    }
+  }
+  return _companyAliases;
+}
+
+function resolveAlias(slug) {
+  const aliases = loadCompanyAliases();
+  return aliases[slug] || slug;
+}
 
 function validateStatus(status) {
   const clean = status.replace(/\*\*/g, '').replace(/\s+\d{4}-\d{2}-\d{2}.*$/, '').trim();
@@ -72,7 +104,24 @@ function validateStatus(status) {
 }
 
 function normalizeCompany(name) {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Lowercase + strip non-alphanumeric, then resolve through the brand-alias map.
+  // E.g. "NetSuite" -> "netsuite" -> "oracle"; "Microsoft Research" -> "microsoftresearch"
+  // -> alias lookup tries both raw and slug-with-dashes form.
+  const stripped = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Also try the dashed form because aliases use dashed slugs ("microsoft-research")
+  const dashed = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const aliases = loadCompanyAliases();
+  if (aliases[dashed]) return aliases[dashed].replace(/-/g, '');
+  if (aliases[stripped]) return aliases[stripped].replace(/-/g, '');
+  return stripped;
+}
+
+// Returns the canonical folder slug for a given company name. Used when
+// routing a new report into reports/<slug>/ — feeds the same alias map so
+// "NetSuite" lands in reports/oracle/ rather than reports/netsuite/.
+function canonicalFolderSlug(name) {
+  const dashed = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return resolveAlias(dashed);
 }
 
 // Tokens that almost every role shares — must NOT count as signal.
@@ -98,12 +147,98 @@ const ROLE_STOPWORDS = new Set([
   'with', 'from', 'into', 'over', 'this', 'that',
 ]);
 
+// Role-abbreviation expansion. Maps short tokens (often filtered by the
+// >3-char rule, or that diverge across aggregators) to their canonical
+// expansion. Catches cases like "Engineering Intern - C&I" (#3113) vs
+// "Engineer Intern, Commercial and Industrial" (#3266) where the same
+// req gets rendered abbreviated in one feed and expanded in another.
+// Both forms get tokens [commercial, industrial] after expansion.
+const ROLE_ABBREVIATIONS = new Map([
+  ['c&i', 'commercial industrial'],
+  ['ci', 'commercial industrial'],   // when "&" gets stripped
+  ['ev', 'electric vehicle'],
+  ['ml', 'machine learning'],
+  ['ai', 'artificial intelligence'],
+  ['cv', 'computer vision'],
+  ['nlp', 'natural language processing'],
+  ['llm', 'large language model'],
+  ['sde', 'software development engineer'],
+  ['swe', 'software engineer'],
+  ['mle', 'machine learning engineer'],
+  ['mlops', 'machine learning operations'],
+  ['ds', 'data science'],
+  ['de', 'data engineer'],
+  ['da', 'data analyst'],
+  ['ba', 'business analyst'],
+  ['fde', 'forward deployed engineer'],
+  ['ux', 'user experience'],
+  ['ui', 'user interface'],
+  ['rd', 'research development'],
+  ['hpc', 'high performance computing'],
+  ['qa', 'quality assurance'],
+]);
+
+// Stem helper: collapse common English inflections so "engineer" matches
+// "engineering" / "engineered" / "engineers". Naive but adequate for role
+// titles which are short and stylized.
+function roleStem(token) {
+  if (token.length <= 4) return token;
+  // Order matters: longer suffixes first.
+  for (const suffix of ['ering', 'ation', 'ings', 'ies', 'ing', 'ers', 'ed', 'es', 'er', 's']) {
+    if (token.endsWith(suffix) && token.length - suffix.length >= 4) {
+      return token.slice(0, token.length - suffix.length);
+    }
+  }
+  return token;
+}
+
 function roleTokens(s) {
-  return s
+  // First pass: lowercase, replace non-alphanumeric with spaces, but PRESERVE
+  // the &-glued abbreviations (c&i → ci) by stripping & before splitting.
+  const normalized = s
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/&/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ');
+  // Second pass: expand known abbreviations IN PLACE so a single-token
+  // abbreviation (which the >3-char filter would otherwise drop) contributes
+  // its full multi-token expansion to the comparison.
+  const expanded = normalized
     .split(/\s+/)
-    .filter(w => w.length > 3 && !ROLE_STOPWORDS.has(w));
+    .filter(Boolean)
+    .flatMap(w => ROLE_ABBREVIATIONS.has(w) ? ROLE_ABBREVIATIONS.get(w).split(/\s+/) : [w]);
+  // Third pass: stop-word filter, length filter, then stem.
+  return expanded
+    .filter(w => w.length > 3 && !ROLE_STOPWORDS.has(w))
+    .map(roleStem);
+}
+
+// Mirror of `discovery_filters.normalize_url` (Python). Strips scheme, www.,
+// query, fragment, trailing slash, and the trailing /apply or /application
+// path suffix. For Workday URLs (`{tenant}.wd{N}.myworkdayjobs.com/...`),
+// collapses to `{tenant}/_{jobid}` so locale prefix (`/en-US/`), site segment,
+// location-encoded path, and aggregator-injected query params don't create
+// false-negative dedup. The 2026-05-10 #3534 (Philips, aggregator-redirected
+// with `utm_source=Simplify`) duplicate of #3524 (direct Workday URL with
+// `/en-US/` locale) was the trigger — both refer to Workday req `582261` but
+// only matched on company+role fuzzy after slipping past URL-fingerprint dedup.
+// Two URLs that normalize to the same string refer to the same job posting.
+function normalizeUrl(url) {
+  if (!url) return '';
+  let u = url.trim().toLowerCase();
+  u = u.split('?')[0].split('#')[0];
+  u = u.replace(/\/+$/, '');
+  u = u.replace(/^https?:\/\/(www\.)?/, '');
+  u = u.replace(/\/(apply|application)\/?$/, '');
+  const wdMatch = u.match(/^([^\/]+\.wd\d+\.myworkdayjobs\.com)\/.*_([a-z0-9][a-z0-9-]{3,})$/);
+  if (wdMatch) return `${wdMatch[1]}/_${wdMatch[2]}`;
+  return u;
+}
+
+// Pull the first http(s) URL out of a Notes / row blob.
+function extractUrl(blob) {
+  if (!blob) return '';
+  const m = blob.match(/https?:\/\/[^\s|)\]]+/);
+  return m ? m[0].replace(/[.,;)]+$/, '') : '';
 }
 
 function roleFuzzyMatch(a, b) {
@@ -284,9 +419,14 @@ for (const file of tsvFiles) {
   const addition = parseTsvContent(content, file);
   if (!addition) { skipped++; continue; }
 
-  // Check for duplicate by:
+  // Check for duplicate by (in order):
   // 1. Exact report number match
-  // 2. Company + role fuzzy match
+  // 2. Exact entry number match
+  // 3. Normalized URL match (catches the case where company+role tokens
+  //    diverge but the underlying ATS req URL is identical - e.g. when one
+  //    source returns the bare apply URL and another appends /application
+  //    or query strings)
+  // 4. Company + role fuzzy match
   const reportNum = extractReportNum(addition.report);
   let duplicate = null;
 
@@ -301,6 +441,21 @@ for (const file of tsvFiles) {
   if (!duplicate) {
     // Exact entry number match
     duplicate = existingApps.find(app => app.num === addition.num);
+  }
+
+  if (!duplicate) {
+    // Normalized URL match against any URL in the existing row's blob
+    // (Notes column or Report cell). This is a cross-source safety net.
+    const additionUrl = normalizeUrl(extractUrl(addition.notes) || extractUrl(addition.report));
+    if (additionUrl) {
+      duplicate = existingApps.find(app => {
+        const appBlob = `${app.notes || ''} ${app.raw || ''}`;
+        // existing rows can carry multiple URLs (CL link, eval URL, etc.);
+        // grab all and compare each.
+        const urls = [...appBlob.matchAll(/https?:\/\/[^\s|)\]]+/g)].map(m => normalizeUrl(m[0].replace(/[.,;)]+$/, '')));
+        return urls.some(u => u && u === additionUrl);
+      });
+    }
   }
 
   if (!duplicate) {

@@ -170,7 +170,6 @@ Career-ops is a single slash command with multiple modes:
 /career-ops batch          → Batch evaluate multiple offers
 /career-ops tracker        → View application status
 /career-ops apply          → Fill application forms with AI
-/career-ops pipeline       → Process pending URLs
 /career-ops contacto       → LinkedIn outreach message
 /career-ops deep           → Deep company research
 /career-ops training       → Evaluate a course/cert

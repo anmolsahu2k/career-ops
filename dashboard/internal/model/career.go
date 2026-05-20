@@ -31,6 +31,15 @@ type PipelineMetrics struct {
 	Actionable int
 }
 
+// TimeBucket selects the granularity of the time-series activity chart.
+type TimeBucket int
+
+const (
+	BucketDay TimeBucket = iota
+	BucketWeek
+	BucketMonth
+)
+
 // ProgressMetrics holds job search progress analytics.
 type ProgressMetrics struct {
 	// Funnel
@@ -39,8 +48,12 @@ type ProgressMetrics struct {
 	// Score distribution
 	ScoreBuckets []ScoreBucket
 
-	// Timeline (weekly activity)
-	WeeklyActivity []WeekActivity
+	// Applications-submitted activity, pre-bucketed at three granularities.
+	// Each slice covers a fixed trailing window (14 days / 8 weeks / 6 months)
+	// and includes zero-count entries so the chart shows gaps.
+	DailyActivity   []BucketActivity
+	WeeklyActivity  []BucketActivity
+	MonthlyActivity []BucketActivity
 
 	// Rates
 	ResponseRate  float64 // Responded / Applied
@@ -48,10 +61,10 @@ type ProgressMetrics struct {
 	OfferRate     float64 // Offer / Applied
 
 	// Averages
-	AvgScore     float64
-	TopScore     float64
-	TotalOffers  int
-	ActiveApps int // not skip/rejected/discarded
+	AvgScore    float64
+	TopScore    float64
+	TotalOffers int
+	ActiveApps  int // not skip/rejected/discarded
 }
 
 // FunnelStage represents one stage of the application funnel.
@@ -67,8 +80,9 @@ type ScoreBucket struct {
 	Count int
 }
 
-// WeekActivity represents application activity for a given ISO week.
-type WeekActivity struct {
-	Week  string // e.g., "2026-W14", "2026-W13"
+// BucketActivity represents application activity for a single time bucket
+// (a day, ISO week, or calendar month, depending on context).
+type BucketActivity struct {
+	Label string // e.g., "2026-05-08", "2026-W19", "2026-05"
 	Count int
 }

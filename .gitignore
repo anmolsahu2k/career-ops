@@ -1,15 +1,19 @@
-# Personal data
-# NOTE: These were excluded in santifer/career-ops (upstream) so system updates
-# wouldn't clobber user data. In our private fork (anmolsahu2k/career-ops), we
-# COMMIT these so cloud routines (Claude Code Routines, see routines/) can read
-# the tracker and update it. Pulling from santifer upstream is still safe because
-# upstream doesn't have these files at all, so a rebase can't overwrite them.
-
-# cv.md                                # NOW TRACKED — needed by routines for scoring
-# data/applications.md                 # NOW TRACKED — the live tracker
-# reports/*.md                         # NOW TRACKED — eval reports + cover letters
-# config/profile.yml                   # NOW TRACKED — needed for archetype mapping
-# portals.yml                          # NOW TRACKED — search config, daily-scan reads it
+# Personal data — NOT tracked (untracked + scrubbed from git history 2026-05-20).
+# Upstream santifer/career-ops already ignores most of these; this fork briefly
+# committed them so the (now-decommissioned) cloud routines could read them.
+# Routines are gone, so these stay personal-only and out of git.
+cv.md
+portals.yml
+config/profile.yml
+data/
+resumes/
+faculty_emails/
+interview-prep/
+prep/
+STATUS.md
+CHANGELOG.md
+INDEX.md
+# (config/profile.example.yml stays tracked — it is a template, not personal.)
 
 # Truly transient stuff that should never be committed
 data/.liveness-urls-*.txt
@@ -40,7 +44,7 @@ writing-samples/*
 **/Work\ experience-Project\ based*.md
 
 # User profile customization stays gitignored — it has narrative weighting
-# that's iterative; routines should not auto-touch it.
+# that's iterative; keep it local.
 modes/_profile.md
 
 # Python bytecode
@@ -68,4 +72,6 @@ package-lock.json
 
 *.tsv
 
-reports/*.md
+reports/*
+
+.playwright-mcp

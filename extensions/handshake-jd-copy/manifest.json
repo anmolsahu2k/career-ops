@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Handshake JD Copy",
+  "version": "0.1.0",
+  "description": "Copy a Handshake job's title, company, location, URL, and description as structured text for pasting into Claude Code (/career-ops).",
+  "host_permissions": [
+    "https://app.joinhandshake.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://app.joinhandshake.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_title": "Handshake JD Copy"
+  }
+}

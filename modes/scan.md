@@ -1,6 +1,8 @@
-# Modo: scan — Portal Scanner (Descubrimiento de Ofertas)
+# Modo: scan — Portal Scanner (Descubrimiento + Evaluación in-line)
 
-Escanea portales de empleo configurados, filtra por relevancia de título, y añade nuevas ofertas al pipeline para evaluación posterior.
+Escanea portales de empleo configurados, filtra por relevancia de título, y **evalúa cada oferta nueva inmediatamente** (no triage state).
+
+> **HARD OVERRIDE for Anmol's workspace (CLAUDE.md Rule 7):** Scan and evaluation can run together OR separately. There is no `data/pipeline.md` triage inbox. After `scan.mjs` writes `data/scan-results-{YYYY-MM-DD}.tsv`, the skill workflow has two valid completion modes: **(default — inline)** immediately evaluate every row through auto-pipeline (parallel agents) and DELETE the TSV before returning; **(scan-only mode, when invoked as `/career-ops scan scan-only`)** stop after the title-level filter, report counts, and leave the TSV on disk for a later invocation to consume. In split mode, the next `/career-ops` invocation MUST detect any pre-existing `data/scan-results-*.tsv` files and run the inline-evaluation pass against them before doing anything else; that pass is what deletes the TSV. The scan workflow is not complete until every candidate has either an eval report or an explicit drop reason logged in `scan-history.tsv`. The Spanish "pipeline.md / Pendientes" steps below are SUPERSEDED — read them as historical/upstream context only.
 
 > **Nota (v1.5+):** El escáner por defecto (`scan.mjs` / `npm run scan`) es **zero-token** y sólo consulta directamente las APIs públicas de Greenhouse, Ashby y Lever. Los niveles con Playwright/WebSearch descritos abajo son el flujo **agente** (ejecutado por Claude/Codex), no lo que hace `scan.mjs`. Si una empresa no tiene API Greenhouse/Ashby/Lever, `scan.mjs` la ignorará; para esos casos, el agente debe completar manualmente el Nivel 1 (Playwright) o Nivel 3 (WebSearch).
 
@@ -70,7 +72,7 @@ Los niveles son aditivos — se ejecutan todos, los resultados se mezclan y dedu
 
 1. **Leer configuración**: `portals.yml`
 2. **Leer historial**: `data/scan-history.tsv` → URLs ya vistas
-3. **Leer dedup sources**: `data/applications.md` + `data/pipeline.md`
+3. **Leer dedup source**: `data/applications.md` (no pipeline.md — triage state eliminated per Anmol's no-triage-state rule)
 
 4. **Nivel 1 — Playwright scan** (paralelo en batches de 3-5):
    Para cada empresa en `tracked_companies` con `enabled: true` y `careers_url` definida:
@@ -109,16 +111,15 @@ Los niveles son aditivos — se ejecutan todos, los resultados se mezclan y dedu
    - 0 keywords de `negative` deben aparecer
    - `seniority_boost` keywords dan prioridad pero no son obligatorios
 
-7. **Deduplicar** contra 3 fuentes:
+7. **Deduplicar** contra 2 fuentes:
    - `scan-history.tsv` → URL exacta ya vista
    - `applications.md` → empresa + rol normalizado ya evaluado
-   - `pipeline.md` → URL exacta ya en pendientes o procesadas
 
 7.5. **Verificar liveness de resultados de WebSearch (Nivel 3)** — ANTES de añadir a pipeline:
 
    Los resultados de WebSearch pueden estar desactualizados (Google cachea resultados durante semanas o meses). Para evitar evaluar ofertas expiradas, verificar con Playwright cada URL nueva que provenga del Nivel 3. Los Niveles 1 y 2 son inherentemente en tiempo real y no requieren esta verificación.
 
-   Para cada URL nueva de Nivel 3 (secuencial — NUNCA Playwright en paralelo):
+   Para cada URL nueva de Nivel 3 (parallel OK — see [_shared.md](_shared.md) Playwright entry; preferred pattern is one shared Chromium with N concurrent pages, e.g. [liveness-parallel.mjs](../liveness-parallel.mjs) at CONCURRENCY=20):
    a. `browser_navigate` a la URL
    b. `browser_snapshot` para leer el contenido
    c. Clasificar:
@@ -132,9 +133,35 @@ Los niveles son aditivos — se ejecutan todos, los resultados se mezclan y dedu
 
    **No interrumpir el scan entero si una URL falla.** Si `browser_navigate` da error (timeout, 403, etc.), marcar como `skipped_expired` y continuar con la siguiente.
 
-8. **Para cada oferta nueva verificada que pase filtros**:
-   a. Añadir a `pipeline.md` sección "Pendientes": `- [ ] {url} | {company} | {title}`
-   b. Registrar en `scan-history.tsv`: `{url}\t{date}\t{query_name}\t{title}\t{company}\tadded`
+8. **Para cada oferta nueva verificada que pase filtros (Anmol's workspace — no-triage rule):**
+   a. Registrar en `scan-history.tsv`: `{url}\t{date}\t{query_name}\t{title}\t{company}\tadded`
+   b. Acumular en `data/scan-results-{date}.tsv` (transient; consumed in step 12)
+   c. **DO NOT write to `data/pipeline.md`** — it does not exist as a triage queue.
+
+12. **Evaluation pass — REQUIRED in default mode, SKIPPED in `scan-only` mode:**
+    > **Mode check.** If invoked as `/career-ops scan scan-only` (or any equivalent split-mode flag the user passed), STOP here: report `{date}.tsv` row count + which company/role buckets, surface the TSV path, and exit. Do NOT dispatch eval agents and do NOT delete the TSV. Otherwise continue with steps a-h below to complete inline evaluation.
+    a. Read `data/scan-results-{date}.tsv` — list of N new candidates with title-level filter applied. (In split-mode resume, also pick up any older `data/scan-results-*.tsv` files left from prior scan-only invocations and process them in the same pass.)
+    b. Apply a second title-level filter to drop obvious non-targets (sales/GTM/marketing/HR/legal/finance/senior/staff/principal/non-target geo) without writing per-URL eval reports. Log dropped rows in `scan-history.tsv` with status `skipped_filter` and a one-line reason.
+    c. **Liveness gate (REQUIRED before agent dispatch).** Run `npm run liveness:bulk -- /tmp/scan-urls.txt /tmp/scan-liveness.tsv` over the surviving URLs (zero Claude tokens, ~2-5 min for hundreds of URLs at CONCURRENCY=20). For results classified `expired` (HTTP 404/410, "no longer available", nav-error, JS-only empty page): drop the URL with `scan-history.tsv` status `skipped_expired` and **do NOT dispatch an eval agent**. For results `uncertain` (typically iCIMS/Workday SPAs whose apply iframe didn't render): keep the URL but flag the resulting tracker row with `LIVENESS-UNCERTAIN {date}.` prefix in the Notes column. This typically saves 25-35% of agent compute by short-circuiting dead URLs before WebFetch retries blow time on them. Empirical baseline (2026-05-04): 742 URLs → 530 active, 157 expired, 55 uncertain in 212s wall time.
+    d. For surviving candidates, dispatch parallel evaluation agents (one batch per ~5 URLs). Each agent runs the full auto-pipeline per URL: WebFetch JD → A-F scoring → write report to `reports/{company-slug}/{NN}-{role-slug}-{date}.md` with `**URL:**` header → write a 9-column tracker line to `batch/tracker-additions/{NN}.tsv`.
+
+       **JD-snippet shortcut (Adzuna and other API-aggregator sources).** If the candidate row's Notes column carries a `jd_snippet:` field (the source API's ~500-char description, written at ingest time by `scripts/adzuna-ingest.py` and other adapters), use the snippet as the primary JD source for scoring. Adzuna in particular rate-limits the detail-page URL (`adzuna.com/details/{id}`) when N parallel eval agents WebFetch it simultaneously → HTTP 429 → eval falls back to title-only and flags `JD-FETCH-UNCERTAIN`. The snippet is sufficient for A-F scoring; WebFetch only if the snippet is empty or the role looks borderline and you want fuller context. Never fail the eval on 429: the snippet is the authoritative summary.
+    e. Pre-allocate sequential `NN` numbers from `max(applications.md ID, reports/ NN prefix) + 1`.
+    f. After all agents complete, merge `batch/tracker-additions/*.tsv` into `data/applications.md` and run `node verify-pipeline.mjs` for schema integrity.
+    g. Delete `data/scan-results-{date}.tsv` (transient — consumed).
+    h. The scan is complete only when every row in the original TSV has either an eval report (Evaluated/SKIP), a `skipped_filter` log line, or a `skipped_expired` log line.
+
+### Liveness gate cheat sheet (post-aggregator and post-merge)
+
+```bash
+# After aggregator-intake.py writes placeholder TSVs, before dispatching evals:
+npm run liveness:batch /tmp/liveness-results.tsv
+python3 scripts/prune-by-liveness.py
+
+# Periodically (recommended weekly) to keep applications.md clean:
+npm run liveness:batch /tmp/liveness-results.tsv
+python3 scripts/prune-by-liveness.py    # marks dead evaluated rows as Discarded
+```
 
 9. **Ofertas filtradas por título**: registrar en `scan-history.tsv` con status `skipped_title`
 10. **Ofertas duplicadas**: registrar con status `skipped_dup`
@@ -155,7 +182,7 @@ Regex genérico: `(.+?)(?:\s*[@|—–-]\s*|\s+at\s+)(.+?)$`
 
 Si se encuentra una URL no accesible públicamente:
 1. Guardar el JD en `jds/{company}-{role-slug}.md`
-2. Añadir a pipeline.md como: `- [ ] local:jds/{company}-{role-slug}.md | {company} | {title}`
+2. Anmol's workspace: añadir como fila en `data/scan-results-{date}.tsv` con `url=local:jds/{company}-{role-slug}.md` para que la evaluación inline lo lea desde disco. NO escribir a `pipeline.md` (no existe).
 
 ## Scan History
 
@@ -179,12 +206,12 @@ Ofertas encontradas: N total
 Filtradas por título: N relevantes
 Duplicadas: N (ya evaluadas o en pipeline)
 Expiradas descartadas: N (links muertos, Nivel 3)
-Nuevas añadidas a pipeline.md: N
+Nuevos candidatos: N escritos a data/scan-results-{date}.tsv
 
   + {company} | {title} | {query_name}
   ...
 
-→ Ejecuta /career-ops pipeline para evaluar las nuevas ofertas.
+→ Anmol's workspace: in default mode, continue to step 12 (evaluation pass) — every row in scan-results-{date}.tsv must be evaluated and the TSV deleted before the scan is complete. In `scan-only` mode, stop here and leave the TSV on disk for a follow-up `/career-ops` invocation to consume.
 ```
 
 ## Gestión de careers_url

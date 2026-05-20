@@ -92,8 +92,9 @@ const (
 	filterAll       = "all"
 	filterEvaluated = "evaluated"
 	filterApplied   = "applied"
+	filterResponded = "responded"
 	filterInterview = "interview"
-	filterSkip      = "skip"
+	filterOffer     = "offer"
 	filterRejected  = "rejected"
 	filterDiscarded = "discarded"
 	filterTop       = "top"
@@ -108,19 +109,23 @@ var pipelineTabs = []pipelineTab{
 	{filterAll, "ALL"},
 	{filterEvaluated, "EVALUATED"},
 	{filterApplied, "APPLIED"},
+	{filterResponded, "RESPONDED"},
 	{filterInterview, "INTERVIEW"},
+	{filterOffer, "OFFER"},
 	{filterTop, "TOP ≥4"},
-	{filterSkip, "SKIP"},
 	{filterRejected, "REJECTED"},
 	{filterDiscarded, "DISCARDED"},
 }
 
 var sortCycle = []string{sortScore, sortDate, sortCompany, sortStatus}
 
-var statusOptions = []string{"Evaluated", "Applied", "Responded", "Interview", "Offer", "Rejected", "Discarded", "SKIP"}
+// statusOptions: canonical statuses for dropdown / cycle. SKIP removed
+// 2026-05-10 — migrated to Discarded across the tracker; verify-pipeline
+// now flags SKIP as an error if it ever reappears.
+var statusOptions = []string{"Evaluated", "Applied", "Responded", "Interview", "Offer", "Rejected", "Discarded"}
 
 // statusGroupOrder defines display order for grouped view.
-var statusGroupOrder = []string{"interview", "offer", "responded", "applied", "evaluated", "skip", "rejected", "discarded"}
+var statusGroupOrder = []string{"interview", "offer", "responded", "applied", "evaluated", "rejected", "discarded"}
 
 // PipelineModel implements the career pipeline dashboard screen.
 type PipelineModel struct {
@@ -383,6 +388,24 @@ func (m PipelineModel) handleKey(msg tea.KeyMsg) (PipelineModel, tea.Cmd) {
 		if len(m.filtered) > 0 {
 			m.statusPicker = true
 			m.statusCursor = 0
+		}
+
+	case "d":
+		if app, ok := m.CurrentApp(); ok {
+			if data.NormalizeStatus(app.Status) == "discarded" {
+				m.flash = fmt.Sprintf("%s — already Discarded", app.Company)
+				m.flashIsErr = false
+				return m, nil
+			}
+			m.flash = fmt.Sprintf("Discarding %s — %s...", app.Company, app.Role)
+			m.flashIsErr = false
+			return m, func() tea.Msg {
+				return PipelineUpdateStatusMsg{
+					CareerOpsPath: m.careerOpsPath,
+					App:           app,
+					NewStatus:     "Discarded",
+				}
+			}
 		}
 
 	case "u":
@@ -958,6 +981,7 @@ func (m PipelineModel) renderHelp() string {
 		keyStyle.Render("Enter") + descStyle.Render(" report  ") +
 		keyStyle.Render("o") + descStyle.Render(" open URL  ") +
 		keyStyle.Render("c") + descStyle.Render(" change  ") +
+		keyStyle.Render("d") + descStyle.Render(" discard  ") +
 		keyStyle.Render("u") + descStyle.Render(" cover ltr  ") +
 		keyStyle.Render("v") + descStyle.Render(" view  ") +
 		keyStyle.Render("p") + descStyle.Render(" progress  ") +

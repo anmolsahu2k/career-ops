@@ -51,8 +51,8 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 | File | Function |
 |------|----------|
 | `data/applications.md` | Application tracker |
-| `data/pipeline.md` | Inbox of pending URLs |
 | `data/scan-history.tsv` | Scanner dedup history |
+| `data/scan-results-{date}.tsv` | Transient scanner output (consumed inline by skill; deleted after eval pass) |
 | `portals.yml` | Query and company config |
 | `templates/cv-template.html` | HTML template for CVs |
 | `templates/cv-template.tex` | LaTeX/Overleaf template for CVs |
@@ -76,7 +76,6 @@ When using [OpenCode](https://opencode.ai), the following slash commands are ava
 | Command | Claude Code Equivalent | Description |
 |---------|------------------------|-------------|
 | `/career-ops` | `/career-ops` | Show menu or evaluate JD with args |
-| `/career-ops-pipeline` | `/career-ops pipeline` | Process pending URLs from inbox |
 | `/career-ops-evaluate` | `/career-ops oferta` | Evaluate job offer (A-F scoring) |
 | `/career-ops-compare` | `/career-ops ofertas` | Compare and rank multiple offers |
 | `/career-ops-contact` | `/career-ops contacto` | LinkedIn outreach (find contacts + draft) |
@@ -101,7 +100,6 @@ When using the [Gemini CLI](https://github.com/google-gemini/gemini-cli), the fo
 | Command | Claude Code Equivalent | Description |
 |---------|------------------------|-------------|
 | `/career-ops` | `/career-ops` | Show menu or evaluate JD with args |
-| `/career-ops-pipeline` | `/career-ops pipeline` | Process pending URLs from inbox |
 | `/career-ops-evaluate` | `/career-ops oferta` | Evaluate job offer (A-G scoring) |
 | `/career-ops-compare` | `/career-ops ofertas` | Compare and rank multiple offers |
 | `/career-ops-contact` | `/career-ops contacto` | LinkedIn outreach (find contacts + draft) |
@@ -197,10 +195,10 @@ Once all files exist, confirm:
 >
 > Tip: Having a personal portfolio dramatically improves your job search. If you don't have one yet, the author's portfolio is also open source: github.com/santifer/cv-santiago — feel free to fork it and make it yours."
 
-Then suggest automation:
-> "Want me to scan for new offers automatically? I can set up a recurring scan every few days so you don't miss anything. Just say 'scan every 3 days' and I'll configure it."
+Then suggest manual cadence:
+> "Whenever you want fresh candidates, run `/career-ops scan` and I'll scrape, filter, and evaluate every survivor in one shot. No background schedule, no inbox to drain — you trigger it when you want it."
 
-If the user accepts, use the `/loop` or `/schedule` skill (if available) to set up a recurring `/career-ops scan` (or `/career-ops-scan` if using OpenCode). If those aren't available, suggest adding a cron job or remind them to run `/career-ops scan` (or `/career-ops-scan` if using OpenCode) periodically.
+(Anmol's workspace specifically forbids cron jobs and triage state — see CLAUDE.md Hard Rules 6 and 7. Other users may have different preferences; ask before suggesting `/loop` or `/schedule`.)
 
 ### Personalization
 
@@ -218,9 +216,9 @@ This system is designed to be customized by YOU (AI Agent). When the user asks y
 
 Default modes are in `modes/` (English). Additional language-specific modes are available:
 
-- **German (DACH market):** `modes/de/` — native German translations with DACH-specific vocabulary (13. Monatsgehalt, Probezeit, Kündigungsfrist, AGG, Tarifvertrag, etc.). Includes `_shared.md`, `angebot.md` (evaluation), `bewerben.md` (apply), `pipeline.md`.
-- **French (Francophone market):** `modes/fr/` — native French translations with France/Belgium/Switzerland/Luxembourg-specific vocabulary (CDI/CDD, convention collective SYNTEC, RTT, mutuelle, prévoyance, 13e mois, intéressement/participation, titres-restaurant, CSE, portage salarial, etc.). Includes `_shared.md`, `offre.md` (evaluation), `postuler.md` (apply), `pipeline.md`.
-- **Japanese (Japan market):** `modes/ja/` — native Japanese translations with Japan-specific vocabulary (正社員, 業務委託, 賞与, 退職金, みなし残業, 年俸制, 36協定, 通勤手当, 住宅手当, etc.). Includes `_shared.md`, `kyujin.md` (evaluation), `oubo.md` (apply), `pipeline.md`.
+- **German (DACH market):** `modes/de/` — native German translations with DACH-specific vocabulary (13. Monatsgehalt, Probezeit, Kündigungsfrist, AGG, Tarifvertrag, etc.). Includes `_shared.md`, `angebot.md` (evaluation), `bewerben.md` (apply). (`pipeline.md` removed in Anmol's workspace per no-triage-state rule.)
+- **French (Francophone market):** `modes/fr/` — native French translations with France/Belgium/Switzerland/Luxembourg-specific vocabulary (CDI/CDD, convention collective SYNTEC, RTT, mutuelle, prévoyance, 13e mois, intéressement/participation, titres-restaurant, CSE, portage salarial, etc.). Includes `_shared.md`, `offre.md` (evaluation), `postuler.md` (apply). (`pipeline.md` removed.)
+- **Japanese (Japan market):** `modes/ja/` — native Japanese translations with Japan-specific vocabulary (正社員, 業務委託, 賞与, 退職金, みなし残業, 年俸制, 36協定, 通勤手当, 住宅手当, etc.). Includes `_shared.md`, `kyujin.md` (evaluation), `oubo.md` (apply). (`pipeline.md` removed.)
 
 **When to use German modes:** If the user is targeting German-language job postings, lives in DACH, or asks for German output. Either:
 1. User says "use German modes" → read from `modes/de/` instead of `modes/`
@@ -310,7 +308,7 @@ Default modes are in `modes/` (English). Additional language-specific modes are 
 - Node.js (mjs modules), Playwright (PDF + scraping), YAML (config), HTML/CSS (template), Markdown (data), Canva MCP (optional visual CV)
 - Scripts in `.mjs`, configuration in YAML
 - Output in `output/` (gitignored), Reports in `reports/`
-- JDs in `jds/` (referenced as `local:jds/{file}` in pipeline.md)
+- JDs in `jds/` (referenced as `local:jds/{file}` in `data/scan-results-{date}.tsv` for the inline eval pass)
 - Batch in `batch/` (gitignored except scripts and prompt)
 - Report numbering: sequential 3-digit zero-padded, max existing + 1
 - **RULE: After each batch of evaluations, run `node merge-tracker.mjs`** to merge tracker additions and avoid duplications.

@@ -1,187 +1,168 @@
 #!/usr/bin/env python3
 # requirements: python-jobspy (pip install python-jobspy)
-"""
-jobspy-ingest.py -- A1 JobSpy adapter (W11 G1).
+"""jobspy-ingest.py - JobSpy adapter for the career-ops discovery pipeline.
 
-Wraps the python-jobspy library (https://github.com/speedyapply/JobSpy)
-to scrape LinkedIn / Indeed / Glassdoor / Google / ZipRecruiter for
-internship listings and emit them into the career-ops pipeline.
+Wraps python-jobspy (https://github.com/speedyapply/JobSpy) to scrape
+LinkedIn / Indeed / ZipRecruiter / Google Jobs for internship listings, then
+routes raw rows through the canonical filter chain in `discovery_filters.py`
+(same chain as `aggregator-intake.py`), then emits placeholder TSVs into
+`batch/tracker-additions/` for the standard liveness -> eval -> merge flow.
 
-Output: one TSV row per kept listing to
-  career-ops/batch/tracker-additions/{NNN}-{slug}-jobspy.tsv
+Pipeline (canonical, shared with all discovery sources):
+  scrape_jobs(per keyword x location) -> raw rows
+    -> apply_unified_filter():
+         title allow + deny  | season filter  | geo filter
+       | within-run URL dedup | tracker URL dedup | fingerprint dedup
+    -> emit TSVs at next_available_nn()..
+    -> standard liveness gate (npm run liveness:batch)
+    -> eval dispatch
+    -> merge-tracker.mjs
 
-NNN starts at 200 (jobspy bucket; aggregator uses 100s, handshake 300s).
+Multi-keyword sweep: --keyword accepts comma-separated terms.
+Multi-location sweep: --location accepts comma-separated locations (one query
+per keyword x location pair). Indeed especially benefits from per-metro
+queries; LinkedIn/ZipRecruiter accept country-string locations.
 
-Filters:
-  - Title must contain "intern" (case-insensitive).
-  - Title must match the target-role allow-list.
-  - is_remote OR location contains a US hint (state code, US city, "remote-us").
+Weekend-aware recency: default `--hours_old` is 168h on Mon-Thu and 240h on
+Fri-Sun (10 days) so weekend runs catch Friday-evening / Saturday postings
+that would otherwise fall outside a tight window.
+
+LinkedIn JD inlining: `linkedin_fetch_description=True` is set so the JD
+body is returned with each row, avoiding a downstream WebFetch round-trip
+during eval. Slower scrape but ~70% fewer eval-agent fetch failures.
+
+Glassdoor disabled: returns HTTP 400 "location not parsed" on country-string
+locations and python-jobspy doesn't expose city-level location IDs.
 
 Stop conditions: captcha or HTTP 429 from any site -> log to stderr,
-exit 1, message "JobSpy hit rate limit / captcha on {site}; stopped".
-
-Hard rules respected:
-  - No em-dashes or en-dashes in any emitted text.
-  - No CV PDFs, no F-1/CPT explainer text.
-  - Status uses canonical "Evaluated".
-  - Score is "0.0/5" (placeholder).
-  - PDF emoji is the cross mark.
-  - Report link points at reports/pending.md.
+continue to next keyword/location combo (don't exit), summarize at end.
 
 Usage:
-  python3 career-ops/scripts/jobspy-ingest.py \\
-      --keyword "software engineer intern" \\
-      --site linkedin,indeed,glassdoor \\
-      --hours_old 168 --limit 25 [--dry-run]
-
-Note: this script was NOT executed during W11 G1 because LinkedIn
-rate-limits aggressively. Run it off-hours and in small batches.
+  python3 scripts/jobspy-ingest.py
+      [--keyword "kw1,kw2,..."]
+      [--site linkedin,indeed,zip_recruiter,google]
+      [--location "United States,San Francisco CA,..."]
+      [--hours_old 168]      # auto-extends to 240 on Fri-Sun
+      [--limit 25]
+      [--no-clean]            # preserve existing jobspy TSVs (for incremental runs)
+      [--dry-run]
 """
 
 import argparse
 import datetime as _dt
-import re
 import sys
-from pathlib import Path
+import time
 
-SCRIPT_PATH = Path(__file__).resolve()
-CAREER_OPS = SCRIPT_PATH.parent.parent
-BATCH_DIR = CAREER_OPS / "batch" / "tracker-additions"
-
-# Rule 1: never emit en-dash (U+2013) or em-dash (U+2014) into candidate-facing text.
-# Built from chr() so the source file has no literal en/em-dash characters.
-EM_DASH_RE = re.compile("[" + chr(0x2013) + chr(0x2014) + "]")
-
-TARGET_ROLE_TOKENS = [
-    "software", "swe", "sde", "backend", "front", "full stack", "fullstack",
-    "full-stack", "platform", "infra", "infrastructure", "devops", "sre",
-    "site reliability", "cloud", "data engineer", "data eng", "data analyst",
-    "data science", "data scientist", "machine learning", "ml ", "mle",
-    "ai ", "applied scientist", "research engineer", "research scientist",
-    "research intern", "deep learning", "nlp", "computer vision", "perception",
-    "robotics", "engineer", "developer", "appsec", "security", "qa",
-    "quality", "solutions", "analytics", "analyst",
-]
-
-ROLE_DENY_TOKENS = [
-    "manager", "senior", " staff ", "principal", "director", "vp ",
-    "vice president", "head of", "lead ", "marketing", "sales", " hr ",
-    "human resources", "finance", "accounting", "consultant", "consulting",
-    "strategy", "operations", "recruiter", "designer", "ux ", "ui ",
-    "graphic", "content writer", "copywriter", "product manager", " pm ",
-    "program manager", "project manager",
-]
-
-US_STATE_CODES = {
-    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
-    "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS",
-    "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK",
-    "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV",
-    "WI", "WY", "DC",
-}
-
-US_CITY_HINTS = [
-    "new york", "san francisco", "seattle", "austin", "boston", "chicago",
-    "los angeles", "san jose", "sunnyvale", "mountain view", "palo alto",
-    "redmond", "menlo park", "san diego", "atlanta", "dallas", "denver",
-    "houston", "miami", "philadelphia", "phoenix", "portland", "raleigh",
-    "salt lake city", "san mateo", "santa clara", "santa monica",
-    "washington", "detroit", "minneapolis", "pittsburgh", "nashville",
-    "columbus", "san bruno", "bellevue", "cambridge", "irvine", "cupertino",
-    "foster city", "newark", "jersey city", "ann arbor", "remote us",
-    "remote, us", "remote-us", "us remote", "u.s.",
-]
+import discovery_filters as df
 
 
-def clean_text(s):
-    if s is None:
-        return ""
-    s = EM_DASH_RE.sub(",", str(s))
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+DEFAULT_KEYWORDS = (
+    "software engineer intern,"
+    "machine learning intern,"
+    "data science intern,"
+    "ai engineer intern,"
+    "data engineer intern,"
+    "backend engineer intern"
+)
+
+# Multi-location sweep. "United States" is the broad query (best for LinkedIn,
+# Google). Per-metro entries help Indeed which yields more results when given
+# city-level locations. Separator is `|` not `,` because city,state strings
+# ("San Francisco, CA") contain commas. Keep this list short to avoid rate
+# limits (4 locations x 6 keywords x 3 sites ~= 24 jobspy calls).
+DEFAULT_LOCATIONS = "United States|San Francisco, CA|New York, NY|Remote"
+
+# Sites: LinkedIn (high-yield, captcha-prone), Indeed (better with per-metro),
+# Google (Google Jobs aggregator, pulls from many indexed sources).
+# Disabled:
+# - Glassdoor: 400s on country-string locations, lib doesn't expose city IDs
+# - ZipRecruiter: returns 403 Cloudflare ("forbidden aa") from any IP-without-
+#   subscription as of 2026-05-04, attempted-and-removed
+DEFAULT_SITES = "linkedin,indeed,google"
+
+WEEKEND_DAYS = {4, 5, 6}  # Friday=4, Saturday=5, Sunday=6 per datetime.weekday()
+WEEKDAY_HOURS = 168       # 7 days
+WEEKEND_HOURS = 240       # 10 days, catches Fri-evening / Sat / Sun postings
+
+INTER_SWEEP_SLEEP = 5     # seconds between (keyword, location) sweeps - reduces LinkedIn captcha risk
 
 
-def slugify(name):
-    s = name.lower()
-    s = EM_DASH_RE.sub("-", s)
-    s = re.sub(r"[^a-z0-9]+", "-", s)
-    return s.strip("-")[:60] or "company"
-
-
-def role_matches_targets(role):
-    rl = " " + role.lower() + " "
-    if "intern" not in rl:
-        return False
-    if not any(tok in rl for tok in TARGET_ROLE_TOKENS):
-        return False
-    if any(tok in rl for tok in ROLE_DENY_TOKENS):
-        return False
-    return True
-
-
-def location_is_us(location, is_remote):
-    if is_remote:
-        return True
-    if not location:
-        return False
-    loc = location.lower()
-    if any(h in loc for h in US_CITY_HINTS):
-        return True
-    if " usa" in loc or "united states" in loc or loc.endswith(", us"):
-        return True
-    for code in US_STATE_CODES:
-        if re.search(r"[,\s]" + code + r"\b", location):
-            return True
-    return False
-
-
-def emit_tsv(num, date, company, role, url, site, dry_run):
-    slug = slugify(company)
-    path = BATCH_DIR / f"{num:03d}-{slug}-jobspy.tsv"
-
-    notes = (
-        f"JobSpy discovery via {site}. URL: {url}. "
-        "Not yet evaluated; promote to per-role eval before applying."
-    )
-    notes = EM_DASH_RE.sub(",", notes)
-
-    cols = [
-        str(num),
-        date,
-        company,
-        role,
-        "Evaluated",
-        "0.0/5",
-        "❌",
-        "[%03d](reports/pending.md)" % num,
-        notes,
-    ]
-    line = "\t".join(cols) + "\n"
-
-    if dry_run:
-        return path, line
-    BATCH_DIR.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(line)
-    return path, line
+def weekend_aware_hours(today, base_hours):
+    """If running on Fri/Sat/Sun and base is the default 168h, slide to 240h.
+    If user passed a non-default --hours_old, respect it as-is."""
+    if base_hours == WEEKDAY_HOURS and today.weekday() in WEEKEND_DAYS:
+        return WEEKEND_HOURS
+    return base_hours
 
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--keyword", default="software engineer intern")
+    p.add_argument(
+        "--keyword",
+        default=DEFAULT_KEYWORDS,
+        help="comma-separated list of search terms; one scrape per term",
+    )
     p.add_argument(
         "--site",
-        default="linkedin,indeed,glassdoor",
-        help="comma-separated jobspy sites",
+        default=DEFAULT_SITES,
+        help="comma-separated jobspy sites (default: linkedin,indeed,zip_recruiter,google; glassdoor disabled, broken on country-string locations)",
     )
-    p.add_argument("--hours_old", type=int, default=168, help="recency window in hours")
-    p.add_argument("--limit", type=int, default=25, help="max results per site")
-    p.add_argument("--location", default="United States")
+    p.add_argument(
+        "--location",
+        default=DEFAULT_LOCATIONS,
+        help="pipe-separated locations (use `|` not `,` because city,state strings contain commas); one query per (keyword, location) pair",
+    )
+    p.add_argument(
+        "--hours_old",
+        type=int,
+        default=WEEKDAY_HOURS,
+        help=f"recency window in hours (default {WEEKDAY_HOURS}h Mon-Thu, "
+             f"auto-extends to {WEEKEND_HOURS}h on Fri-Sun)",
+    )
+    p.add_argument("--limit", type=int, default=25, help="results per site per (keyword, location)")
+    p.add_argument(
+        "--max-age-days",
+        type=int,
+        default=df.MAX_AGE_DAYS_DEFAULT,
+        help="drop rows older than this (default %(default)s)",
+    )
+    p.add_argument(
+        "--no-clean",
+        action="store_true",
+        help="preserve existing jobspy TSVs in batch dir (for incremental / additive runs)",
+    )
+    p.add_argument(
+        "--inline-jd",
+        action="store_true",
+        help="fetch LinkedIn JD body during scrape (linkedin_fetch_description=True). "
+             "Slower (~5x per LinkedIn sweep) but doubles as a free liveness gate "
+             "and avoids the eval-agent WebFetch round-trip. Off by default until "
+             "downstream consumes the JD body from the TSV.",
+    )
+    p.add_argument("--no-tracker-dedup", action="store_true", help="debugging only")
+    p.add_argument(
+        "--time-budget",
+        type=int,
+        default=480,
+        help="max wall-seconds to spend on the sweep matrix (default 480s = 8min). "
+             "LinkedIn calls are slow and the orchestrator was previously SIGKILLing "
+             "the script mid-sweep; this lets the script exit cleanly with partial "
+             "results, run the unified filter on what it has, and emit TSVs.",
+    )
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args(argv)
 
     sites = [s.strip() for s in args.site.split(",") if s.strip()]
-    today = _dt.date.today().isoformat()
+    keywords = [k.strip() for k in args.keyword.split(",") if k.strip()]
+    locations = [l.strip() for l in args.location.split("|") if l.strip()]
+    today = _dt.date.today()
+    today_iso = today.isoformat()
+
+    # Weekend-aware hours_old.
+    effective_hours = weekend_aware_hours(today, args.hours_old)
+    weekend_note = ""
+    if effective_hours != args.hours_old:
+        weekend_note = f" (weekend slide: {args.hours_old}h -> {effective_hours}h, today is {today.strftime('%A')})"
 
     try:
         from jobspy import scrape_jobs  # type: ignore
@@ -192,94 +173,153 @@ def main(argv=None):
         )
         return 2
 
-    print(f"# jobspy-ingest run {today}", file=sys.stderr)
-    print(f"  keyword={args.keyword!r} sites={sites} hours_old={args.hours_old} limit={args.limit}", file=sys.stderr)
+    print(f"# jobspy-ingest run {today_iso}", file=sys.stderr)
+    print(f"  sites={sites}", file=sys.stderr)
+    print(f"  keywords ({len(keywords)}): {keywords}", file=sys.stderr)
+    print(f"  locations ({len(locations)}): {locations}", file=sys.stderr)
+    print(f"  hours_old={effective_hours}{weekend_note}, limit={args.limit}/site/(keyword,location)", file=sys.stderr)
+    print(f"  total scrape calls: {len(keywords) * len(locations)} ({len(keywords)} keywords x {len(locations)} locations)", file=sys.stderr)
 
-    # Clear stale jobspy TSVs (200-299 bucket) to avoid orphans on re-run.
-    if not args.dry_run and BATCH_DIR.exists():
+    # Clean stale jobspy TSVs from batch dir (unless --no-clean).
+    if not args.dry_run and df.BATCH_DIR.exists() and not args.no_clean:
         cleared = 0
-        for f in BATCH_DIR.glob("*-jobspy.tsv"):
-            try:
-                lead = int(f.name.split("-", 1)[0])
-            except ValueError:
-                continue
-            if 200 <= lead <= 299:
-                f.unlink()
-                cleared += 1
+        for f in df.BATCH_DIR.glob("*-jobspy.tsv"):
+            f.unlink()
+            cleared += 1
         if cleared:
-            print(f"  cleared {cleared} stale jobspy TSVs", file=sys.stderr)
+            print(f"  cleared {cleared} stale jobspy TSVs (use --no-clean to keep them)", file=sys.stderr)
+    elif args.no_clean:
+        print("  --no-clean: preserving existing jobspy TSVs", file=sys.stderr)
 
-    try:
-        # python-jobspy >= 1.x rejects `is_remote=None` via pydantic; omit the
-        # kwarg to fall back to the library default (returns both remote and
-        # on-site postings, which is what we want).
-        jobs = scrape_jobs(
-            site_name=sites,
-            search_term=args.keyword,
-            location=args.location,
-            results_wanted=args.limit,
-            hours_old=args.hours_old,
-            country_indeed="USA",
-        )
-    except Exception as exc:  # broad: jobspy raises various site-specific exceptions
-        msg = str(exc).lower()
-        if "captcha" in msg or "429" in msg or "rate" in msg or "blocked" in msg:
-            offending = "unknown"
-            for s in sites:
-                if s in msg:
-                    offending = s
-                    break
-            print(
-                f"JobSpy hit rate limit / captcha on {offending}; stopped",
-                file=sys.stderr,
-            )
-            return 1
-        print(f"jobspy error: {exc}", file=sys.stderr)
-        return 1
+    # Tracker dedup signatures.
+    if args.no_tracker_dedup:
+        existing_urls, existing_fps = set(), set()
+        print("  skipping tracker dedup (--no-tracker-dedup)", file=sys.stderr)
+    else:
+        existing_urls, existing_fps = df.collect_existing_signatures()
+        print(f"  tracker baseline: {len(existing_urls)} URLs, {len(existing_fps)} fingerprints", file=sys.stderr)
 
-    if jobs is None or len(jobs) == 0:
-        print("  no rows returned", file=sys.stderr)
+    # Multi-keyword x multi-location sweep.
+    raw_rows = []
+    captcha_hits = []
+    skipped_combos = 0
+    sweep_count = 0
+    total_sweeps = len(keywords) * len(locations)
+    sweep_started = time.monotonic()
+    budget_exit = False
+    for keyword in keywords:
+        if budget_exit:
+            break
+        for location in locations:
+            if time.monotonic() - sweep_started > args.time_budget:
+                remaining = total_sweeps - sweep_count
+                print(
+                    f"  time-budget {args.time_budget}s exceeded; exiting sweep "
+                    f"early with {sweep_count}/{total_sweeps} done ({remaining} skipped). "
+                    f"Partial results will still be filtered + emitted.",
+                    file=sys.stderr,
+                )
+                budget_exit = True
+                break
+            sweep_count += 1
+            label = f"[{sweep_count}/{total_sweeps}] {keyword!r} @ {location!r}"
+            try:
+                jobs = scrape_jobs(
+                    site_name=sites,
+                    search_term=keyword,
+                    location=location,
+                    results_wanted=args.limit,
+                    hours_old=effective_hours,
+                    country_indeed="USA",
+                    linkedin_fetch_description=args.inline_jd,
+                )
+            except Exception as exc:
+                msg = str(exc).lower()
+                if "captcha" in msg or "429" in msg or "rate" in msg or "blocked" in msg:
+                    offending = "unknown"
+                    for s in sites:
+                        if s in msg:
+                            offending = s
+                            break
+                    captcha_hits.append((keyword, location, offending))
+                    skipped_combos += 1
+                    print(f"  {label}: captcha/rate-limit on {offending}, skipping", file=sys.stderr)
+                else:
+                    skipped_combos += 1
+                    print(f"  {label}: error {exc}", file=sys.stderr)
+                # Don't exit - continue with the next combo so partial yield survives.
+                # Sleep extra after a captcha to give the offending site time to cool off.
+                time.sleep(INTER_SWEEP_SLEEP * 2)
+                continue
+
+            if jobs is None or len(jobs) == 0:
+                print(f"  {label}: 0 rows", file=sys.stderr)
+            else:
+                rows = jobs.to_dict(orient="records") if hasattr(jobs, "to_dict") else list(jobs)
+                print(f"  {label}: {len(rows)} raw rows", file=sys.stderr)
+
+                for r in rows:
+                    raw_rows.append({
+                        "title": r.get("title") or r.get("job_title") or "",
+                        "company": r.get("company") or r.get("employer") or "",
+                        "url": r.get("job_url") or r.get("url") or "",
+                        "location": r.get("location") or "",
+                        "is_remote": bool(r.get("is_remote") or False),
+                        "age_days": None,  # jobspy filters by hours_old at query time
+                        "site": r.get("site") or "jobspy",
+                        "description": r.get("description") or "",  # JD body if linkedin_fetch_description worked
+                    })
+
+            # Pace between sweeps to reduce captcha risk on later calls.
+            if sweep_count < total_sweeps:
+                time.sleep(INTER_SWEEP_SLEEP)
+
+    if captcha_hits:
+        print(f"\n  captcha summary: {len(captcha_hits)} sweep(s) blocked", file=sys.stderr)
+        for k, l, s in captcha_hits[:5]:
+            print(f"    - {s}: keyword={k!r} location={l!r}", file=sys.stderr)
+        if len(captcha_hits) > 5:
+            print(f"    ... and {len(captcha_hits) - 5} more", file=sys.stderr)
+
+    if not raw_rows:
+        print("  no rows returned across all sweeps", file=sys.stderr)
         return 0
 
-    # jobs is a pandas DataFrame; iterate via to_dict
-    rows = jobs.to_dict(orient="records") if hasattr(jobs, "to_dict") else list(jobs)
-    raw = len(rows)
-    print(f"  raw rows: {raw}", file=sys.stderr)
+    attempted = sweep_count
+    successful = attempted - skipped_combos
+    print(
+        f"  total raw rows: {len(raw_rows)} from {successful}/{total_sweeps} successful sweeps "
+        f"({attempted} attempted; {total_sweeps - attempted} skipped by time-budget)",
+        file=sys.stderr,
+    )
 
-    kept = []
-    seen_urls = set()
-    for r in rows:
-        title = clean_text(r.get("title") or r.get("job_title") or "")
-        company = clean_text(r.get("company") or r.get("employer") or "")
-        location = clean_text(r.get("location") or "")
-        url = clean_text(r.get("job_url") or r.get("url") or "")
-        is_remote = bool(r.get("is_remote") or False)
-        site = clean_text(r.get("site") or "")
+    # Canonical filter chain (shared with aggregator-intake.py).
+    kept, drops = df.apply_unified_filter(
+        raw_rows,
+        source_tag="jobspy",
+        max_age_days=args.max_age_days,
+        existing_urls=existing_urls,
+        existing_fps=existing_fps,
+    )
+    print(f"  drops: {drops}", file=sys.stderr)
+    print(f"  kept after unified filter: {len(kept)}", file=sys.stderr)
 
-        if not company or not title or not url:
-            continue
-        if not role_matches_targets(title):
-            continue
-        if not location_is_us(location, is_remote):
-            continue
-        key = url.split("?")[0].rstrip("/").lower()
-        if key in seen_urls:
-            continue
-        seen_urls.add(key)
-        kept.append((title, company, url, site or "jobspy"))
-
-    print(f"  kept after filter + dedupe: {len(kept)}", file=sys.stderr)
+    # Allocate sequential NNs from next_available_nn().
+    start_nn = df.next_available_nn()
+    print(f"  starting NN: {start_nn}", file=sys.stderr)
 
     written = []
-    for offset, (title, company, url, site) in enumerate(kept):
-        num = 200 + offset
-        path, _line = emit_tsv(
+    for offset, row in enumerate(kept):
+        num = start_nn + offset
+        path, _line = df.emit_tsv(
             num=num,
-            date=today,
-            company=company,
-            role=title,
-            url=url,
-            site=site,
+            date=today_iso,
+            company=row["company"],
+            role=row["title"],
+            url=row["url"],
+            source=row.get("site", "jobspy"),
+            age_days=None,
+            suffix="jobspy",
             dry_run=args.dry_run,
         )
         written.append(path)
@@ -287,7 +327,7 @@ def main(argv=None):
     if args.dry_run:
         print(f"[dry-run] would write {len(written)} TSV files", file=sys.stderr)
     else:
-        print(f"wrote {len(written)} TSV files to {BATCH_DIR}", file=sys.stderr)
+        print(f"wrote {len(written)} TSV files to {df.BATCH_DIR}", file=sys.stderr)
     return 0
 
 

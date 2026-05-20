@@ -3,14 +3,17 @@
 """
 aggregator-intake.py -- B6/B7/B8 + SimplifyJobs README aggregator (W11 G1).
 
-Pulls four public GitHub READMEs that maintain markdown-table summer 2026
-internship listings, parses the tables, dedupes by URL, filters for
-target-role internships in the US (or remote, including India remote),
-and emits one TSV row per kept listing to
+Pulls public GitHub READMEs that maintain markdown-table summer 2026
+internship listings, parses the tables, dedupes by URL (intra-batch AND
+against existing tracker rows), drops off-season postings (Fall 2026 /
+Spring 2027 / Summer 2027 / Winter), filters for target-role internships
+in the US (or remote, including India remote), and emits one TSV row per
+kept listing to
   career-ops/batch/tracker-additions/{NNN}-{slug}-aggregator.tsv
 
-NNN starts at 100 (aggregator bucket; jobspy uses 200s, handshake uses 300s
-to avoid filename collisions during parallel runs).
+NNN allocation is dynamic: starts at max(applications.md NN, existing
+batch/tracker-additions/*.tsv NN, 100) + 1. This avoids collisions with
+the 138-row tracker that already spans NN 1-257.
 
 Output TSV is 9 tab-separated columns matching the merge-tracker.mjs
 contract (status BEFORE score; merge-tracker handles the column swap when
@@ -42,11 +45,31 @@ from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve()
 CAREER_OPS = SCRIPT_PATH.parent.parent
-BATCH_DIR = CAREER_OPS / "batch" / "tracker-additions"
 DATA_DIR = CAREER_OPS / "data"
 LOG_DIR = DATA_DIR
 
+# Canonical constants + helpers live in discovery_filters.py and are shared
+# with all discovery sources (jobspy-ingest.py, future handshake-ingest.py,
+# etc.). Import them so adding a deny-list token or fixing a regex propagates
+# to every source automatically.
+import discovery_filters as df
+from discovery_filters import (
+    BATCH_DIR, APPS_FILE, REPORTS_DIR,
+    TARGET_ROLE_TOKENS, ROLE_DENY_TOKENS,
+    US_STATE_CODES, US_CITY_HINTS, REMOTE_HINTS,
+    SEASON_DENY_RE, AGE_TOKEN_RE, MONTH_NAMES,
+    URL_RE, EM_DASH_RE, MAX_AGE_DAYS_DEFAULT,
+    parse_age, parse_date_posted, normalize_url,
+    role_in_season, _normalize_company, _normalize_role,
+    collect_existing_signatures, next_available_nn,
+    slugify, clean_text, is_internship,
+    is_brand_denied, is_phd_only_title,
+)
+MERGED_DIR = BATCH_DIR / "merged"
+
 SOURCES = [
+    # speedyapply (both SWE and AI) expose an "Age" column with values like
+    # "5d", "1mo", "8w", "12h" — parsed by parse_age() into integer days.
     {
         "name": "speedyapply-swe",
         "url": "https://raw.githubusercontent.com/speedyapply/2026-SWE-College-Jobs/main/README.md",
@@ -55,82 +78,60 @@ SOURCES = [
         "name": "speedyapply-ai",
         "url": "https://raw.githubusercontent.com/speedyapply/2026-AI-College-Jobs/main/README.md",
     },
+    # vanshb03 exposes a "Date Posted" column with values like "Apr 29" or
+    # "Apr 24" (month abbrev + day, no year) — parsed by parse_date_posted().
     {
         "name": "vanshb03-summer2027",
         "url": "https://raw.githubusercontent.com/vanshb03/Summer2027-Internships/main/README.md",
     },
+    # SimplifyJobs exposes age inline in the apply-button cell as "Xd" / "Xmo"
+    # — parsed by the same parse_age() function.
     {
         # SimplifyJobs default branch is "dev" (not "main"); main returns 404.
         "name": "simplifyjobs-summer2026",
         "url": "https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/README.md",
     },
+    # jobright-ai family added 2026-05-05. User asked for "aaronwangj/awesome-
+    # ai-internships" but that repo doesn't exist; the closest live analog is
+    # the jobright-ai org's per-domain repos (157+52+35+25 stars). Default
+    # branch is `master` (not `main`). Tables use markdown pipe rows with
+    # company/role/location/type/posted columns. Date column uses "May 05"
+    # format (parsed by parse_date_posted). Apply URLs go through
+    # jobright.ai/jobs/info/{hash}?utm_campaign=1079&utm_source=git which
+    # 302-redirects to the canonical employer ATS — works fine for liveness
+    # gate and eval-agent fetch.
     {
-        # PrepAIJobs uses 5-col schema: Company | Role | Location | Apply | Posted
-        # with emoji headers (find_col matches via case-insensitive substring).
-        "name": "prepaijobs-summer2026",
-        "url": "https://raw.githubusercontent.com/PrepAIJobs/Summer2026-Internships/main/README.md",
+        "name": "jobright-ai-swe",
+        "url": "https://raw.githubusercontent.com/jobright-ai/2026-Software-Engineer-Internship/master/README.md",
     },
     {
-        # summer2026internships uses 4-col schema: Company | Role | Location | Link.
-        "name": "summer2026internships",
-        "url": "https://raw.githubusercontent.com/summer2026internships/Summer2026-Internships/main/README.md",
+        "name": "jobright-ai-engineer",
+        "url": "https://raw.githubusercontent.com/jobright-ai/2026-Engineer-Internship/master/README.md",
     },
+    {
+        "name": "jobright-ai-data-analysis",
+        "url": "https://raw.githubusercontent.com/jobright-ai/2026-Data-Analysis-Internship/master/README.md",
+    },
+    {
+        "name": "jobright-ai-summary",
+        "url": "https://raw.githubusercontent.com/jobright-ai/2026-Internship/master/README.md",
+    },
+    # PrepAIJobs and summer2026internships were dropped 2026-05-03: both
+    # README tables are stale (no recent updates) and contributed mostly
+    # off-cycle / already-closed postings. Re-add only if they resume daily
+    # updates with a parseable freshness signal.
 ]
 
-# Role allow-list: must contain at least one of these case-insensitive tokens.
-TARGET_ROLE_TOKENS = [
-    "software", "swe", "sde", "backend", "front", "full stack", "fullstack",
-    "full-stack", "platform", "infra", "infrastructure", "devops", "sre",
-    "site reliability", "cloud", "data engineer", "data eng", "data analyst",
-    "data science", "data scientist", "machine learning", "ml ", "mle",
-    "ai ", "applied scientist", "research engineer", "research scientist",
-    "research intern", "deep learning", "nlp", "computer vision", "perception",
-    "robotics", "engineer", "developer", "appsec", "security", "qa",
-    "quality", "solutions", "analytics", "analyst",
-]
-
-# Role deny-list: skip out-of-scope roles even if they match an allow token.
-ROLE_DENY_TOKENS = [
-    "manager", "senior", " staff ", "principal", "director", "vp ",
-    "vice president", "head of", "lead ", "marketing", "sales", " hr ",
-    "human resources", "finance", "accounting", "consultant", "consulting",
-    "strategy", "operations", "recruiter", "designer", "ux ", "ui ",
-    "graphic", "content writer", "copywriter", "product manager", " pm ",
-    "program manager", "project manager",
-]
-
-US_STATE_CODES = {
-    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
-    "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS",
-    "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK",
-    "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV",
-    "WI", "WY", "DC",
-}
-
-US_CITY_HINTS = [
-    "new york", "san francisco", "seattle", "austin", "boston", "chicago",
-    "los angeles", "san jose", "sunnyvale", "mountain view", "palo alto",
-    "redmond", "menlo park", "san diego", "atlanta", "dallas", "denver",
-    "houston", "miami", "philadelphia", "phoenix", "portland", "raleigh",
-    "salt lake city", "san mateo", "santa clara", "santa monica",
-    "washington", "detroit", "minneapolis", "pittsburgh", "nashville",
-    "columbus", "san bruno", "bellevue", "cambridge", "irvine", "cupertino",
-    "foster city", "newark", "jersey city", "ann arbor", "remote us",
-    "remote, us", "remote-us", "us remote", "u.s.",
-]
-
-# Remote-anywhere markers we still accept (rule 5: India remote acceptable).
-REMOTE_HINTS = [
-    "remote", "anywhere", "work from home", "wfh",
-]
-
-# Markdown link regex: captures the inner URL.
+# Markdown-table parsing regexes (aggregator-specific; not shared).
 LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 EMOJI_LINK_RE = re.compile(r"<a [^>]*href=\"([^\"]+)\"[^>]*>")
 HTML_TAG_RE = re.compile(r"<[^>]+>")
-# Rule 1: never emit en-dash (U+2013) or em-dash (U+2014) into candidate-facing text.
-# Built from chr() so the source file has no literal en/em-dash characters.
-EM_DASH_RE = re.compile("[" + chr(0x2013) + chr(0x2014) + "]")
+# (TARGET_ROLE_TOKENS, ROLE_DENY_TOKENS, US_STATE_CODES, US_CITY_HINTS,
+# REMOTE_HINTS, SEASON_DENY_RE, AGE_TOKEN_RE, MONTH_NAMES, URL_RE, EM_DASH_RE,
+# parse_age, parse_date_posted, normalize_url, role_in_season,
+# _normalize_company, _normalize_role, collect_existing_signatures,
+# next_available_nn, slugify, clean_text, is_internship are all imported from
+# discovery_filters above.)
 
 
 def fetch(url, timeout=30):
@@ -150,6 +151,10 @@ def strip_md(text):
     if not text:
         return ""
     text = HTML_TAG_RE.sub(" ", text)
+    # Collapse markdown links `[display](url)` to just `display`. Otherwise
+    # jobright-ai aggregator rows leak the URL into the Company/Role
+    # columns, which the dashboard renders as raw markdown noise.
+    text = LINK_RE.sub(r"\1", text)
     text = text.replace("**", "").replace("`", "")
     text = EM_DASH_RE.sub(",", text)  # rule 1: no em/en dashes
     text = re.sub(r"\s+", " ", text).strip()
@@ -176,18 +181,16 @@ def first_link(cell):
     return None
 
 
-def slugify(name):
-    s = name.lower()
-    s = EM_DASH_RE.sub("-", s)
-    s = re.sub(r"[^a-z0-9]+", "-", s)
-    s = s.strip("-")
-    return s[:60] or "company"
+# slugify and is_internship are imported from discovery_filters above.
 
-
-def is_internship(role, type_cell=""):
-    blob = f"{role} {type_cell}".lower()
-    return "intern" in blob
-
+# Aggregator-specific overrides (semantically different from the shared
+# module's defaults):
+# - role_matches_targets: aggregator does NOT require "intern" in the title
+#   itself, because is_internship() runs separately and accepts intern signal
+#   from the type_cell.
+# - location_is_us_or_remote: aggregator accepts MISSING location as US-OK
+#   (many aggregator rows have no location column at all). The shared module
+#   default for jobspy/etc. rejects missing location.
 
 def role_matches_targets(role):
     rl = " " + role.lower() + " "
@@ -200,7 +203,6 @@ def role_matches_targets(role):
 
 def location_is_us_or_remote(location):
     if not location:
-        # If location is missing, accept (many aggregator rows omit it).
         return True
     loc = location.lower()
     if any(h in loc for h in REMOTE_HINTS):
@@ -209,7 +211,6 @@ def location_is_us_or_remote(location):
         return True
     if " usa" in loc or "united states" in loc or loc.endswith(", us"):
         return True
-    # Look for ", XX" state codes
     for code in US_STATE_CODES:
         if re.search(r"[,\s]" + code + r"\b", location):
             return True
@@ -321,6 +322,11 @@ def harvest_table(rows, source_name):
     # "Application"; vanshb03 uses "Application/Link".
     url_idx = find_col(header, "application", "apply", "posting", "link")
     type_idx = find_col(header, "type")
+    # Freshness: speedyapply has "Age" column ("5d", "1mo"); vanshb03 has
+    # "Date Posted" ("Apr 29"); SimplifyJobs encodes age inline in the apply
+    # cell with a "Xd" / "Xmo" badge — handled below as a fallback scan.
+    age_idx = find_col(header, "age")
+    date_posted_idx = find_col(header, "date posted", "posted", "date")
 
     # If we cannot identify a company column AND a role column, bail out.
     if company_idx is None or role_idx is None:
@@ -343,6 +349,17 @@ def harvest_table(rows, source_name):
         loc_cell = cells[loc_idx] if (loc_idx is not None and loc_idx < len(cells)) else ""
         url_cell_raw = raw[url_idx] if (url_idx is not None and url_idx < len(raw)) else ""
         type_cell = cells[type_idx] if (type_idx is not None and type_idx < len(cells)) else ""
+        age_cell = cells[age_idx] if (age_idx is not None and age_idx < len(cells)) else ""
+        date_posted_cell = cells[date_posted_idx] if (date_posted_idx is not None and date_posted_idx < len(cells)) else ""
+
+        # Resolve freshness. Try age column first (speedyapply, SimplifyJobs),
+        # fall back to date-posted (vanshb03), then last-resort scan the apply
+        # cell for an embedded badge token (SimplifyJobs HTML rows).
+        age_days = parse_age(age_cell)
+        if age_days is None:
+            age_days = parse_date_posted(date_posted_cell)
+        if age_days is None:
+            age_days = parse_age(url_cell_raw)
 
         # Resolve "same as above" markers
         if comp_cell in ("", "↳", "->", "\"", "''"):
@@ -365,16 +382,18 @@ def harvest_table(rows, source_name):
             "url": url.strip(),
             "type": type_cell,
             "source": source_name,
+            "age_days": age_days,  # int or None if source/row has no signal
         }
 
 
-def write_tsv(num, date, company, role, notes_url, source, dry_run):
+def write_tsv(num, date, company, role, notes_url, source, age_days, dry_run):
     slug = slugify(company)
     fname = f"{num:03d}-{slug}-aggregator.tsv"
     path = BATCH_DIR / fname
 
+    age_blurb = f"Posted {age_days}d ago. " if age_days is not None else "Age unknown. "
     notes = (
-        f"Aggregator discovery via {source}. URL: {notes_url}. "
+        f"Aggregator discovery via {source}. {age_blurb}URL: {notes_url}. "
         "Not yet evaluated; promote to per-role eval before applying."
     )
     notes = EM_DASH_RE.sub(",", notes)  # safety net
@@ -414,26 +433,40 @@ def main(argv=None):
         action="store_true",
         help="print what would be written without creating files",
     )
+    p.add_argument(
+        "--no-clean",
+        action="store_true",
+        help="skip clearing existing *-aggregator.tsv files (use when extending an in-flight batch)",
+    )
+    p.add_argument(
+        "--max-age-days",
+        type=int,
+        default=MAX_AGE_DAYS_DEFAULT,
+        help=f"drop rows whose posting is older than N days (default "
+             f"{MAX_AGE_DAYS_DEFAULT}). Rows with no parseable age are KEPT "
+             "(so vanshb03/SimplifyJobs rows missing dates aren't silently filtered).",
+    )
     args = p.parse_args(argv)
 
     today = _dt.date.today().isoformat()
     print(f"# aggregator-intake run {today}", file=sys.stderr)
 
-    # Clean up stale aggregator TSVs in our bucket (100-199) so re-runs don't
-    # leave orphan files when the dedupe / filter ordering shifts. Touch only
-    # files that match our suffix; never delete jobspy or handshake output.
-    if not args.dry_run and BATCH_DIR.exists():
+    # Clean up stale aggregator TSVs in batch/tracker-additions/ (NOT merged/)
+    # so re-runs don't leave orphan files when filter ordering shifts. We
+    # match by the `-aggregator.tsv` suffix only; jobspy and handshake output
+    # use different suffixes and are never touched. Skipped under --no-clean
+    # which is the right mode when extending an in-flight batch (in-flight
+    # TSVs are already in the dedup set from BATCH_DIR scan, so we won't
+    # rewrite them anyway).
+    if not args.dry_run and not args.no_clean and BATCH_DIR.exists():
         cleared = 0
         for f in BATCH_DIR.glob("*-aggregator.tsv"):
-            try:
-                lead = int(f.name.split("-", 1)[0])
-            except ValueError:
-                continue
-            if 100 <= lead <= 199:
-                f.unlink()
-                cleared += 1
+            f.unlink()
+            cleared += 1
         if cleared:
             print(f"  cleared {cleared} stale aggregator TSVs", file=sys.stderr)
+    elif args.no_clean:
+        print(f"  --no-clean: keeping existing aggregator TSVs in {BATCH_DIR}", file=sys.stderr)
 
     fetched_per_source = {}
     all_rows = []
@@ -458,8 +491,8 @@ def main(argv=None):
     seen = set()
     deduped = []
     for entry in all_rows:
-        key = entry["url"].split("?")[0].rstrip("/").lower()
-        if key in seen:
+        key = normalize_url(entry["url"])
+        if not key or key in seen:
             continue
         seen.add(key)
         deduped.append(entry)
@@ -467,34 +500,99 @@ def main(argv=None):
     after_dedup = len(deduped)
     print(f"  = {after_dedup} after URL dedupe", file=sys.stderr)
 
-    # Filter: must be internship + target role + US/remote
+    # Filter: must be internship + target role + US/remote + in-season +
+    # brand-allowed + non-PhD-only.
     kept = []
+    dropped_brand = dropped_phd = 0
     for entry in deduped:
         if not is_internship(entry["role"], entry.get("type", "")):
             continue
         if not role_matches_targets(entry["role"]):
+            continue
+        if not role_in_season(entry["role"]):
+            continue
+        if is_brand_denied(entry["company"]):
+            dropped_brand += 1
+            continue
+        if is_phd_only_title(entry["role"]):
+            dropped_phd += 1
             continue
         if not location_is_us_or_remote(entry.get("location", "")):
             continue
         kept.append(entry)
 
     after_filter = len(kept)
-    print(f"  = {after_filter} after target-role + US/remote filter", file=sys.stderr)
+    print(
+        f"  = {after_filter} after target-role + US/remote + season + brand + PhD filter "
+        f"({dropped_brand} brand-deny, {dropped_phd} PhD-only)",
+        file=sys.stderr,
+    )
 
-    # Per-source kept counts (post-filter)
+    # Age filter: drop rows older than --max-age-days. Rows with no parseable
+    # age signal (sources/columns that don't expose freshness) are KEPT, so a
+    # source-format change doesn't silently nuke the whole batch.
+    fresh = []
+    dropped_age = 0
     for entry in kept:
+        age = entry.get("age_days")
+        if age is not None and age > args.max_age_days:
+            dropped_age += 1
+            continue
+        fresh.append(entry)
+    kept = fresh
+    print(
+        f"  = {len(kept)} after age filter "
+        f"({dropped_age} dropped as > {args.max_age_days}d old; "
+        f"rows with no age signal kept by default)",
+        file=sys.stderr,
+    )
+
+    # Cross-dedup against existing tracker. Use BOTH URL match (catches the
+    # easy case) AND company+role fingerprint (catches the case where the
+    # aggregator has simplify.jobs/p/... redirects while applications.md has
+    # the direct ATS URL). Must run before --limit so the budget isn't eaten
+    # by rows merge-tracker.mjs would just discard.
+    existing_urls, existing_fps = collect_existing_signatures()
+    print(
+        f"  ~ {len(existing_urls)} URLs and {len(existing_fps)} company/role fingerprints "
+        f"known from applications.md + reports/",
+        file=sys.stderr,
+    )
+    novel = []
+    dropped_url = dropped_fp = 0
+    for e in kept:
+        if normalize_url(e["url"]) in existing_urls:
+            dropped_url += 1
+            continue
+        fp = (_normalize_company(e["company"]), _normalize_role(e["role"]))
+        if fp[0] and fp[1] and fp in existing_fps:
+            dropped_fp += 1
+            continue
+        novel.append(e)
+        existing_fps.add(fp)  # also dedup intra-batch by fingerprint
+    after_tracker_dedup = len(novel)
+    print(
+        f"  = {after_tracker_dedup} after tracker dedup "
+        f"({dropped_url} URL match, {dropped_fp} company+role fingerprint match)",
+        file=sys.stderr,
+    )
+
+    # Per-source kept counts (post-filter, post-tracker-dedup)
+    for entry in novel:
         s = fetched_per_source.get(entry["source"])
         if s:
             s["kept"] += 1
 
     if args.limit is not None:
-        kept = kept[: args.limit]
-        print(f"  = {len(kept)} after --limit", file=sys.stderr)
+        novel = novel[: args.limit]
+        print(f"  = {len(novel)} after --limit", file=sys.stderr)
 
-    # Emit TSVs starting at 100
+    # Emit TSVs with dynamic NN starting after the highest existing number.
+    start_nn = next_available_nn()
+    print(f"  NN allocation starts at {start_nn} (max existing + 1)", file=sys.stderr)
     written = []
-    for offset, entry in enumerate(kept):
-        num = 100 + offset
+    for offset, entry in enumerate(novel):
+        num = start_nn + offset
         path, _line = write_tsv(
             num=num,
             date=today,
@@ -502,6 +600,7 @@ def main(argv=None):
             role=entry["role"],
             notes_url=entry["url"],
             source=entry["source"],
+            age_days=entry.get("age_days"),
             dry_run=args.dry_run,
         )
         written.append((path, entry))
@@ -538,13 +637,17 @@ def main(argv=None):
             "",
             f"- Combined raw rows: {sum(s.get('raw', 0) for s in fetched_per_source.values())}",
             f"- After URL dedup: {after_dedup}",
-            f"- After target-role + US/remote filter: {after_filter}",
+            f"- After target-role + US/remote + season filter: {after_filter}",
+            f"- After cross-dedup vs applications.md + reports/: {after_tracker_dedup}",
             f"- TSVs written: {len(written)}",
             f"- Output dir: career-ops/batch/tracker-additions/",
             "",
             "Filter rules: role must contain a target token (SDE/AI/MLE/DS/DE/DA + ",
             "adjacents), must not contain a deny token (Senior/Manager/PM/Sales/etc.), ",
-            "location must be US, US-remote, or generic remote (India remote OK, no CPT).",
+            "must not match a SEASON_DENY pattern (Fall 2026 / Spring-Summer 2027+), ",
+            "location must be US, US-remote, or generic remote (India remote OK, no CPT). ",
+            "Then cross-dedup against URLs already in applications.md and reports/. ",
+            "NN allocation is dynamic: starts at max(applications.md NN, batch/*.tsv NN, 99) + 1.",
             "",
             "Next step: run merge-tracker.mjs, dedup-tracker.mjs, normalize-statuses.mjs, ",
             "then verify-pipeline.mjs from the career-ops/ directory.",

@@ -39,6 +39,11 @@ type appModel struct {
 }
 
 func (m *appModel) reloadPipelineData() {
+	if n, err := data.ExpireStaleEvaluations(m.careerOpsPath, time.Now()); err != nil {
+		fmt.Fprintf(os.Stderr, "WARN: auto-expire failed: %v\n", err)
+	} else if n > 0 {
+		m.pipeline.SetFlash(fmt.Sprintf("Auto-discarded %d stale evals (>21d)", n), false)
+	}
 	apps := data.ParseApplications(m.careerOpsPath)
 	metrics := data.ComputeMetrics(apps)
 	m.progressMetrics = data.ComputeProgressMetrics(apps)
@@ -189,6 +194,12 @@ func main() {
 
 	careerOpsPath := *pathFlag
 
+	// Sweep stale evaluations (>21d) into Discarded before loading.
+	staleFlipped, err := data.ExpireStaleEvaluations(careerOpsPath, time.Now())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "WARN: auto-expire failed: %v\n", err)
+	}
+
 	// Load applications
 	apps := data.ParseApplications(careerOpsPath)
 	if apps == nil {
@@ -212,6 +223,10 @@ func main() {
 		if archetype != "" || tldr != "" || remote != "" || comp != "" {
 			pm.EnrichReport(app.ReportPath, archetype, tldr, remote, comp)
 		}
+	}
+
+	if staleFlipped > 0 {
+		pm.SetFlash(fmt.Sprintf("Auto-discarded %d stale evals (>21d)", staleFlipped), false)
 	}
 
 	m := appModel{

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -480,9 +479,12 @@ func NormalizeStatus(raw string) string {
 	}
 
 	switch {
-	// Most restrictive first — accepts both English and Spanish
+	// Most restrictive first — accepts both English and Spanish.
+	// SKIP migrated to Discarded 2026-05-10; legacy SKIP / no-aplicar / geo-blocker
+	// strings are folded into Discarded so the dashboard never shows them as a
+	// separate category. Pre-migration buckets are dead.
 	case strings.Contains(s, "no aplicar") || strings.Contains(s, "no_aplicar") || s == "skip" || strings.Contains(s, "geo blocker"):
-		return "skip"
+		return "discarded"
 	case strings.Contains(s, "interview") || strings.Contains(s, "entrevista"):
 		return "interview"
 	case s == "offer" || strings.Contains(s, "oferta"):
@@ -542,6 +544,14 @@ func LoadReportSummary(careerOpsPath, reportPath string) (archetype, tldr, remot
 }
 
 // UpdateApplicationStatus updates the status of an application in applications.md.
+//
+// Side effect: when transitioning from a pre-apply state (Triaged / Evaluated /
+// Discarded / SKIP / empty) to a post-apply state (Applied / Responded /
+// Interview / Offer / Rejected), the Date column is rewritten to today so the
+// Progress screen attributes the application to the actual apply day rather
+// than the original evaluation day. Subsequent transitions inside the
+// post-apply set leave Date untouched (so going Applied → Interview keeps the
+// apply-day anchor). Pre-apply ↔ pre-apply transitions also leave Date alone.
 func UpdateApplicationStatus(careerOpsPath string, app model.CareerApplication, newStatus string) error {
 	filePath := filepath.Join(careerOpsPath, "applications.md")
 	content, err := os.ReadFile(filePath)
@@ -556,30 +566,188 @@ func UpdateApplicationStatus(careerOpsPath string, app model.CareerApplication, 
 	lines := strings.Split(string(content), "\n")
 	found := false
 
+	oldNorm := NormalizeStatus(app.Status)
+	newNorm := NormalizeStatus(newStatus)
+	stampApplyDate := isPreApply(oldNorm) && isPostApply(newNorm)
+
+	// Match by NN column (first field) — canonical, unique per row.
+	// Falls back to report-link match for rows where Number wasn't parsed
+	// (legacy / malformed rows).
+	nnPrefix := ""
+	if app.Number != 0 {
+		nnPrefix = fmt.Sprintf("| %d |", app.Number)
+	}
 	for i, line := range lines {
-		if !strings.HasPrefix(strings.TrimSpace(line), "|") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "|") {
 			continue
 		}
-		// Match by report number
-		if app.ReportNumber != "" && strings.Contains(line, fmt.Sprintf("[%s]", app.ReportNumber)) {
-			// Replace the status field
-			lines[i] = replaceStatusInLine(line, app.Status, newStatus)
-			found = true
-			break
+		matched := false
+		if nnPrefix != "" && strings.HasPrefix(trimmed, nnPrefix) {
+			matched = true
+		} else if nnPrefix == "" && app.ReportNumber != "" && strings.Contains(line, fmt.Sprintf("[%s]", app.ReportNumber)) {
+			matched = true
 		}
+		if !matched {
+			continue
+		}
+		updated := replaceStatusInLine(line, app.Status, newStatus)
+		if stampApplyDate {
+			updated = replaceDateInLine(updated, time.Now().Format("2006-01-02"))
+		}
+		lines[i] = updated
+		found = true
+		break
 	}
 
 	if !found {
-		return fmt.Errorf("application not found: report %s", app.ReportNumber)
+		return fmt.Errorf("application not found: NN=%d report=%s", app.Number, app.ReportNumber)
 	}
 
 	return os.WriteFile(filePath, []byte(strings.Join(lines, "\n")), 0644)
+}
+
+// isPreApply returns true for statuses that mean "not yet applied".
+// Empty status counts as pre-apply (rows imported from a placeholder).
+func isPreApply(norm string) bool {
+	switch norm {
+	case "triaged", "evaluated", "discarded", "skip", "":
+		return true
+	}
+	return false
+}
+
+// isPostApply returns true for statuses downstream of submission.
+// Mirrors the union the Progress chart uses to count "applied or further".
+func isPostApply(norm string) bool {
+	switch norm {
+	case "applied", "responded", "interview", "offer", "rejected":
+		return true
+	}
+	return false
 }
 
 // replaceStatusInLine replaces the old status with new status in a table line.
 func replaceStatusInLine(line, oldStatus, newStatus string) string {
 	// Case-insensitive replacement of the status field
 	return strings.Replace(line, oldStatus, newStatus, 1)
+}
+
+// replaceDateInLine rewrites the Date column (field index 2 in the 9-col
+// pipe-delimited tracker schema) to the given YYYY-MM-DD string. Surrounding
+// whitespace is preserved so the table stays well-formed.
+func replaceDateInLine(line, newDate string) string {
+	parts := strings.Split(line, "|")
+	if len(parts) < 11 {
+		return line
+	}
+	parts[2] = " " + newDate + " "
+	return strings.Join(parts, "|")
+}
+
+// ExpireStaleEvaluations sweeps applications.md and flips Evaluated rows whose
+// Date is older than 21 days to Discarded. The Notes column gets an audit
+// suffix appended. The rewrite is atomic (temp file + rename). Returns the
+// number of rows flipped; (0, nil) means the file was already clean.
+// Idempotent: already-Discarded rows are skipped.
+func ExpireStaleEvaluations(careerOpsPath string, now time.Time) (int, error) {
+	filePath := filepath.Join(careerOpsPath, "applications.md")
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		filePath = filepath.Join(careerOpsPath, "data", "applications.md")
+		content, err = os.ReadFile(filePath)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return 0, err
+	}
+
+	// Anchor cutoff to midnight so date-only Date column comparisons are
+	// calendar-day accurate (a row dated exactly 21 days ago is NOT flipped).
+	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	cutoff := midnight.AddDate(0, 0, -21)
+	today := now.Format("2006-01-02")
+	lines := strings.Split(string(content), "\n")
+	flipped := 0
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "|") ||
+			strings.HasPrefix(trimmed, "|---") ||
+			strings.HasPrefix(trimmed, "| #") {
+			continue
+		}
+		// Conservative: only rewrite pure-pipe rows, skip tab-mixed legacy rows.
+		if strings.Contains(trimmed, "\t") {
+			continue
+		}
+
+		inner := strings.Trim(trimmed, "|")
+		parts := strings.Split(inner, "|")
+		if len(parts) < 9 {
+			continue
+		}
+		fields := make([]string, len(parts))
+		for j, p := range parts {
+			fields[j] = strings.TrimSpace(p)
+		}
+
+		if NormalizeStatus(fields[5]) != "evaluated" {
+			continue
+		}
+		date, err := time.Parse("2006-01-02", fields[1])
+		if err != nil {
+			continue
+		}
+		if !date.Before(cutoff) {
+			continue
+		}
+
+		fields[5] = "Discarded"
+		suffix := fmt.Sprintf("auto-discarded %s (>21d stale)", today)
+		if fields[8] == "" {
+			fields[8] = suffix
+		} else {
+			fields[8] = fields[8] + "; " + suffix
+		}
+		lines[i] = "| " + strings.Join(fields, " | ") + " |"
+		flipped++
+	}
+
+	if flipped == 0 {
+		return 0, nil
+	}
+
+	// Atomic write: temp file in same dir, chmod to match original, rename.
+	dir := filepath.Dir(filePath)
+	tmp, err := os.CreateTemp(dir, ".applications.*.tmp")
+	if err != nil {
+		return 0, err
+	}
+	tmpPath := tmp.Name()
+	if _, err := tmp.Write([]byte(strings.Join(lines, "\n"))); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return 0, err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return 0, err
+	}
+	if err := os.Chmod(tmpPath, info.Mode().Perm()); err != nil {
+		os.Remove(tmpPath)
+		return 0, err
+	}
+	if err := os.Rename(tmpPath, filePath); err != nil {
+		os.Remove(tmpPath)
+		return 0, err
+	}
+
+	return flipped, nil
 }
 
 // cleanTableCell removes trailing pipes and whitespace from a table cell value.
@@ -696,39 +864,93 @@ func ComputeProgressMetrics(apps []model.CareerApplication) model.ProgressMetric
 		{Label: "  <3.0", Count: buckets[4]},
 	}
 
-	// Weekly activity: group by ISO week from Date field, show last 8 weeks.
+	// Time-series activity: count rows that reached "applied or further" (the same
+	// union the funnel's "Applied" stage uses), bucketed by day / ISO week / month.
+	// Each window is back-filled with zeros so the chart shows true cadence.
+	dayCounts := make(map[string]int)
 	weekCounts := make(map[string]int)
+	monthCounts := make(map[string]int)
 	for _, app := range apps {
 		if app.Date == "" {
+			continue
+		}
+		norm := NormalizeStatus(app.Status)
+		if norm != "applied" && norm != "responded" && norm != "interview" && norm != "offer" && norm != "rejected" {
 			continue
 		}
 		t, err := time.Parse("2006-01-02", app.Date)
 		if err != nil {
 			continue
 		}
-		year, week := t.ISOWeek()
-		key := fmt.Sprintf("%d-W%02d", year, week)
-		weekCounts[key]++
+		dayCounts[bucketKey(t, model.BucketDay)]++
+		weekCounts[bucketKey(t, model.BucketWeek)]++
+		monthCounts[bucketKey(t, model.BucketMonth)]++
 	}
 
-	// Sort weeks and take last 8
-	var weeks []string
-	for w := range weekCounts {
-		weeks = append(weeks, w)
-	}
-	sort.Strings(weeks)
-	if len(weeks) > 8 {
-		weeks = weeks[len(weeks)-8:]
-	}
-
-	for _, w := range weeks {
-		pm.WeeklyActivity = append(pm.WeeklyActivity, model.WeekActivity{
-			Week:  w,
-			Count: weekCounts[w],
-		})
-	}
+	now := time.Now()
+	pm.DailyActivity = materializeActivity(dayCounts, windowKeys(now, model.BucketDay))
+	pm.WeeklyActivity = materializeActivity(weekCounts, windowKeys(now, model.BucketWeek))
+	pm.MonthlyActivity = materializeActivity(monthCounts, windowKeys(now, model.BucketMonth))
 
 	return pm
+}
+
+// bucketKey formats t as the canonical key for a TimeBucket.
+//
+//	BucketDay   -> "2006-01-02"
+//	BucketWeek  -> "2006-W02" (ISO week)
+//	BucketMonth -> "2006-01"
+func bucketKey(t time.Time, b model.TimeBucket) string {
+	switch b {
+	case model.BucketDay:
+		return t.Format("2006-01-02")
+	case model.BucketMonth:
+		return t.Format("2006-01")
+	default:
+		year, week := t.ISOWeek()
+		return fmt.Sprintf("%d-W%02d", year, week)
+	}
+}
+
+// windowKeys returns the trailing keys for the given bucket, oldest-first.
+//
+//	BucketDay   -> last 14 calendar days ending on now's local day
+//	BucketWeek  -> last 8 ISO weeks ending on now's ISO week
+//	BucketMonth -> last 6 calendar months ending on now's month
+func windowKeys(now time.Time, b model.TimeBucket) []string {
+	switch b {
+	case model.BucketDay:
+		keys := make([]string, 0, 14)
+		for i := 13; i >= 0; i-- {
+			keys = append(keys, bucketKey(now.AddDate(0, 0, -i), model.BucketDay))
+		}
+		return keys
+	case model.BucketMonth:
+		keys := make([]string, 0, 6)
+		// Anchor on the first day of `now`'s month so AddDate(0, -i, 0) doesn't
+		// skip months when `now` is e.g. the 31st.
+		anchor := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		for i := 5; i >= 0; i-- {
+			keys = append(keys, bucketKey(anchor.AddDate(0, -i, 0), model.BucketMonth))
+		}
+		return keys
+	default:
+		keys := make([]string, 0, 8)
+		for i := 7; i >= 0; i-- {
+			keys = append(keys, bucketKey(now.AddDate(0, 0, -7*i), model.BucketWeek))
+		}
+		return keys
+	}
+}
+
+// materializeActivity expands a count map into an ordered slice over the given
+// window keys, including zero-count entries.
+func materializeActivity(counts map[string]int, keys []string) []model.BucketActivity {
+	out := make([]model.BucketActivity, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, model.BucketActivity{Label: k, Count: counts[k]})
+	}
+	return out
 }
 
 // safePct returns the percentage of part/whole, or 0 if whole is 0.

@@ -17,6 +17,7 @@ type ProgressClosedMsg struct{}
 // ProgressModel implements the progress analytics screen.
 type ProgressModel struct {
 	metrics      model.ProgressMetrics
+	bucket       model.TimeBucket
 	scrollOffset int
 	width        int
 	height       int
@@ -27,6 +28,7 @@ type ProgressModel struct {
 func NewProgressModel(t theme.Theme, metrics model.ProgressMetrics, width, height int) ProgressModel {
 	return ProgressModel{
 		metrics: metrics,
+		bucket:  model.BucketWeek,
 		width:   width,
 		height:  height,
 		theme:   t,
@@ -64,6 +66,15 @@ func (m ProgressModel) Update(msg tea.Msg) (ProgressModel, tea.Cmd) {
 			if m.scrollOffset < 0 {
 				m.scrollOffset = 0
 			}
+		case "v":
+			switch m.bucket {
+			case model.BucketDay:
+				m.bucket = model.BucketWeek
+			case model.BucketWeek:
+				m.bucket = model.BucketMonth
+			default:
+				m.bucket = model.BucketDay
+			}
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -78,7 +89,7 @@ func (m ProgressModel) View() string {
 	funnel := m.renderFunnel()
 	scores := m.renderScoreDistribution()
 	rates := m.renderRates()
-	weekly := m.renderWeeklyActivity()
+	timeSeries := m.renderTimeSeries()
 	help := m.renderHelp()
 
 	// Combine panels
@@ -89,7 +100,7 @@ func (m ProgressModel) View() string {
 		"",
 		rates,
 		"",
-		weekly,
+		timeSeries,
 	)
 
 	// Apply scroll
@@ -317,14 +328,30 @@ func (m ProgressModel) renderRates() string {
 	return strings.Join(lines, "\n")
 }
 
-func (m ProgressModel) renderWeeklyActivity() string {
+func (m ProgressModel) renderTimeSeries() string {
 	padStyle := lipgloss.NewStyle().Padding(0, 2)
 	sectionTitle := lipgloss.NewStyle().Bold(true).Foreground(m.theme.Sky)
 
-	var lines []string
-	lines = append(lines, padStyle.Render(sectionTitle.Render("Weekly Activity")))
+	var (
+		series []model.BucketActivity
+		title  string
+	)
+	switch m.bucket {
+	case model.BucketDay:
+		series = m.metrics.DailyActivity
+		title = "Applications Submitted \u2014 Daily"
+	case model.BucketMonth:
+		series = m.metrics.MonthlyActivity
+		title = "Applications Submitted \u2014 Monthly"
+	default:
+		series = m.metrics.WeeklyActivity
+		title = "Applications Submitted \u2014 Weekly"
+	}
 
-	if len(m.metrics.WeeklyActivity) == 0 {
+	var lines []string
+	lines = append(lines, padStyle.Render(sectionTitle.Render(title)))
+
+	if len(series) == 0 {
 		dimStyle := lipgloss.NewStyle().Foreground(m.theme.Subtext)
 		lines = append(lines, padStyle.Render(dimStyle.Render("No data")))
 		return strings.Join(lines, "\n")
@@ -332,24 +359,24 @@ func (m ProgressModel) renderWeeklyActivity() string {
 
 	// Find max count for bar scaling
 	maxCount := 0
-	for _, w := range m.metrics.WeeklyActivity {
-		if w.Count > maxCount {
-			maxCount = w.Count
+	for _, b := range series {
+		if b.Count > maxCount {
+			maxCount = b.Count
 		}
 	}
 
-	labelW := 10
+	labelW := 12
 	barMaxW := m.width - labelW - 12
 	if barMaxW < 10 {
 		barMaxW = 10
 	}
 
-	for _, week := range m.metrics.WeeklyActivity {
+	for _, entry := range series {
 		barW := 0
 		if maxCount > 0 {
-			barW = week.Count * barMaxW / maxCount
+			barW = entry.Count * barMaxW / maxCount
 		}
-		if barW < 1 && week.Count > 0 {
+		if barW < 1 && entry.Count > 0 {
 			barW = 1
 		}
 
@@ -357,15 +384,18 @@ func (m ProgressModel) renderWeeklyActivity() string {
 		labelStyle := lipgloss.NewStyle().Foreground(m.theme.Subtext).Width(labelW)
 		countStyle := lipgloss.NewStyle().Foreground(m.theme.Subtext)
 
-		// Show short week label (e.g., "W14" from "2026-W14")
-		shortWeek := week.Week
-		if idx := strings.Index(shortWeek, "-"); idx >= 0 {
-			shortWeek = shortWeek[idx+1:]
+		// For weekly bucket, show short week label (e.g., "W14" from "2026-W14");
+		// daily and monthly labels are kept as-is since they're already compact.
+		shortLabel := entry.Label
+		if m.bucket == model.BucketWeek {
+			if idx := strings.Index(shortLabel, "-"); idx >= 0 {
+				shortLabel = shortLabel[idx+1:]
+			}
 		}
 
 		bar := barStyle.Render(strings.Repeat("\u2588", barW))
-		label := labelStyle.Render(shortWeek)
-		count := countStyle.Render(fmt.Sprintf("  %d", week.Count))
+		label := labelStyle.Render(shortLabel)
+		count := countStyle.Render(fmt.Sprintf("  %d", entry.Count))
 
 		lines = append(lines, padStyle.Render(label+bar+count))
 	}
@@ -387,6 +417,7 @@ func (m ProgressModel) renderHelp() string {
 
 	keys := keyStyle.Render("\u2191\u2193") + descStyle.Render(" scroll  ") +
 		keyStyle.Render("PgUp/Dn") + descStyle.Render(" page  ") +
+		keyStyle.Render("v") + descStyle.Render(" toggle bucket  ") +
 		keyStyle.Render("Esc") + descStyle.Render(" back")
 
 	gap := m.width - lipgloss.Width(keys) - lipgloss.Width(brand) - 2
