@@ -6,6 +6,7 @@ cv.md
 portals.yml
 config/profile.yml
 data/
+reports/
 resumes/
 faculty_emails/
 interview-prep/
@@ -71,7 +72,5 @@ career-dashboard
 package-lock.json
 
 *.tsv
-
-reports/*
 
 .playwright-mcp
