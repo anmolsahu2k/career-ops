@@ -201,10 +201,10 @@ const allowedFiles = [
   // English README (legitimately credits upstream / Santiago)
   'README.md',
   // Standard project files
-  'LICENSE', 'CITATION.cff', 'CONTRIBUTING.md',
-  'package.json', '.github/FUNDING.yml', 'CLAUDE.md', 'go.mod', 'test-all.mjs',
-  // Community / governance files (added in v1.3.0, all legitimately reference the maintainer)
-  'CODE_OF_CONDUCT.md', 'GOVERNANCE.md', 'SECURITY.md', 'SUPPORT.md',
+  'LICENSE',
+  'package.json', 'CLAUDE.md', 'go.mod', 'test-all.mjs',
+  // Security disclosure files
+  'SECURITY.md',
   '.github/SECURITY.md',
   // Dashboard credit string
   'dashboard/internal/ui/screens/pipeline.go',
