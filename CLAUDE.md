@@ -81,7 +81,7 @@ This is a user-triggered flow. Per Rule 6, there is no scheduled scan. Per Rule 
 
 ### Handshake (manual on-website, decided 2026-05-05)
 
-Anmol applies to Handshake postings directly via the Handshake web UI (CMU SSO at `https://app.joinhandshake.com/job-search`). **Not part of the discovery sweep.** The previous snippet/server/CSV discovery flow is decommissioned; its `scripts/` source files (`handshake-server.mjs`, `handshake-export-snippet.js`, `handshake-ingest.py`) were removed in the 2026-05-20 scripts cleanup. The `extensions/handshake-jd-copy/` browser extension remains on disk.
+Anmol applies to Handshake postings directly via the Handshake web UI (CMU SSO at `https://app.joinhandshake.com/job-search`). **Not part of the discovery sweep.** The previous snippet/server/CSV discovery flow + its browser extension were fully decommissioned and removed during the 2026-05-20 cleanup pass.
 
 **Tracking model:** Handshake sends a per-application confirmation email to anmolsah@andrew.cmu.edu after every submission. Tracker rows for Handshake-sourced applications get added later from those emails (manually or via a future Gmail watcher), not via a discovery sweep at the start of the funnel. This matches CLAUDE.md Rule 6 ("everything is user-triggered") and avoids the auth-walled JD-fetch problem the snippet flow had.
 
