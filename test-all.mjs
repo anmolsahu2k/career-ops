@@ -205,7 +205,6 @@ const allowedFiles = [
   'package.json', 'CLAUDE.md', 'go.mod', 'test-all.mjs',
   // Security disclosure files
   'SECURITY.md',
-  '.github/SECURITY.md',
   // Dashboard credit string
   'dashboard/internal/ui/screens/pipeline.go',
 ];
