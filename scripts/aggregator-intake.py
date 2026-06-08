@@ -43,9 +43,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-SCRIPT_PATH = Path(__file__).resolve()
-CAREER_OPS = SCRIPT_PATH.parent.parent
-DATA_DIR = CAREER_OPS / "data"
+import _paths
+_P = _paths.resolve_paths(__file__)
+CAREER_OPS = _P["root"]
+DATA_DIR = _P["data_dir"]
 LOG_DIR = DATA_DIR
 
 # Canonical constants + helpers live in discovery_filters.py and are shared
@@ -60,66 +61,48 @@ from discovery_filters import (
     SEASON_DENY_RE, AGE_TOKEN_RE, MONTH_NAMES,
     URL_RE, EM_DASH_RE, MAX_AGE_DAYS_DEFAULT,
     parse_age, parse_date_posted, normalize_url,
-    role_in_season, _normalize_company, _normalize_role,
+    _normalize_company, _normalize_role,
     collect_existing_signatures, next_available_nn,
-    slugify, clean_text, is_internship,
+    slugify, clean_text,
+    role_matches_targets, location_is_us_or_remote,
     is_brand_denied, is_phd_only_title,
 )
 MERGED_DIR = BATCH_DIR / "merged"
 
 SOURCES = [
-    # speedyapply (both SWE and AI) expose an "Age" column with values like
-    # "5d", "1mo", "8w", "12h" — parsed by parse_age() into integer days.
+    # speedyapply new-grad feeds (SWE + AI). "Age" column: "5d" / "1mo" etc.
     {
-        "name": "speedyapply-swe",
-        "url": "https://raw.githubusercontent.com/speedyapply/2026-SWE-College-Jobs/main/README.md",
+        "name": "speedyapply-swe-newgrad",
+        "url": "https://raw.githubusercontent.com/speedyapply/2026-SWE-College-Jobs/main/NEW_GRAD_USA.md",
     },
     {
-        "name": "speedyapply-ai",
-        "url": "https://raw.githubusercontent.com/speedyapply/2026-AI-College-Jobs/main/README.md",
+        "name": "speedyapply-ai-newgrad",
+        "url": "https://raw.githubusercontent.com/speedyapply/2026-AI-College-Jobs/main/NEW_GRAD_USA.md",
     },
-    # vanshb03 exposes a "Date Posted" column with values like "Apr 29" or
-    # "Apr 24" (month abbrev + day, no year) — parsed by parse_date_posted().
+    # SimplifyJobs new-grad (dev branch). Age inline in apply cell.
     {
-        "name": "vanshb03-summer2027",
-        "url": "https://raw.githubusercontent.com/vanshb03/Summer2027-Internships/main/README.md",
+        "name": "simplifyjobs-newgrad",
+        "url": "https://raw.githubusercontent.com/SimplifyJobs/New-Grad-Positions/dev/README.md",
     },
-    # SimplifyJobs exposes age inline in the apply-button cell as "Xd" / "Xmo"
-    # — parsed by the same parse_age() function.
+    # vanshb03 new-grad repos. "Date Posted" column: "Apr 29" etc.
     {
-        # SimplifyJobs default branch is "dev" (not "main"); main returns 404.
-        "name": "simplifyjobs-summer2026",
-        "url": "https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/README.md",
-    },
-    # jobright-ai family added 2026-05-05. User asked for "aaronwangj/awesome-
-    # ai-internships" but that repo doesn't exist; the closest live analog is
-    # the jobright-ai org's per-domain repos (157+52+35+25 stars). Default
-    # branch is `master` (not `main`). Tables use markdown pipe rows with
-    # company/role/location/type/posted columns. Date column uses "May 05"
-    # format (parsed by parse_date_posted). Apply URLs go through
-    # jobright.ai/jobs/info/{hash}?utm_campaign=1079&utm_source=git which
-    # 302-redirects to the canonical employer ATS — works fine for liveness
-    # gate and eval-agent fetch.
-    {
-        "name": "jobright-ai-swe",
-        "url": "https://raw.githubusercontent.com/jobright-ai/2026-Software-Engineer-Internship/master/README.md",
+        "name": "vanshb03-newgrad-2027",
+        "url": "https://raw.githubusercontent.com/vanshb03/New-Grad-2027/main/README.md",
     },
     {
-        "name": "jobright-ai-engineer",
-        "url": "https://raw.githubusercontent.com/jobright-ai/2026-Engineer-Internship/master/README.md",
+        "name": "vanshb03-newgrad-2026",
+        "url": "https://raw.githubusercontent.com/vanshb03/New-Grad-2026/main/README.md",
+    },
+    # jobright-ai new-grad and H-1B daily feeds. Default branch: master.
+    # Apply URLs redirect via jobright.ai/jobs/info/{hash} to canonical ATS.
+    {
+        "name": "jobright-newgrad-swe",
+        "url": "https://raw.githubusercontent.com/jobright-ai/2026-Software-Engineer-New-Grad/master/README.md",
     },
     {
-        "name": "jobright-ai-data-analysis",
-        "url": "https://raw.githubusercontent.com/jobright-ai/2026-Data-Analysis-Internship/master/README.md",
+        "name": "jobright-h1b",
+        "url": "https://raw.githubusercontent.com/jobright-ai/Daily-H1B-Jobs-In-Tech/master/README.md",
     },
-    {
-        "name": "jobright-ai-summary",
-        "url": "https://raw.githubusercontent.com/jobright-ai/2026-Internship/master/README.md",
-    },
-    # PrepAIJobs and summer2026internships were dropped 2026-05-03: both
-    # README tables are stale (no recent updates) and contributed mostly
-    # off-cycle / already-closed postings. Re-add only if they resume daily
-    # updates with a parseable freshness signal.
 ]
 
 # Markdown-table parsing regexes (aggregator-specific; not shared).
@@ -128,10 +111,10 @@ EMOJI_LINK_RE = re.compile(r"<a [^>]*href=\"([^\"]+)\"[^>]*>")
 HTML_TAG_RE = re.compile(r"<[^>]+>")
 # (TARGET_ROLE_TOKENS, ROLE_DENY_TOKENS, US_STATE_CODES, US_CITY_HINTS,
 # REMOTE_HINTS, SEASON_DENY_RE, AGE_TOKEN_RE, MONTH_NAMES, URL_RE, EM_DASH_RE,
-# parse_age, parse_date_posted, normalize_url, role_in_season,
-# _normalize_company, _normalize_role, collect_existing_signatures,
-# next_available_nn, slugify, clean_text, is_internship are all imported from
-# discovery_filters above.)
+# parse_age, parse_date_posted, normalize_url, _normalize_company,
+# _normalize_role, collect_existing_signatures, next_available_nn, slugify,
+# clean_text, role_matches_targets, location_is_us_or_remote, is_brand_denied,
+# is_phd_only_title are all imported from discovery_filters above.)
 
 
 def fetch(url, timeout=30):
@@ -181,40 +164,25 @@ def first_link(cell):
     return None
 
 
-# slugify and is_internship are imported from discovery_filters above.
-
-# Aggregator-specific overrides (semantically different from the shared
-# module's defaults):
-# - role_matches_targets: aggregator does NOT require "intern" in the title
-#   itself, because is_internship() runs separately and accepts intern signal
-#   from the type_cell.
-# - location_is_us_or_remote: aggregator accepts MISSING location as US-OK
-#   (many aggregator rows have no location column at all). The shared module
-#   default for jobspy/etc. rejects missing location.
-
-def role_matches_targets(role):
-    rl = " " + role.lower() + " "
-    if not any(tok in rl for tok in TARGET_ROLE_TOKENS):
-        return False
-    if any(tok in rl for tok in ROLE_DENY_TOKENS):
-        return False
-    return True
+# Per-row sponsorship signal from the new-grad repos' emoji / H1B-status column.
+# Returns (sponsorship_tristate, citizen_only_bool):
+#   🏅/🥈 -> (True,  cz)   sponsors / has history
+#   🛂    -> (False, cz)   does NOT sponsor
+#   🇺🇸   -> (.,     True) citizen-only (also implies no F-1 sponsorship)
+#   none  -> (None,  False) unknown
+def sponsorship_signal(*cells):
+    blob = " ".join(c or "" for c in cells)
+    citizen_only = "\U0001F1FA\U0001F1F8" in blob          # 🇺🇸
+    if "\U0001F3C5" in blob or "\U0001F948" in blob:       # 🏅 explicit / 🥈 history
+        return True, citizen_only
+    if "\U0001F6C2" in blob or citizen_only:               # 🛂 no-sponsor / 🇺🇸 citizen
+        return False, citizen_only
+    return None, False
 
 
-def location_is_us_or_remote(location):
-    if not location:
-        return True
-    loc = location.lower()
-    if any(h in loc for h in REMOTE_HINTS):
-        return True
-    if any(h in loc for h in US_CITY_HINTS):
-        return True
-    if " usa" in loc or "united states" in loc or loc.endswith(", us"):
-        return True
-    for code in US_STATE_CODES:
-        if re.search(r"[,\s]" + code + r"\b", location):
-            return True
-    return False
+# slugify, role_matches_targets, and location_is_us_or_remote are all imported
+# from discovery_filters above (FT pivot versions). The intern-era is_internship
+# gate is no longer used.
 
 
 def parse_markdown_tables(md):
@@ -327,6 +295,7 @@ def harvest_table(rows, source_name):
     # cell with a "Xd" / "Xmo" badge — handled below as a fallback scan.
     age_idx = find_col(header, "age")
     date_posted_idx = find_col(header, "date posted", "posted", "date")
+    h1b_idx = find_col(header, "h1b", "sponsor")
 
     # If we cannot identify a company column AND a role column, bail out.
     if company_idx is None or role_idx is None:
@@ -375,6 +344,12 @@ def harvest_table(rows, source_name):
         if not comp_cell or not role_cell:
             continue
 
+        sponsorship, citizen_only = sponsorship_signal(
+            raw[role_idx] if (role_idx is not None and role_idx < len(raw)) else "",
+            raw[url_idx] if (url_idx is not None and url_idx < len(raw)) else "",
+            raw[h1b_idx] if (h1b_idx is not None and h1b_idx < len(raw)) else "",
+        )
+
         yield {
             "company": comp_cell,
             "role": role_cell,
@@ -383,17 +358,32 @@ def harvest_table(rows, source_name):
             "type": type_cell,
             "source": source_name,
             "age_days": age_days,  # int or None if source/row has no signal
+            "sponsorship": sponsorship,
+            "citizen_only": citizen_only,
         }
 
 
-def write_tsv(num, date, company, role, notes_url, source, age_days, dry_run):
+def write_tsv(num, date, company, role, notes_url, source, age_days, dry_run,
+              sponsorship=None, citizen_only=False, extras=None):
     slug = slugify(company)
     fname = f"{num:03d}-{slug}-aggregator.tsv"
     path = BATCH_DIR / fname
 
     age_blurb = f"Posted {age_days}d ago. " if age_days is not None else "Age unknown. "
+    sponsor_blurb = ""
+    if sponsorship is True:
+        sponsor_blurb = "VISA-SPONSORSHIP: yes. "
+    elif sponsorship is False:
+        sponsor_blurb = "VISA-SPONSORSHIP: no (per source). "
+    if citizen_only:
+        sponsor_blurb += "CITIZEN-ONLY: yes (per source). "
+    extras_blurb = ""
+    if extras:
+        parts = [f"{k}: {v}" for k, v in extras.items() if v not in (None, "")]
+        if parts:
+            extras_blurb = "; ".join(parts) + ". "
     notes = (
-        f"Aggregator discovery via {source}. {age_blurb}URL: {notes_url}. "
+        f"Aggregator discovery via {source}. {age_blurb}{sponsor_blurb}{extras_blurb}URL: {notes_url}. "
         "Not yet evaluated; promote to per-role eval before applying."
     )
     notes = EM_DASH_RE.sub(",", notes)  # safety net
@@ -446,7 +436,23 @@ def main(argv=None):
              f"{MAX_AGE_DAYS_DEFAULT}). Rows with no parseable age are KEPT "
              "(so vanshb03/SimplifyJobs rows missing dates aren't silently filtered).",
     )
+    p.add_argument(
+        "--no-h1b",
+        action="store_true",
+        help="skip H1BGrader sponsorship-history enrichment (for offline/fast runs "
+             "that should not attempt FlareSolverr)",
+    )
     args = p.parse_args(argv)
+
+    # Optional H1BGrader enrichment — guarded import so missing module never
+    # breaks the run.
+    if not args.no_h1b:
+        try:
+            import h1bgrader_lookup as _h1b
+        except Exception:
+            _h1b = None
+    else:
+        _h1b = None
 
     today = _dt.date.today().isoformat()
     print(f"# aggregator-intake run {today}", file=sys.stderr)
@@ -500,16 +506,12 @@ def main(argv=None):
     after_dedup = len(deduped)
     print(f"  = {after_dedup} after URL dedupe", file=sys.stderr)
 
-    # Filter: must be internship + target role + US/remote + in-season +
-    # brand-allowed + non-PhD-only.
+    # Filter: target role (FT) + US-only geo + brand-allowed + non-PhD-only + age.
     kept = []
-    dropped_brand = dropped_phd = 0
+    dropped_brand = dropped_phd = dropped_offtarget = dropped_nonus = dropped_old = 0
     for entry in deduped:
-        if not is_internship(entry["role"], entry.get("type", "")):
-            continue
         if not role_matches_targets(entry["role"]):
-            continue
-        if not role_in_season(entry["role"]):
+            dropped_offtarget += 1
             continue
         if is_brand_denied(entry["company"]):
             dropped_brand += 1
@@ -517,33 +519,20 @@ def main(argv=None):
         if is_phd_only_title(entry["role"]):
             dropped_phd += 1
             continue
-        if not location_is_us_or_remote(entry.get("location", "")):
+        if entry.get("age_days") is not None and entry["age_days"] > MAX_AGE_DAYS_DEFAULT:
+            dropped_old += 1
+            continue
+        loc = entry.get("location", "")
+        if loc and not location_is_us_or_remote(loc):
+            dropped_nonus += 1
             continue
         kept.append(entry)
 
     after_filter = len(kept)
     print(
-        f"  = {after_filter} after target-role + US/remote + season + brand + PhD filter "
-        f"({dropped_brand} brand-deny, {dropped_phd} PhD-only)",
-        file=sys.stderr,
-    )
-
-    # Age filter: drop rows older than --max-age-days. Rows with no parseable
-    # age signal (sources/columns that don't expose freshness) are KEPT, so a
-    # source-format change doesn't silently nuke the whole batch.
-    fresh = []
-    dropped_age = 0
-    for entry in kept:
-        age = entry.get("age_days")
-        if age is not None and age > args.max_age_days:
-            dropped_age += 1
-            continue
-        fresh.append(entry)
-    kept = fresh
-    print(
-        f"  = {len(kept)} after age filter "
-        f"({dropped_age} dropped as > {args.max_age_days}d old; "
-        f"rows with no age signal kept by default)",
+        f"  = {after_filter} after target-role + US-only + brand + PhD + age filter "
+        f"({dropped_offtarget} off-target, {dropped_brand} brand-deny, "
+        f"{dropped_phd} PhD-only, {dropped_nonus} non-US, {dropped_old} too-old)",
         file=sys.stderr,
     )
 
@@ -593,6 +582,17 @@ def main(argv=None):
     written = []
     for offset, entry in enumerate(novel):
         num = start_nn + offset
+        # Best-effort H1BGrader enrichment: fill sponsorship=True if we find
+        # LCA history and sponsorship is still unknown from the source emoji.
+        # Fully guarded: any exception returns {"has_history": None} silently.
+        if entry.get("sponsorship") is None and _h1b is not None:
+            try:
+                sig = _h1b.lookup(entry["company"])
+            except Exception:
+                sig = {"has_history": None}
+            if sig.get("has_history") is True:
+                entry["sponsorship"] = True
+                entry.setdefault("extras", {})["H1B-HISTORY"] = f"{sig.get('lca_recent', '?')} recent LCAs"
         path, _line = write_tsv(
             num=num,
             date=today,
@@ -602,6 +602,9 @@ def main(argv=None):
             source=entry["source"],
             age_days=entry.get("age_days"),
             dry_run=args.dry_run,
+            sponsorship=entry.get("sponsorship"),
+            citizen_only=entry.get("citizen_only", False),
+            extras=entry.get("extras"),
         )
         written.append((path, entry))
 

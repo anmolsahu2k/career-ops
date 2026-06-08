@@ -42,6 +42,9 @@ import urllib.request
 import discovery_filters as df
 
 
+# Disabled: new-grad URL unverified — re-enable once the correct FT path is confirmed.
+ENABLED = False
+
 HOMEPAGE = "https://www.levels.fyi/jobs/internships"
 NEXT_DATA_RE = re.compile(
     r'<script id="__NEXT_DATA__"[^>]*>(.+?)</script>', re.DOTALL
@@ -140,6 +143,13 @@ def normalize_job(company_dict, job):
 
 
 def main(argv=None):
+    if not ENABLED:
+        print(
+            "levels-ingest deferred: new-grad URL unverified",
+            file=sys.stderr,
+        )
+        return 0
+
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument(
         "--keyword",

@@ -59,10 +59,6 @@ UA = "career-ops-hn-ingest/1.0 (+local pipeline)"
 # (em-dashes already normalized to commas downstream).
 HEADER_SEP_RE = re.compile(r"\s*[|]\s*|\s+[-–—]\s+")
 
-INTERN_TOKEN_RE = re.compile(
-    r"\b(intern(s|ship|ships)?|co-?op|apprentice|summer\s*20\d{2})\b",
-    re.IGNORECASE,
-)
 
 # Some posters use brackets or parens around metadata; strip them for matching.
 META_STRIP_RE = re.compile(r"[\[\]()<>]")
@@ -211,8 +207,8 @@ def normalize_comment(comment):
     work_type = parsed.get("work_type", "")
     # Combine role + work_type for the title-level intern detection.
     role_for_filter = (role + " " + work_type).strip()
-    if not INTERN_TOKEN_RE.search(role_for_filter):
-        return None  # skip non-intern HN entries (the bulk of the thread)
+    if not df.role_matches_targets(role_for_filter):
+        return None  # skip non-target HN entries (the bulk of the thread)
 
     apply_url = first_real_url(text_html)
     permalink = HN_PERMALINK.format(id=cid)
@@ -291,10 +287,10 @@ def main(argv=None):
         row = normalize_comment(c)
         if row:
             raw_rows.append(row)
-    print(f"  intern-tagged rows: {len(raw_rows)}", file=sys.stderr)
+    print(f"  target-matched rows: {len(raw_rows)}", file=sys.stderr)
     if not raw_rows:
         print(
-            "  no intern entries in this thread (typical: HN whoishiring is FTE-heavy)",
+            "  no target entries in this thread (typical: HN whoishiring is FTE-heavy; new-grad roles are rare)",
             file=sys.stderr,
         )
         return 0

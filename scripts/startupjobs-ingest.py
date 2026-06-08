@@ -39,9 +39,13 @@ from pathlib import Path
 import discovery_filters as df
 
 
+# Disabled: FT category URL unverified (was /internships; FT equivalent unknown).
+# Re-enable once the correct full-time category path is confirmed.
+ENABLED = False
+
 # startup.jobs's keyword search is brittle; the /internships category page
-# is the most reliable entry point. We hit each (q, location) combo and
-# paginate via the c=internship preserved param.
+# was the most reliable entry point. FT equivalent needs verification before
+# re-enabling.
 DEFAULT_QUERIES = (
     "software,"
     "engineer,"
@@ -153,6 +157,13 @@ def _parse_card(card):
 
 
 def main(argv=None):
+    if not ENABLED:
+        print(
+            "startupjobs-ingest deferred: FT category URL unverified",
+            file=sys.stderr,
+        )
+        return 0
+
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--keyword", default=DEFAULT_QUERIES, help="comma-separated narrowing queries; '' = base /internships listing")
     p.add_argument("--max-pages-per-query", type=int, default=2)

@@ -168,18 +168,16 @@ def fetch_pages_via_urllib(cookie_header, user_agent, build_id, keywords, max_pa
 
 
 DEFAULT_KEYWORDS = (
-    "software engineer intern,"
-    "machine learning intern,"
-    "data science intern,"
-    "ai engineer intern,"
-    "data engineer intern,"
-    "backend engineer intern,"
-    # Broader catch-alls. The post-fetch _is_internship_per_source filter
-    # drops non-internship rows, so we can afford generic queries that
-    # surface rows missed by the role-specific ones above.
-    "intern,"
-    "internship,"
-    "summer 2026 internship"
+    "software engineer new grad,"
+    "machine learning engineer new grad,"
+    "data scientist new grad,"
+    "data engineer new grad,"
+    "ai engineer new grad,"
+    "forward deployed engineer,"
+    "solutions engineer new grad,"
+    "new grad software engineer,"
+    "entry level software engineer,"
+    "university graduate software engineer"
 )
 
 
@@ -497,13 +495,6 @@ def main(argv=None):
         print("  no rows returned", file=sys.stderr)
         return 0
     print(f"  total raw rows: {len(raw_rows)}", file=sys.stderr)
-
-    # Pre-filter: only keep rows the source itself flagged as Internship
-    # commitment (Hiring Cafe surfaces both Internship and Full Time even
-    # under intern-keyword queries because it's title-level matching).
-    pre = len(raw_rows)
-    raw_rows = [r for r in raw_rows if r.get("_is_internship_per_source")]
-    print(f"  after source-side internship-commitment filter: {len(raw_rows)} (dropped {pre - len(raw_rows)})", file=sys.stderr)
 
     # Canonical filter chain.
     kept, drops = df.apply_unified_filter(

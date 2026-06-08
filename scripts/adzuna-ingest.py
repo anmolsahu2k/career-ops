@@ -48,11 +48,16 @@ API_TEMPLATE = (
 )
 
 DEFAULT_KEYWORDS = (
-    "software engineer intern,"
-    "machine learning intern,"
-    "data science intern,"
-    "ai engineer intern,"
-    "data engineer intern"
+    "software engineer new grad,"
+    "machine learning engineer new grad,"
+    "data scientist new grad,"
+    "data engineer new grad,"
+    "ai engineer new grad,"
+    "forward deployed engineer,"
+    "solutions engineer new grad,"
+    "new grad software engineer,"
+    "entry level software engineer,"
+    "university graduate software engineer"
 )
 
 UA = "Mozilla/5.0"

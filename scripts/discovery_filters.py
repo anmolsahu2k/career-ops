@@ -27,12 +27,12 @@ Module is stdlib-only so it can be imported from any context without pip.
 import datetime as _dt
 import re
 from pathlib import Path
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-CAREER_OPS = SCRIPT_DIR.parent
-APPS_FILE = CAREER_OPS / "data" / "applications.md"
-REPORTS_DIR = CAREER_OPS / "reports"
-BATCH_DIR = CAREER_OPS / "batch" / "tracker-additions"
+import _paths
+_P = _paths.resolve_paths(__file__)
+CAREER_OPS = _P["root"]
+APPS_FILE = _P["apps_file"]
+REPORTS_DIR = _P["reports_dir"]
+BATCH_DIR = _P["batch_dir"]
 
 MAX_AGE_DAYS_DEFAULT = 21
 
@@ -47,6 +47,8 @@ TARGET_ROLE_TOKENS = [
     "research intern", "deep learning", "nlp", "computer vision", "perception",
     "robotics", "engineer", "developer", "appsec", "security", "qa",
     "quality", "solutions", "analytics", "analyst",
+    "forward deployed", "forward-deployed", "fde", "solutions engineer",
+    "field engineer", "member of technical staff", "technical staff",
 ]
 
 ROLE_DENY_TOKENS = [
@@ -100,9 +102,18 @@ US_CITY_HINTS = [
     "columbus", "san bruno", "bellevue", "cambridge", "irvine", "cupertino",
     "foster city", "newark", "jersey city", "ann arbor", "remote us",
     "remote, us", "remote-us", "us remote", "u.s.",
+    "remote (united states)", "remote (us)", "remote usa", "remote - us",
 ]
 
 REMOTE_HINTS = ["remote", "anywhere", "work from home", "wfh"]
+
+NON_US_HINTS = [
+    "india", "canada", "united kingdom", " uk", "ireland", "germany", "france",
+    "spain", "portugal", "poland", "netherlands", "emea", "apac", "latam",
+    "europe", "remote - eu", "remote, eu", "bengaluru", "bangalore", "hyderabad",
+    "pune", "london", "berlin", "toronto", "dublin", "singapore", "australia",
+    "mexico", "brazil", "japan", "israel",
+]
 
 # ── Season filter ────────────────────────────────────────────────────────
 
@@ -294,8 +305,8 @@ def parse_date_posted(text, today=None):
 
 
 def role_in_season(role):
-    """True if role title does NOT contain an off-season marker."""
-    return SEASON_DENY_RE.search(role or "") is None
+    """FT pivot: no intern-season filtering. Always in-season."""
+    return True
 
 
 _INTERN_TOKEN_RE = re.compile(
@@ -310,42 +321,48 @@ def is_internship(role, type_cell=""):
     return bool(_INTERN_TOKEN_RE.search(role or "") or _INTERN_TOKEN_RE.search(type_cell or ""))
 
 
+# New-grad / entry-level allow tokens (a positive boost signal, NOT required —
+# many on-target FT roles carry no level word in the title).
+NEWGRAD_TOKENS = [
+    "new grad", "new-grad", "newgrad", "new graduate", "university grad",
+    "university graduate", "entry level", "entry-level", "early career",
+    "associate", "campus", "class of 20", "2026 grad", "2027 grad",
+    "early talent", "rotational",
+]
+# Titles that are entry-level despite containing a deny-ish word, e.g. AI-lab
+# "Member of Technical Staff" must NOT be killed by the " staff " deny token.
+_DENY_CARVEOUTS = ("member of technical staff", "technical staff -")
+
+
 def role_matches_targets(role):
     rl = " " + (role or "").lower() + " "
-    # 2026-05-10 fix: was `if "intern" not in rl: return False` (rejects Co-op/
-    # Apprentice/Trainee/Summer Analyst variants used by quant funds, Apple
-    # Co-op, consulting summer-associate programs). Now matches the
-    # portals.yml `must_match` regex contract.
-    if not _INTERN_TOKEN_RE.search(role or ""):
-        return False
+    # FT pivot: the intern-token requirement is removed. On-target = a target
+    # role token present AND no senior/non-tech deny token (unless carved out).
     if not any(tok in rl for tok in TARGET_ROLE_TOKENS):
         return False
     if any(tok in rl for tok in ROLE_DENY_TOKENS):
-        return False
+        if not any(c in rl for c in _DENY_CARVEOUTS):
+            return False
     return True
 
 
 def location_is_us_or_remote(location, is_remote=False):
-    """Pass if explicitly remote, or location matches US state/city/USA hint."""
-    if is_remote:
-        return True
-    if not location:
+    """US-only FT. Explicit non-US -> drop (even if remote). US signal -> pass.
+    is_remote flag w/o a non-US contradiction -> pass (US-scoped source). Bare
+    'remote' string or empty -> drop."""
+    loc = (location or "").lower()
+    if any(n in loc for n in NON_US_HINTS):
         return False
-    loc = location.lower()
-    if any(h in loc for h in US_CITY_HINTS):
+    us_signal = (
+        any(h in loc for h in US_CITY_HINTS)
+        or " usa" in loc or "united states" in loc or loc.endswith(", us")
+        or any(re.search(r"[,\s]" + code + r"\b", location or "") for code in US_STATE_CODES)
+        or any(re.search(r"\b" + re.escape(name) + r"\b", loc) for name in US_STATE_NAMES)
+    )
+    if us_signal:
         return True
-    if any(h in loc for h in REMOTE_HINTS):
+    if is_remote and not loc.strip():
         return True
-    if " usa" in loc or "united states" in loc or loc.endswith(", us"):
-        return True
-    for code in US_STATE_CODES:
-        if re.search(r"[,\s]" + code + r"\b", location):
-            return True
-    # State full-name fallback: "California", "Texas", "Georgia", etc.
-    # Match on word-boundary so "Washingtonville, NY" doesn't match "washington".
-    for name in US_STATE_NAMES:
-        if re.search(r"\b" + re.escape(name) + r"\b", loc):
-            return True
     return False
 
 

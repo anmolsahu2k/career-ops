@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-Context for Claude Code sessions in this workspace. Anmol's Summer 2026 internship search ops.
+Context for Claude Code sessions in this workspace. Anmol's full-time / new-grad search ops (Dec 2026 grad, start ~Jan 2027).
 
 ## Who
 
-Anmol Sahu. CMU MISM-BIDA (Heinz, Master of Information Systems Management with Business Intelligence and Data Analytics track, expected Dec 2026, CGPA 3.75). F-1 visa, CPT-eligible (Master's CPT Canvas course already enrolled, code GNYPT8). 2.5 yrs SDE at Byju's. Active projects: Highmark cancer-staging (XGBoost on 6M+ claims), Cloudify (multi-agent OpenAI+Claude cloud migration, TartanHacks 2026), EEG Classification (CMU 11-685, multi-head CNN+Transformer + CLIP retrieval on PSC HPC). 6 hackathon wins (~$22K).
+Anmol Sahu. CMU MISM-BIDA (Heinz, Master of Information Systems Management with Business Intelligence and Data Analytics track, expected Dec 2026, CGPA 3.75). F-1 visa, OPT-eligible post-graduation, requires H-1B sponsorship. 2.5 yrs SDE at Byju's. Active projects: Highmark cancer-staging (XGBoost on 6M+ claims), Cloudify (multi-agent OpenAI+Claude cloud migration, TartanHacks 2026), EEG Classification (CMU 11-685, multi-head CNN+Transformer + CLIP retrieval on PSC HPC). 6 hackathon wins (~$22K).
 
 Source-of-truth CV: [cv.md](cv.md). Submission resumes are the user's PDFs in [resumes/](resumes/) (`SDE Anmol's Resume(27-04-26)-LATEST.pdf`, `MLE Anmol's Resume(27-04-26)-LATEST.pdf`).
 
@@ -16,9 +16,9 @@ State (what's done, what's pending, decommissioned workstreams, outstanding user
 
 1. **No em-dashes or en-dashes** in any candidate-facing content (resumes, cover letters, form answers, faculty emails, alumni outreach). Use commas, periods, colons, or rephrase.
 2. **Do NOT generate CV PDFs.** User submits own resume. Provide evaluations, Block H form answers, and cover letters only.
-3. **Do NOT include the F-1/CPT/Heinz/OIE/May 12/June 1 explainer paragraph** in cover letters, form answers, faculty emails, or alumni outreach. If start date is asked, just say "Available June 2026."
-4. **Generate cover letters only on explicit request.** Do NOT auto-draft cover letters during evaluation, even for top-tier (≥4.0) roles. The two trigger sources are: (a) the user explicitly asks ("write a cover letter for X"); (b) the user presses `u` on a row in the Go TUI dashboard, which shells out to `claude -p` and writes the letter directly. (Previous default was auto-draft; reversed because most evaluated roles never get applied to and the auto-drafts piled up unused.)
-5. **Target roles**: SDE Intern, AI Intern, MLE Intern, Data Science Intern, Data Engineer Intern, Data Analyst Intern, plus adjacent. US-based (in-person or remote-US) primary; India remote acceptable but no CPT for India remote work.
+3. **Do NOT include any visa/OPT/H-1B/sponsorship explainer paragraph** in cover letters, form answers, faculty emails, or alumni outreach. If start date is asked, just say "Available January 2027."
+4. **Generate cover letters only on explicit request.** Do NOT auto-draft cover letters during evaluation, even for top-tier (≥4.0) roles. The only trigger is the user explicitly asking ("write a cover letter for X"). (Previous default was auto-draft; reversed because most evaluated roles never get applied to and the auto-drafts piled up unused.)
+5. **Target roles**: SDE / Software Engineer (New Grad), AI Engineer, MLE, Data Scientist, Data Engineer, Data Analyst, Forward-Deployed / Solutions Engineer, plus adjacent. US-based (in-person or remote-US) primary; needs H-1B sponsorship (no India-remote for the US FT search).
 6. **No cron jobs / no schedules.** Everything is user-triggered. There is no `crontab`, no Claude Code Routines, no daily-*-cron scripts. If a workflow needs to run periodically, the user invokes it manually.
 7. **Scan and evaluation can run together OR separately.** `scan.mjs` writes new candidates to `data/scan-results-{YYYY-MM-DD}.tsv`. The skill may either (a) dispatch evaluation agents inline in the same invocation and delete the TSV before returning (auto-pipeline), or (b) stop after scan and leave the TSV on disk so the user can trigger evaluation in a follow-up invocation. Pasting URLs/JD text directly to `/career-ops` always runs the inline auto-pipeline (no scan step). When scan-only mode leaves a TSV on disk, a later evaluation invocation consumes it, dispatches evaluation agents, and deletes it before returning. `data/pipeline.md` is still NOT used as an inbox; the on-disk TSV is the only handoff format between scan and evaluation.
 
@@ -39,15 +39,15 @@ Eval report files MUST include a `**URL:**` line (not `**Apply:**`) — the dash
 
 ```
 career-ops/
-  config/profile.yml         # Anmol-specific config + internship_constraints
+  config/profile.yml         # Anmol-specific config + job_search_constraints
   cv.md                       # source-of-truth CV
   data/
     applications.md           # 9-col tracker
-    intern_shortlist.md       # initial scan top 25
+    intern_shortlist.md       # historical intern scan top 25 (pre-pivot)
     simplifyjobs_summer2026_picks.md
     alumni_outreach_priorities.md
-  modes/_profile.md           # intern-specific archetypes
-  portals.yml                 # intern-friendly filters
+  modes/_profile.md           # role-specific archetypes
+  portals.yml                 # new-grad-friendly filters
   reports/
     {company-slug}/           # one folder per company (slug = lowercased, hyphenated company name)
       {NN}-{role-slug}-{YYYY-MM-DD}.md           # eval report
@@ -77,7 +77,7 @@ This is a user-triggered flow. Per Rule 6, there is no scheduled scan. Per Rule 
 6. **Merge** `batch/tracker-additions/*.tsv` into [data/applications.md](data/applications.md). Run `node verify-pipeline.mjs` for schema integrity.
 7. **Delete** `data/scan-results-{YYYY-MM-DD}.tsv` — evaluation is not complete until the TSV is gone. (In split mode this delete happens in the follow-up invocation, not the scan-only one.)
 8. **Pick correct resume** per role: **SDE PDF** for SDE/backend/infra, **MLE PDF** for AI/ML/DS/applied-scientist. Note in Notes column.
-9. Cover letters: do NOT auto-draft. Generated only when the user asks, or when the user presses `u` in the dashboard (which shells out to `claude -p` and writes the file at `reports/{company-slug}/{NN}-{company-slug}-{role-slug}-cover-letter.md`). Application-questions files (`-application-questions.md`) follow the same on-request rule. Tracker Notes column gets the `CL:` prefix only after a letter actually exists.
+9. Cover letters: do NOT auto-draft. Generated only when the user asks. Application-questions files (`-application-questions.md`) follow the same on-request rule. Tracker Notes column gets the `CL:` prefix only after a letter actually exists.
 
 ### Handshake (manual on-website, decided 2026-05-05)
 
@@ -87,19 +87,13 @@ Anmol applies to Handshake postings directly via the Handshake web UI (CMU SSO a
 
 **Implication for `/career-ops scan`:** the scan command does NOT include any Handshake source. If you want to surface a Handshake posting for evaluation, copy the URL/JD into `/career-ops` manually (Rule 7 auto-pipeline path).
 
-### Dashboard `u` keybinding (cover letter)
+## Useful API endpoints (new-grad-friendly filters)
 
-In the Go TUI dashboard at `dashboard/`, pressing `u` (lowercase) on a selected row:
-- **If a cover letter already exists** for that row (canonical or legacy filename matching `reports/<company-slug>/<NN>-*-cover-letter.md`): opens it in the in-terminal viewer, same as Enter does for eval reports.
-- **If no cover letter exists**: shells out to `claude --permission-mode acceptEdits -p "<prompt>"` from the workspace root. CLAUDE.md auto-loads, so the standing rules apply. The prompt instructs claude to write the letter at the canonical path and exit. After completion the dashboard auto-opens the new file in the viewer; on failure it surfaces the error in the flash bar. While generation is running (~30-60s), additional `u` presses on any row are debounced. Implementation: [dashboard/internal/data/cover_letter.go](dashboard/internal/data/cover_letter.go), key handler in [dashboard/internal/ui/screens/pipeline.go](dashboard/internal/ui/screens/pipeline.go).
-
-## Useful API endpoints (intern-friendly filters)
-
-- Greenhouse: `https://boards-api.greenhouse.io/v1/boards/{slug}/jobs` — filter for "intern" / "summer 2026" / "student"
+- Greenhouse: `https://boards-api.greenhouse.io/v1/boards/{slug}/jobs` — filter for "new grad" / "entry level" / "2026/2027 grad"
 - Ashby: `https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true`
 - Lever: `https://api.lever.co/v0/postings/{slug}?mode=json`
 - Workday (POST): `https://{tenant}.{wdN}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs` with body `{"appliedFacets":{},"limit":20,"offset":N,"searchText":""}` — returns `{jobPostings:[], total:N}`. scan.mjs paginates parallel, capped at 50 pages = 1000 jobs. To add a Workday tenant, set `careers_url` to `https://{tenant}.{wdN}.myworkdayjobs.com/{site}` and `api:` to the `/wday/cxs/...` URL. Approach ported from kbhujbal/go-get-jobs.
-- SimplifyJobs/Summer2026-Internships GitHub README is the highest-signal aggregator.
+- SimplifyJobs/New-Grad-Positions, speedyapply NEW_GRAD_USA, and jobright Daily-H1B GitHub READMEs are the highest-signal aggregators.
 
 Many slugs 404 (snowflake, doordash, notion, ramp, plaid, openai, huggingface, sierra, etc.) — these don't expose public boards. Check Greenhouse/Ashby first; fall back to scraping the careers page only if needed.
 
@@ -119,7 +113,7 @@ Hard rules 1-5 live as numbered rules in this file (above) and are NOT mirrored 
 
 ## Known gotchas
 
-- **Cover-letter scrubbing**: when you regenerate a cover letter, run a final pass for em-dashes (`—`, `–`) and any auto-introduced CPT/Heinz explainer.
+- **Cover-letter scrubbing**: when you regenerate a cover letter, run a final pass for em-dashes (`—`, `–`) and any auto-introduced OPT/H-1B/visa explainer.
 - **Job-location verification**: don't trust the company name. Some Cohere, Mistral, Perplexity reqs are EU-only or Toronto-only — pull the JD location field before recommending. (This burned us once.)
 - **Bash for-loops**: when iterating slug lists, inline the list in the for-loop. `slugs="..."` then `for s in $slugs` treats the whole string as one token in some shells.
 - **Tracker dashboard updates flow back to applications.md**: if user updates status in the dashboard, the .md file changes too. Don't assume my last-known state is current — re-read before mutating.

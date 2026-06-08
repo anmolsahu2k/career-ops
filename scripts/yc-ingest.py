@@ -39,12 +39,20 @@ import sys
 import discovery_filters as df
 
 
+# Disabled: FT surface (/jobs?q=) unverified — re-enable once URL is confirmed.
+ENABLED = False
+
 DEFAULT_KEYWORDS = (
-    "software engineer intern,"
-    "machine learning intern,"
-    "data engineer intern,"
-    "ai engineer intern,"
-    "intern"
+    "software engineer new grad,"
+    "machine learning engineer new grad,"
+    "data scientist new grad,"
+    "data engineer new grad,"
+    "ai engineer new grad,"
+    "forward deployed engineer,"
+    "solutions engineer new grad,"
+    "new grad software engineer,"
+    "entry level software engineer,"
+    "university graduate software engineer"
 )
 
 
@@ -143,13 +151,11 @@ async function scrollUntilStable(maxScrolls) {
 }
 
 for (const q of queries) {
-  // The /jobs route's intern filter (?type=intern, ?jobType=intern, etc.)
-  // is auth-gated and ignored for unauthenticated sessions; ALL queries
-  // return Senior FTE roles. The /internships path is the real intern
-  // listing, returns YC W25/W26/F24/S24 batches with comp + posting age.
-  // Free-text narrowing via ?q= is supported on /internships.
+  // The /jobs path is the FT listing on workatastartup.com. Free-text
+  // narrowing via ?q= is supported but unverified against a live run;
+  // this source is currently ENABLED=False until the URL is confirmed.
   const kwParam = q.kw ? `?q=${encodeURIComponent(q.kw)}` : '';
-  const url = `https://www.workatastartup.com/internships${kwParam}`;
+  const url = `https://www.workatastartup.com/jobs${kwParam}`;
   process.stderr.write(`  [${q.label}] ${url}\n`);
   let rowCount = 0;
   try {
@@ -240,11 +246,18 @@ def _parse_card(card):
 
 
 def main(argv=None):
+    if not ENABLED:
+        print(
+            "yc-ingest deferred: FT surface (/jobs?q=) unverified",
+            file=sys.stderr,
+        )
+        return 0
+
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument(
         "--keyword",
         default=DEFAULT_KEYWORDS,
-        help="comma-separated narrowing queries; '' = base intern listing",
+        help="comma-separated narrowing queries; '' = base FT listing",
     )
     p.add_argument("--max-pages", type=int, default=3)
     p.add_argument("--max-age-days", type=int, default=df.MAX_AGE_DAYS_DEFAULT)
