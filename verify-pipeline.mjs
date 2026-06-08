@@ -15,22 +15,18 @@
  */
 
 import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const CAREER_OPS = dirname(fileURLToPath(import.meta.url));
-// Support both layouts: data/applications.md (boilerplate) and applications.md (original)
-const APPS_FILE = existsSync(join(CAREER_OPS, 'data/applications.md'))
-  ? join(CAREER_OPS, 'data/applications.md')
-  : join(CAREER_OPS, 'applications.md');
-const ADDITIONS_DIR = join(CAREER_OPS, 'batch/tracker-additions');
-const REPORTS_DIR = join(CAREER_OPS, 'reports');
-const STATES_FILE = existsSync(join(CAREER_OPS, 'templates/states.yml'))
-  ? join(CAREER_OPS, 'templates/states.yml')
-  : join(CAREER_OPS, 'states.yml');
+import { join } from 'path';
+import { resolvePaths } from './lib/paths.mjs';
+const P = resolvePaths(import.meta.url);
+const REPO_ROOT = P.root;       // shared config (portals.yml, templates/states.yml)
+const TARGET_ROOT = P.target;   // report-link resolution base
+const APPS_FILE = P.appsFile;
+const ADDITIONS_DIR = P.batchDir('tracker-additions');
+const REPORTS_DIR = P.reportsDir;
+const STATES_FILE = P.statesFile;   // shared, always root/templates/states.yml
 
 // Ensure required directories exist (fresh setup)
-mkdirSync(join(CAREER_OPS, 'data'), { recursive: true });
+mkdirSync(P.dataDir, { recursive: true });
 mkdirSync(REPORTS_DIR, { recursive: true });
 
 // SKIP removed 2026-05-10 — legacy term migrated to Discarded across the tracker.
@@ -131,7 +127,7 @@ let brokenReports = 0;
 for (const e of entries) {
   const match = e.report.match(/\]\(([^)]+)\)/);
   if (!match) continue;
-  const reportPath = join(CAREER_OPS, match[1]);
+  const reportPath = join(TARGET_ROOT, match[1]);
   if (!existsSync(reportPath)) {
     error(`#${e.num}: Report not found: ${match[1]}`);
     brokenReports++;
@@ -213,11 +209,11 @@ const evalReports = walkReports(REPORTS_DIR);
 for (const path of evalReports) {
   const body = readFileSync(path, 'utf-8');
   if (!/^\*\*URL:\*\*/m.test(body)) {
-    warn(`${path.replace(CAREER_OPS + '/', '')}: missing **URL:** header (dashboard O-key won't work)`);
+    warn(`${path.replace(TARGET_ROOT + '/', '')}: missing **URL:** header (dashboard O-key won't work)`);
     missingUrlHeader++;
   }
   if (!/^\*\*Resume:\*\*/m.test(body)) {
-    warn(`${path.replace(CAREER_OPS + '/', '')}: missing **Resume:** header (per modes/_shared.md rule 11)`);
+    warn(`${path.replace(TARGET_ROOT + '/', '')}: missing **Resume:** header (per modes/_shared.md rule 11)`);
     missingResumeHeader++;
   }
 }
@@ -263,7 +259,7 @@ function walkSpecial(dir, suffixRe) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, entry.name);
     if (entry.isDirectory()) out.push(...walkSpecial(p, suffixRe));
-    else if (suffixRe.test(entry.name)) out.push(p.replace(CAREER_OPS + '/', ''));
+    else if (suffixRe.test(entry.name)) out.push(p.replace(TARGET_ROOT + '/', ''));
   }
   return out;
 }
@@ -277,7 +273,7 @@ if (orphanQs === 0) ok(`All ${allQs.length} form-answer files referenced in trac
 // --- Check 11: Brand-alias in tracker (Issue 11 prevention) ---
 // If portals.yml has company_aliases, check that no row uses a subsidiary slug.
 let aliasViolations = 0;
-const portalsPath = join(CAREER_OPS, 'portals.yml');
+const portalsPath = join(REPO_ROOT, 'portals.yml');
 if (existsSync(portalsPath)) {
   const aliases = {};
   const portalLines = readFileSync(portalsPath, 'utf-8').split('\n');

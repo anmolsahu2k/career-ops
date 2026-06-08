@@ -29,9 +29,12 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 
-ROOT = Path(__file__).resolve().parent.parent
-TRACKER = ROOT / "data" / "applications.md"
-REPORTS = ROOT / "reports"
+import _paths
+_P = _paths.resolve_paths(__file__)
+REPO_ROOT = _P["root"]      # for git -C and relative_to in git mv
+TARGET_ROOT = _P["target"]  # reorg operates within the target subtree
+TRACKER = _P["apps_file"]
+REPORTS = _P["reports_dir"]
 
 # Keep these at top of reports/ — shared sentinels / non-company files.
 KEEP_AT_TOP = {"pending.md", ".gitkeep"}
@@ -250,10 +253,10 @@ def main():
     if not args.execute:
         print("\n(dry-run; pass --execute to actually move)")
         # Still write the manifest for inspection
-        manifest = ROOT / "_meta" / "reorg-manifest.txt"
+        manifest = TARGET_ROOT / "_meta" / "reorg-manifest.txt"
         manifest.parent.mkdir(exist_ok=True)
-        manifest.write_text("\n".join(f"{old.relative_to(ROOT)} -> {new.relative_to(ROOT)}" for old, new in moves))
-        print(f"Manifest written to {manifest.relative_to(ROOT)}")
+        manifest.write_text("\n".join(f"{old.relative_to(REPO_ROOT)} -> {new.relative_to(REPO_ROOT)}" for old, new in moves))
+        print(f"Manifest written to {manifest.relative_to(REPO_ROOT)}")
         return
 
     # Execute moves
@@ -265,7 +268,7 @@ def main():
         if args.no_git:
             shutil.move(str(old), str(new))
         else:
-            r = subprocess.run(["git", "-C", str(ROOT), "mv", str(old.relative_to(ROOT)), str(new.relative_to(ROOT))],
+            r = subprocess.run(["git", "-C", str(REPO_ROOT), "mv", str(old.relative_to(REPO_ROOT)), str(new.relative_to(REPO_ROOT))],
                                capture_output=True, text=True)
             if r.returncode != 0:
                 # Fallback for untracked files (most of reports/ is untracked per status output)
@@ -280,7 +283,7 @@ def main():
     new_tracker = rewrite_links(tracker_text, slug_for_filename)
     if new_tracker != tracker_text:
         TRACKER.write_text(new_tracker)
-        print(f"Updated {TRACKER.relative_to(ROOT)}")
+        print(f"Updated {TRACKER.relative_to(REPO_ROOT)}")
 
     # Rewrite cross-refs inside moved files
     rewritten = 0

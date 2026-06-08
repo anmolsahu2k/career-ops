@@ -31,8 +31,6 @@ try {
   // dotenv is optional — fall back to process.env if not installed
 }
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
 // ---------------------------------------------------------------------------
 // Paths
 // ---------------------------------------------------------------------------
@@ -48,6 +46,16 @@ const PATHS = {
   reports:  join(ROOT, 'reports'),
   tracker:  join(ROOT, 'data', 'applications.md'),
 };
+
+// ---------------------------------------------------------------------------
+// Deprecated (Rule 2: no CV PDF gen; Gemini chain retired). Refuse to run unless
+// explicitly opted in, so it can never write the frozen intern tracker/reports.
+if (process.env.ALLOW_GEMINI_EVAL !== '1') {
+  console.error('gemini-eval.mjs is deprecated and disabled. Set ALLOW_GEMINI_EVAL=1 to override.');
+  process.exit(2);
+}
+
+const { GoogleGenerativeAI } = await import('@google/generative-ai');
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing

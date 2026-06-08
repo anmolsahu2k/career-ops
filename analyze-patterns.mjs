@@ -12,14 +12,13 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
+import { resolvePaths } from './lib/paths.mjs';
 
-const CAREER_OPS = dirname(fileURLToPath(import.meta.url));
-const APPS_FILE = existsSync(join(CAREER_OPS, 'data/applications.md'))
-  ? join(CAREER_OPS, 'data/applications.md')
-  : join(CAREER_OPS, 'applications.md');
-const REPORTS_DIR = join(CAREER_OPS, 'reports');
+const P = resolvePaths(import.meta.url);
+const APPS_FILE = P.appsFile;
+const REPORTS_DIR = P.reportsDir;
+const TARGET_ROOT = P.target;
 
 // --- CLI args ---
 const args = process.argv.slice(2);
@@ -221,7 +220,7 @@ function analyze() {
   // Enrich entries with report data and classification
   const enriched = entries.map(e => {
     const reportMatch = e.report.match(/\]\(([^)]+)\)/);
-    const reportPath = reportMatch ? join(CAREER_OPS, reportMatch[1]) : null;
+    const reportPath = reportMatch ? join(TARGET_ROOT, reportMatch[1]) : null;
     const reportData = reportPath ? parseReport(reportPath) : null;
     const outcome = classifyOutcome(e.status);
     const score = parseFloat(e.score) || 0;

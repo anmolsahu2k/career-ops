@@ -22,18 +22,21 @@
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import yaml from 'js-yaml';
+import { resolvePaths } from './lib/paths.mjs';
 const parseYaml = yaml.load;
 
 // ── Config ──────────────────────────────────────────────────────────
 
-const PORTALS_PATH = 'portals.yml';
-const SCAN_HISTORY_PATH = 'data/scan-history.tsv';
-const APPLICATIONS_PATH = 'data/applications.md';
-const SCAN_RESULTS_PATH = (date) => `data/scan-results-${date}.tsv`;
+const P = resolvePaths(import.meta.url);
+const PORTALS_PATH = P.portalsFile;                            // shared root config
+const SCAN_HISTORY_PATH = join(P.dataDir, 'scan-history.tsv');
+const APPLICATIONS_PATH = P.appsFile;
+const SCAN_RESULTS_PATH = (date) => join(P.dataDir, `scan-results-${date}.tsv`);
 
 // Ensure required directories exist (fresh setup)
-mkdirSync('data', { recursive: true });
+mkdirSync(P.dataDir, { recursive: true });
 
 const CONCURRENCY = 10;
 const FETCH_TIMEOUT_MS = 10_000;

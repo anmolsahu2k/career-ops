@@ -30,14 +30,17 @@
 
 import { chromium } from 'playwright';
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import yaml from 'js-yaml';
+import { resolvePaths } from './lib/paths.mjs';
 
-const PORTALS_PATH = 'portals.yml';
-const SCAN_HISTORY_PATH = 'data/scan-history.tsv';
-const APPLICATIONS_PATH = 'data/applications.md';
-const SCAN_RESULTS_PATH = (date) => `data/scan-results-${date}.tsv`;
+const P = resolvePaths(import.meta.url);
+const PORTALS_PATH = P.portalsFile;                            // shared root config
+const SCAN_HISTORY_PATH = join(P.dataDir, 'scan-history.tsv');
+const APPLICATIONS_PATH = P.appsFile;
+const SCAN_RESULTS_PATH = (date) => join(P.dataDir, `scan-results-${date}.tsv`);
 
-mkdirSync('data', { recursive: true });
+mkdirSync(P.dataDir, { recursive: true });
 
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || '5', 10);
 const NAV_TIMEOUT_MS = 30000;

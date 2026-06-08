@@ -12,14 +12,13 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
+import { resolvePaths } from './lib/paths.mjs';
 
-const CAREER_OPS = dirname(fileURLToPath(import.meta.url));
-const APPS_FILE = existsSync(join(CAREER_OPS, 'data/applications.md'))
-  ? join(CAREER_OPS, 'data/applications.md')
-  : join(CAREER_OPS, 'applications.md');
-const FOLLOWUPS_FILE = join(CAREER_OPS, 'data/follow-ups.md');
+const P = resolvePaths(import.meta.url);
+const APPS_FILE = P.appsFile;
+const FOLLOWUPS_FILE = join(P.dataDir, 'follow-ups.md');
+const TARGET_ROOT = P.target;
 
 
 // --- CLI args ---
@@ -148,7 +147,7 @@ function extractContacts(notes) {
 function resolveReportPath(reportField) {
   const match = reportField.match(/\]\(([^)]+)\)/);
   if (!match) return null;
-  const fullPath = join(CAREER_OPS, match[1]);
+  const fullPath = join(TARGET_ROOT, match[1]);
   return existsSync(fullPath) ? match[1] : null;
 }
 

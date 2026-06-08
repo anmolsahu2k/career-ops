@@ -1,14 +1,9 @@
 package screens
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/santifer/career-ops/dashboard/internal/data"
 	"github.com/santifer/career-ops/dashboard/internal/model"
 	"github.com/santifer/career-ops/dashboard/internal/theme"
 )
@@ -164,97 +159,3 @@ func TestRejectedAndDiscardedTabsFilterCorrectly(t *testing.T) {
 	}
 }
 
-// uKeyTestSetup builds a pipeline with one selected app at the given workspace.
-func uKeyTestSetup(t *testing.T, workspace string) PipelineModel {
-	t.Helper()
-	apps := []model.CareerApplication{{
-		Number:       1205,
-		ReportNumber: "1205",
-		Company:      "Abridge",
-		Role:         "Full-Stack Engineer Intern",
-		Status:       "Applied",
-		Score:        4.5,
-		ScoreRaw:     "4.5/5",
-	}}
-	pm := NewPipelineModel(
-		theme.NewTheme("catppuccin-mocha"),
-		apps,
-		model.PipelineMetrics{Total: len(apps)},
-		workspace,
-		120, 40,
-	)
-	pm.viewMode = "flat"
-	pm.applyFilterAndSort()
-	pm.cursor = 0
-	return pm
-}
-
-func TestUKey_NoExistingFile_DispatchesGenerate(t *testing.T) {
-	tmp := t.TempDir()
-	pm := uKeyTestSetup(t, tmp)
-
-	updated, cmd := pm.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'u'}})
-	if !updated.coverLetterGenerating {
-		t.Error("expected coverLetterGenerating to be set after `u` press with no existing file")
-	}
-	if updated.flash == "" {
-		t.Error("expected flash to be set during generation")
-	}
-	if cmd == nil {
-		t.Fatal("expected a non-nil tea.Cmd dispatching the generate message")
-	}
-	switch cmd().(type) {
-	case PipelineGenerateCoverLetterMsg:
-		// good
-	default:
-		t.Errorf("expected PipelineGenerateCoverLetterMsg, got %T", cmd())
-	}
-}
-
-func TestUKey_ExistingFile_DispatchesOpenViewer(t *testing.T) {
-	tmp := t.TempDir()
-	pm := uKeyTestSetup(t, tmp)
-	app := pm.filtered[0]
-
-	// Drop a canonical cover letter file.
-	rel := data.CoverLetterPath(app)
-	if err := os.MkdirAll(filepath.Join(tmp, filepath.Dir(rel)), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(tmp, rel), []byte("# letter\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	updated, cmd := pm.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'u'}})
-	if updated.coverLetterGenerating {
-		t.Error("did not expect generating flag when file already exists")
-	}
-	if cmd == nil {
-		t.Fatal("expected open-viewer command")
-	}
-	msg, ok := cmd().(PipelineOpenReportMsg)
-	if !ok {
-		t.Fatalf("expected PipelineOpenReportMsg, got %T", cmd())
-	}
-	wantSuffix := filepath.Base(rel)
-	if !strings.HasSuffix(msg.Path, wantSuffix) {
-		t.Errorf("opened path = %q, want suffix %q", msg.Path, wantSuffix)
-	}
-	if !strings.Contains(msg.Title, "Cover Letter") {
-		t.Errorf("title = %q, want it to mention Cover Letter", msg.Title)
-	}
-}
-
-func TestUKey_DebouncedDuringGeneration(t *testing.T) {
-	tmp := t.TempDir()
-	pm := uKeyTestSetup(t, tmp)
-	pm.coverLetterGenerating = true
-
-	updated, cmd := pm.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'u'}})
-	if cmd != nil {
-		t.Errorf("expected nil cmd while already generating, got %T", cmd())
-	}
-	if !strings.Contains(strings.ToLower(updated.flash), "still generating") {
-		t.Errorf("expected flash to mention still generating, got %q", updated.flash)
-	}
-}

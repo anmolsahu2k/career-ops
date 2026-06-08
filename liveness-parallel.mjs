@@ -22,15 +22,15 @@
 
 import { chromium } from 'playwright';
 import { readFile, writeFile, readdir } from 'fs/promises';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { classifyLiveness, isSpaHost } from './liveness-core.mjs';
+import { resolvePaths } from './lib/paths.mjs';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
+const P = resolvePaths(import.meta.url);
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || '20', 10);
 
 async function urlsFromBatch() {
-  const dir = join(HERE, 'batch/tracker-additions');
+  const dir = P.batchDir('tracker-additions');
   // All discovery sources (aggregator, jobspy, handshake, ...) write *.tsv into
   // batch/tracker-additions/ and the canonical pipeline gates them all the same
   // way. Glob all tsvs, not just one source's. Skip the merged/ subdirectory.
@@ -48,7 +48,7 @@ async function urlsFromBatch() {
     const rp = (reportCell.match(/\(([^)]+\.md)\)/) || [])[1];
     if (rp) {
       try {
-        const reportText = await readFile(join(HERE, rp), 'utf-8');
+        const reportText = await readFile(join(P.target, rp), 'utf-8');
         const m2 = reportText.match(URL_RE);
         if (m2) urls.add(m2[1].replace(/[.,]+$/, ''));
       } catch (e) { /* report not found, skip */ }

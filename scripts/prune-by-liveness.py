@@ -17,9 +17,10 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
-
-WORKSPACE = Path(__file__).resolve().parent.parent
-BATCH = WORKSPACE / "batch/tracker-additions"
+import _paths
+_P = _paths.resolve_paths(__file__)
+BATCH = _P["batch_dir"]
+TARGET_ROOT = _P["target"]
 URL_RE_REPORT = re.compile(r"\*\*URL:\*\*\s*(\S+)")
 
 
@@ -49,7 +50,7 @@ def url_for_tsv(tsv_path):
 
     m2 = re.search(r"\(([^)]+\.md)\)", report_cell)
     if m2:
-        rp = WORKSPACE / m2.group(1)
+        rp = TARGET_ROOT / m2.group(1)
         if rp.exists():
             m3 = URL_RE_REPORT.search(rp.read_text(errors="replace"))
             if m3:
@@ -110,7 +111,7 @@ def main(argv=None):
                 # Mark Discarded in report file
                 m2 = re.search(r"\(([^)]+\.md)\)", report_cell)
                 if m2:
-                    rp = WORKSPACE / m2.group(1)
+                    rp = TARGET_ROOT / m2.group(1)
                     if rp.exists() and rp.name != "pending.md":
                         text = rp.read_text()
                         new_text = re.sub(

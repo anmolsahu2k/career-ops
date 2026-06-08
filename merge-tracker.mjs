@@ -19,22 +19,20 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, renameSync, existsSync } from 'fs';
-import { join, basename, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join, basename } from 'path';
 import { execFileSync } from 'child_process';
+import { resolvePaths } from './lib/paths.mjs';
 
-const CAREER_OPS = dirname(fileURLToPath(import.meta.url));
-// Support both layouts: data/applications.md (boilerplate) and applications.md (original)
-const APPS_FILE = existsSync(join(CAREER_OPS, 'data/applications.md'))
-  ? join(CAREER_OPS, 'data/applications.md')
-  : join(CAREER_OPS, 'applications.md');
-const ADDITIONS_DIR = join(CAREER_OPS, 'batch/tracker-additions');
+const P = resolvePaths(import.meta.url);
+const CAREER_OPS = P.root;          // portals.yml read via join(CAREER_OPS,'portals.yml') stays root — correct
+const APPS_FILE = P.appsFile;
+const ADDITIONS_DIR = P.batchDir('tracker-additions');
 const MERGED_DIR = join(ADDITIONS_DIR, 'merged');
 const DRY_RUN = process.argv.includes('--dry-run');
 const VERIFY = process.argv.includes('--verify');
 
 // Ensure required directories exist (fresh setup)
-mkdirSync(join(CAREER_OPS, 'data'), { recursive: true });
+mkdirSync(P.dataDir, { recursive: true });
 mkdirSync(ADDITIONS_DIR, { recursive: true });
 
 // Canonical states. SKIP is intentionally NOT included here — it was the legacy
@@ -269,6 +267,27 @@ function parseScore(s) {
   return m ? parseFloat(m[1]) : 0;
 }
 
+// Sanitize a value before it goes into a markdown table cell. A literal "|"
+// injects an extra column and breaks the 9-field count the Go dashboard parses
+// (fields[5]=Status, etc.); tabs/newlines do the same to downstream TSV/diff
+// tooling. This is the single chokepoint every source (scan agents, aggregator,
+// gmail-sweep) funnels through, so sanitizing here covers all of them.
+function sanitizeCell(v) {
+  return String(v ?? '')
+    .replace(/\|/g, '/')
+    .replace(/[\t\r\n]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+// Backstop for sanitizeCell. A well-formed 9-column row "| f1 | ... | f9 |"
+// splits on "|" into 11 parts (leading empty + 9 fields + trailing empty).
+// Anything else means a cell still smuggled a pipe through — the caller warns
+// and skips rather than write a row that desyncs the dashboard's column parser.
+function rowIsValid(line) {
+  return line.split('|').length === 11 && !/[\t\n\r]/.test(line);
+}
+
 function parseAppLine(line) {
   const parts = line.split('|').map(s => s.trim());
   if (parts.length < 9) return null;
@@ -475,9 +494,15 @@ for (const file of tsvFiles) {
       console.log(`🔄 Update: #${duplicate.num} ${addition.company} — ${addition.role} (${oldScore}→${newScore})`);
       const lineIdx = appLines.indexOf(duplicate.raw);
       if (lineIdx >= 0) {
-        const updatedLine = `| ${duplicate.num} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.score} | ${duplicate.status} | ${duplicate.pdf} | ${addition.report} | Re-eval ${addition.date} (${oldScore}→${newScore}). ${addition.notes} |`;
-        appLines[lineIdx] = updatedLine;
-        updated++;
+        const notesField = sanitizeCell(`Re-eval ${addition.date} (${oldScore}→${newScore}). ${addition.notes}`);
+        const updatedLine = `| ${duplicate.num} | ${sanitizeCell(addition.date)} | ${sanitizeCell(addition.company)} | ${sanitizeCell(addition.role)} | ${sanitizeCell(addition.score)} | ${sanitizeCell(duplicate.status)} | ${sanitizeCell(duplicate.pdf)} | ${sanitizeCell(addition.report)} | ${notesField} |`;
+        if (rowIsValid(updatedLine)) {
+          appLines[lineIdx] = updatedLine;
+          updated++;
+        } else {
+          console.warn(`⚠️  Skipping update for #${duplicate.num} ${addition.company}: row failed schema guard → ${updatedLine}`);
+          skipped++;
+        }
       }
     } else {
       console.log(`⏭️  Skip: ${addition.company} — ${addition.role} (existing #${duplicate.num} ${oldScore} >= new ${newScore})`);
@@ -488,10 +513,15 @@ for (const file of tsvFiles) {
     const entryNum = addition.num > maxNum ? addition.num : ++maxNum;
     if (addition.num > maxNum) maxNum = addition.num;
 
-    const newLine = `| ${entryNum} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.score} | ${addition.status} | ${addition.pdf} | ${addition.report} | ${addition.notes} |`;
-    newLines.push(newLine);
-    added++;
-    console.log(`➕ Add #${entryNum}: ${addition.company} — ${addition.role} (${addition.score})`);
+    const newLine = `| ${entryNum} | ${sanitizeCell(addition.date)} | ${sanitizeCell(addition.company)} | ${sanitizeCell(addition.role)} | ${sanitizeCell(addition.score)} | ${sanitizeCell(addition.status)} | ${sanitizeCell(addition.pdf)} | ${sanitizeCell(addition.report)} | ${sanitizeCell(addition.notes)} |`;
+    if (rowIsValid(newLine)) {
+      newLines.push(newLine);
+      added++;
+      console.log(`➕ Add #${entryNum}: ${addition.company} — ${addition.role} (${addition.score})`);
+    } else {
+      console.warn(`⚠️  Skipping add for ${addition.company} — ${addition.role}: row failed schema guard → ${newLine}`);
+      skipped++;
+    }
   }
 }
 

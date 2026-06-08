@@ -48,23 +48,6 @@ type PipelineRefreshMsg struct{}
 // PipelineOpenProgressMsg is emitted when the progress screen should open.
 type PipelineOpenProgressMsg struct{}
 
-// PipelineGenerateCoverLetterMsg is emitted when the user presses `u` on a
-// row that has no existing cover letter. main.go shells out to `claude -p` and
-// returns a PipelineCoverLetterReadyMsg when the file is written.
-type PipelineGenerateCoverLetterMsg struct {
-	CareerOpsPath string
-	App           model.CareerApplication
-}
-
-// PipelineCoverLetterReadyMsg is emitted by main.go after `claude -p` returns,
-// successfully or otherwise. On success, the pipeline auto-opens the file in
-// the viewer.
-type PipelineCoverLetterReadyMsg struct {
-	App     model.CareerApplication
-	RelPath string
-	Err     error
-}
-
 // PipelineFlashMsg sets a transient status line at the bottom of the screen.
 // The flash clears on the next keypress.
 type PipelineFlashMsg struct {
@@ -144,11 +127,9 @@ type PipelineModel struct {
 	// Status picker sub-state
 	statusPicker bool
 	statusCursor int
-	// Transient flash message (e.g. "Cover letter generated...")
+	// Transient flash message (e.g. status change confirmation)
 	flash      string
 	flashIsErr bool
-	// True while a cover-letter generation subprocess is running.
-	coverLetterGenerating bool
 }
 
 // SetFlash sets the transient flash message; cleared on next keypress.
@@ -157,14 +138,8 @@ func (m *PipelineModel) SetFlash(text string, isErr bool) {
 	m.flashIsErr = isErr
 }
 
-// SetCoverLetterGenerating toggles the in-flight flag for the `u` keybinding.
-// While true, additional `u` presses are ignored.
-func (m *PipelineModel) SetCoverLetterGenerating(b bool) {
-	m.coverLetterGenerating = b
-}
-
 // CareerOpsPath exposes the workspace path for callers that need to open files
-// produced after async work (e.g. the cover-letter viewer).
+// produced after async work.
 func (m PipelineModel) CareerOpsPath() string {
 	return m.careerOpsPath
 }
@@ -404,32 +379,6 @@ func (m PipelineModel) handleKey(msg tea.KeyMsg) (PipelineModel, tea.Cmd) {
 					CareerOpsPath: m.careerOpsPath,
 					App:           app,
 					NewStatus:     "Discarded",
-				}
-			}
-		}
-
-	case "u":
-		if m.coverLetterGenerating {
-			m.flash = "Cover letter is still generating, please wait..."
-			m.flashIsErr = false
-			return m, nil
-		}
-		if app, ok := m.CurrentApp(); ok {
-			if rel, exists := data.FindExistingCoverLetter(m.careerOpsPath, app); exists {
-				fullPath := filepath.Join(m.careerOpsPath, rel)
-				title := fmt.Sprintf("%s — %s — Cover Letter", app.Company, app.Role)
-				return m, func() tea.Msg {
-					return PipelineOpenReportMsg{Path: fullPath, Title: title, JobURL: app.JobURL}
-				}
-			}
-			careerOpsPath := m.careerOpsPath
-			m.coverLetterGenerating = true
-			m.flash = fmt.Sprintf("Generating cover letter for %s — %s via claude...", app.Company, app.Role)
-			m.flashIsErr = false
-			return m, func() tea.Msg {
-				return PipelineGenerateCoverLetterMsg{
-					CareerOpsPath: careerOpsPath,
-					App:           app,
 				}
 			}
 		}
@@ -982,7 +931,6 @@ func (m PipelineModel) renderHelp() string {
 		keyStyle.Render("o") + descStyle.Render(" open URL  ") +
 		keyStyle.Render("c") + descStyle.Render(" change  ") +
 		keyStyle.Render("d") + descStyle.Render(" discard  ") +
-		keyStyle.Render("u") + descStyle.Render(" cover ltr  ") +
 		keyStyle.Render("v") + descStyle.Render(" view  ") +
 		keyStyle.Render("p") + descStyle.Render(" progress  ") +
 		keyStyle.Render("Esc") + descStyle.Render(" quit")

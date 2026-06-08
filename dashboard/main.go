@@ -1,12 +1,10 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"time"
 
@@ -17,8 +15,6 @@ import (
 	"github.com/santifer/career-ops/dashboard/internal/theme"
 	"github.com/santifer/career-ops/dashboard/internal/ui/screens"
 )
-
-const coverLetterGenTimeout = 5 * time.Minute
 
 type viewState int
 
@@ -113,33 +109,6 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case screens.ProgressClosedMsg:
 		m.state = viewPipeline
-		return m, nil
-
-	case screens.PipelineGenerateCoverLetterMsg:
-		careerOpsPath := msg.CareerOpsPath
-		app := msg.App
-		return m, func() tea.Msg {
-			ctx, cancel := context.WithTimeout(context.Background(), coverLetterGenTimeout)
-			defer cancel()
-			rel, err := data.GenerateCoverLetter(ctx, careerOpsPath, app, "")
-			return screens.PipelineCoverLetterReadyMsg{App: app, RelPath: rel, Err: err}
-		}
-
-	case screens.PipelineCoverLetterReadyMsg:
-		m.pipeline.SetCoverLetterGenerating(false)
-		if msg.Err != nil {
-			m.pipeline.SetFlash(fmt.Sprintf("Cover-letter generation failed: %v", msg.Err), true)
-			return m, nil
-		}
-		m.pipeline.SetFlash(fmt.Sprintf("Cover letter written to %s", msg.RelPath), false)
-		fullPath := filepath.Join(m.pipeline.CareerOpsPath(), msg.RelPath)
-		title := fmt.Sprintf("%s — %s — Cover Letter", msg.App.Company, msg.App.Role)
-		m.viewer = screens.NewViewerModel(
-			m.theme,
-			fullPath, title,
-			m.pipeline.Width(), m.pipeline.Height(),
-		)
-		m.state = viewReport
 		return m, nil
 
 	case screens.PipelineOpenURLMsg:
