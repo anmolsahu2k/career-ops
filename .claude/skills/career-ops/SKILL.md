@@ -3,7 +3,7 @@ name: career-ops
 description: AI job search command center -- evaluate offers, generate CVs, scan portals, track applications
 user_invocable: true
 args: mode
-argument-hint: "[scan | deep | pdf | oferta | ofertas | apply | batch | tracker | contacto | training | project | interview-prep | update]"
+argument-hint: "[scan | deep | pdf | oferta | ofertas | apply | batch | tracker | contacto | training | project | interview-prep | update | gmail-sweep]"
 ---
 
 # career-ops -- Router
@@ -29,6 +29,7 @@ Determine the mode from `{{mode}}`:
 | `batch` | `batch` |
 | `patterns` | `patterns` |
 | `followup` | `followup` |
+| `gmail-sweep` | `gmail-sweep` |
 
 **Auto-pipeline detection:** If `{{mode}}` is not a known sub-command AND contains JD text (keywords: "responsibilities", "requirements", "qualifications", "about the role", "we're looking for", company name + role) or a URL to a JD, execute `auto-pipeline`.
 
@@ -58,6 +59,7 @@ Available commands:
   /career-ops batch     → Batch processing with parallel workers
   /career-ops patterns  → Analyze rejection patterns and improve targeting
   /career-ops followup  → Follow-up cadence tracker: flag overdue, generate drafts
+  /career-ops gmail-sweep → Sweep both Gmail accounts: add applications, flip rejections
 
 Paste a JD directly to run the full auto-pipeline.
 
@@ -85,7 +87,7 @@ Applies to: `auto-pipeline`, `oferta`, `ofertas`, `pdf`, `contacto`, `apply`, `s
 ### Standalone modes (only their mode file):
 Read `modes/{mode}.md`
 
-Applies to: `tracker`, `deep`, `training`, `project`, `patterns`, `followup`
+Applies to: `tracker`, `deep`, `training`, `project`, `patterns`, `followup`, `gmail-sweep`
 
 ### Modes delegated to subagent:
 For `scan` and `apply` (with Playwright): launch as Agent with the content of `_shared.md` + `modes/{mode}.md` injected into the subagent prompt. (`scan` agents in default mode must complete the inline evaluation pass before returning — no leftover candidates in `data/scan-results-{date}.tsv`. In `scan-only` mode, the agent stops after the title-level filter, reports row counts, and leaves the TSV on disk for a follow-up invocation.)
