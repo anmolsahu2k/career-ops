@@ -21,7 +21,12 @@
     "scan:spa": "node scan-spa.mjs",
     "gemini:eval": "node gemini-eval.mjs",
     "runtime:test": "node --test tests/runtime-*.test.mjs",
-    "runtime:doctor": "node bin/career-ops.mjs doctor --config config/runtime.example.yml"
+    "runtime:doctor": "node bin/career-ops.mjs doctor --config config/runtime.example.yml",
+    "runtime:label-pack": "node scripts/build-runtime-label-review.mjs --target ft",
+    "runtime:split-label-pack": "node scripts/build-runtime-split-label-review.mjs --target ft",
+    "runtime:historical-fixtures": "node scripts/build-runtime-historical-fixtures.mjs --target ft --replace",
+    "runtime:historical-evidence": "node scripts/capture-runtime-historical-evidence.mjs --target ft --apply",
+    "runtime:replacement-pack": "node scripts/build-runtime-replacement-review.mjs --target ft"
   },
   "keywords": [
     "ai",

@@ -3,7 +3,7 @@
  * gemini-eval.mjs — Gemini-powered Job Offer Evaluator for career-ops
  *
  * A free-tier alternative to the Claude-based pipeline.
- * Reads evaluation logic from modes/oferta.md + modes/_shared.md,
+ * Reads evaluation logic from modes/offer.md + modes/_shared.md,
  * reads the user's resume from cv.md, and evaluates a Job Description
  * passed as a command-line argument.
  *
@@ -18,6 +18,7 @@
  */
 
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
+import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -36,10 +37,21 @@ try {
 // ---------------------------------------------------------------------------
 const ROOT = dirname(fileURLToPath(import.meta.url));
 
+// Compatibility entrypoint. The default path delegates to the provider-neutral
+// runtime; the historical implementation remains available only by explicit opt-in.
+if (process.env.CAREER_OPS_RUNTIME !== 'legacy') {
+  const result = spawnSync(process.execPath, [join(ROOT, 'bin', 'career-ops.mjs'), 'respond', ...process.argv.slice(2)], {
+    cwd: ROOT,
+    env: process.env,
+    stdio: 'inherit',
+  });
+  process.exit(result.status ?? 1);
+}
+
 const PATHS = {
   // Primary evaluation logic lives in these two mode files
   shared:   join(ROOT, 'modes', '_shared.md'),
-  oferta:   join(ROOT, 'modes', 'oferta.md'),
+  offer:    join(ROOT, 'modes', 'offer.md'),
   // Canonical skill path referenced in Issue #344
   evaluate: join(ROOT, '.claude', 'skills', 'career-ops', 'SKILL.md'),
   cv:       join(ROOT, 'cv.md'),
@@ -51,7 +63,7 @@ const PATHS = {
 // Deprecated (Rule 2: no CV PDF gen; Gemini chain retired). Refuse to run unless
 // explicitly opted in, so it can never write the frozen intern tracker/reports.
 if (process.env.ALLOW_GEMINI_EVAL !== '1') {
-  console.error('gemini-eval.mjs is deprecated and disabled. Set ALLOW_GEMINI_EVAL=1 to override.');
+  console.error('Legacy gemini-eval.mjs is disabled. Set CAREER_OPS_RUNTIME=legacy and ALLOW_GEMINI_EVAL=1 to override.');
   process.exit(2);
 }
 
@@ -172,7 +184,7 @@ if (!readdirSync) {
 console.log('\n📂  Loading context files...');
 
 const sharedContext  = readFile(PATHS.shared,   'modes/_shared.md');
-const ofertaLogic    = readFile(PATHS.oferta,   'modes/oferta.md');
+const offerLogic     = readFile(PATHS.offer,    'modes/offer.md');
 const cvContent      = readFile(PATHS.cv,       'cv.md');
 
 // ---------------------------------------------------------------------------
@@ -189,9 +201,9 @@ SYSTEM CONTEXT (_shared.md)
 ${sharedContext}
 
 ═══════════════════════════════════════════════════════
-EVALUATION MODE (oferta.md)
+EVALUATION MODE (offer.md)
 ═══════════════════════════════════════════════════════
-${ofertaLogic}
+${offerLogic}
 
 ═══════════════════════════════════════════════════════
 CANDIDATE RESUME (cv.md)
@@ -303,7 +315,7 @@ if (saveReport) {
 **Archetype:** ${archetype}
 **Score:** ${score}/5
 **Legitimacy:** ${legitimacy}
-**PDF:** pending
+**Resume:** select SDE or MLE resume before applying
 **Tool:** Gemini (${modelName})
 
 ---
@@ -316,7 +328,7 @@ ${evaluationText.replace(/---SCORE_SUMMARY---[\s\S]*?---END_SUMMARY---/, '').tri
 
     // Append tracker entry reminder
     console.log(`\n📊  Tracker entry (add to data/applications.md):`);
-    console.log(`    | ${num} | ${today} | ${company} | ${role} | ${score} | Evaluada | ❌ | [${num}](reports/${filename}) |`);
+    console.log(`    | ${num} | ${today} | ${company} | ${role} | ${score} | Evaluated | ❌ | [${num}](reports/${filename}) | SRC: manual |`);
   } catch (err) {
     console.warn(`⚠️   Could not save report: ${err.message}`);
   }

@@ -7,6 +7,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Compatibility entrypoint. Runtime v1 consumes a RuntimeBatchManifestV1 and
+# validates every response through the same policy and transaction pipeline.
+if [[ "${CAREER_OPS_RUNTIME:-v1}" != "legacy" ]]; then
+  exec node "$PROJECT_DIR/bin/career-ops.mjs" batch "$@"
+fi
+
 BATCH_DIR="$SCRIPT_DIR"
 INPUT_FILE="$BATCH_DIR/batch-input.tsv"
 STATE_FILE="$BATCH_DIR/batch-state.tsv"
@@ -220,23 +227,20 @@ get_retries() {
   echo "${retries:-0}"
 }
 
-# Calculate next report number.
+# Reserve the next report number from the ONE number space (tracker rows +
+# report files + un-merged batch TSVs) via reserve-report-num.mjs, which is
+# atomic across processes (O_CREAT|O_EXCL sentinel). Falls back to the state
+# file so two workers in THIS run never double-assign even if node fails.
 # Caller must hold STATE_LOCK_DIR while this runs.
 next_report_num_unlocked() {
-  local max_num=0
-  if [[ -d "$REPORTS_DIR" ]]; then
-    for f in "$REPORTS_DIR"/*.md; do
-      [[ -f "$f" ]] || continue
-      local basename
-      basename=$(basename "$f")
-      local num="${basename%%-*}"
-      num=$((10#$num)) # Remove leading zeros for arithmetic
-      if (( num > max_num )); then
-        max_num=$num
-      fi
-    done
+  local num
+  if num=$(node "$PROJECT_DIR/reserve-report-num.mjs" 2>/dev/null) && [[ "$num" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$num"
+    return 0
   fi
-  # Also check state file for assigned report numbers
+  # Fallback (reserve script unavailable): state-file max + 1. Weaker — only
+  # sees this run's assignments — but preserves the old behavior's floor.
+  local max_num=0
   if [[ -f "$STATE_FILE" ]]; then
     while IFS=$'\t' read -r _ _ _ _ _ rnum _ _ _; do
       [[ "$rnum" == "report_num" || "$rnum" == "-" || -z "$rnum" ]] && continue
@@ -322,7 +326,7 @@ process_offer() {
 
   # Build the prompt with placeholders replaced
   local prompt
-  prompt="Procesa esta oferta de empleo. Ejecuta el pipeline completo: evaluación A-F + report .md + PDF + tracker line."
+  prompt="Process this job posting. Run the full pipeline: A-G evaluation + report .md + resume selection + tracker line."
   prompt="$prompt URL: $url"
   prompt="$prompt JD file: $jd_file"
   prompt="$prompt Report number: $report_num"
