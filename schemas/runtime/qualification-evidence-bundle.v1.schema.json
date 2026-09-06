@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QualificationEvidenceBundleV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schema_version", "provider_id", "model_snapshot", "task_class",
+    "component_digests", "coverage", "metrics", "qualification"
+  ],
+  "properties": {
+    "schema": { "const": "QualificationEvidenceBundleV1" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "provider_id": { "type": "string", "minLength": 1 },
+    "model_snapshot": { "type": "string", "minLength": 1 },
+    "task_class": { "type": "string", "minLength": 1 },
+    "component_digests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recommendation", "hard_gates"],
+      "properties": {
+        "recommendation": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "hard_gates": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["representative_recommendations", "deterministic_hard_gates", "same_model_snapshot", "unresolved_blockers"],
+      "properties": {
+        "representative_recommendations": { "const": true },
+        "deterministic_hard_gates": { "const": true },
+        "same_model_snapshot": { "const": true },
+        "unresolved_blockers": { "type": "array", "maxItems": 0 }
+      }
+    },
+    "metrics": { "type": "object" },
+    "qualification": { "type": "object" }
+  }
+}

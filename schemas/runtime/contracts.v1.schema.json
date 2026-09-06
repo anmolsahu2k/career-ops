@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://career-ops.local/schemas/runtime/contracts.v1.schema.json",
+  "title": "Career-Ops Runtime Contracts V1",
+  "$defs": {
+    "Header": { "type": "object", "required": ["schema", "schema_version"], "properties": { "schema": { "type": "string" }, "schema_version": { "const": 1 } } },
+    "EvidenceReferenceV1": {
+      "allOf": [{ "$ref": "#/$defs/Header" }],
+      "type": "object",
+      "required": ["id", "source_type", "uri", "content_hash", "retrieved_at", "liveness_state", "trust_class"],
+      "properties": {
+        "id": { "type": "string" }, "source_type": { "type": "string" }, "uri": { "type": "string", "format": "uri" },
+        "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "retrieved_at": { "type": "string", "format": "date-time" },
+        "liveness_state": { "enum": ["YES", "NO", "UNKNOWN"] }, "trust_class": { "enum": ["trusted_evidence", "untrusted_external_evidence"] }
+      }
+    },
+    "TaskEnvelopeV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["task_id", "created_at", "task_class", "risk", "minimum_capability_class", "rules", "evidence_manifest", "expected_output", "context_hashes", "idempotency_key"] },
+    "RawProviderResultV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["task_id", "provider_snapshot", "response", "usage", "latency_ms", "attempts", "capability_degradation"] },
+    "NormalizedEvaluationV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["task_id", "decision_inputs", "presentation_content", "unknowns", "validation_warnings", "enrichment_passes"] },
+    "PolicyDecisionV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["task_id", "decision", "gate_resolution", "authorized_writes", "uncertainty_handling", "review_required", "reasons", "policy_version", "policy_hash", "decision_hash"] },
+    "CommitPlanV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["transaction_id", "task_id", "decision_hash", "report_identity", "tracker_mutation", "artifact_manifest", "expected_prior_state", "plan_hash"] },
+    "TransactionJournalV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["transaction_id", "task_id", "owner_identity", "heartbeat_at", "journal_state", "artifact_progress", "tracker_progress"] },
+    "CommitReceiptV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["transaction_id", "task_id", "idempotency_key", "provider_provenance", "digest_chain", "artifact_manifest", "receipt_hash"] },
+    "EnvironmentObservationV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["observed_at", "expires_at", "host_id", "platform"] },
+    "CapabilityProfileV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["host_id", "observed_at", "providers"] },
+    "ResourcePoolV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["quota_state", "remaining_ratio"] },
+    "ModelQualificationV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["provider_id", "model_snapshot", "task_class", "capability_class", "sample_count", "confidence_interval_95", "qualified", "lifecycle_state"] },
+    "CanaryCertificationV1": { "allOf": [{ "$ref": "#/$defs/Header" }], "required": ["provider_id", "model_snapshot", "qualification_bundle_digest", "receipt_count", "checks", "passed", "qualification"] }
+  }
+}

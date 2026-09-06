@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RuntimeHistoricalRecommendationSetV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "evaluation_set_version",
+    "created_at",
+    "representative",
+    "human_approved",
+    "label_scope",
+    "gate_labels_included",
+    "source_review_pack_digest",
+    "approval",
+    "independent_audit",
+    "cases",
+    "set_digest"
+  ],
+  "properties": {
+    "schema": { "type": "string", "const": "RuntimeHistoricalRecommendationSetV1" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "evaluation_set_version": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "representative": { "type": "boolean", "const": true },
+    "human_approved": { "type": "boolean", "const": true },
+    "label_scope": { "type": "array", "items": { "type": "string", "const": "recommendation" }, "minItems": 1, "maxItems": 1 },
+    "gate_labels_included": { "type": "boolean", "const": false },
+    "source_review_pack_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "approval": { "type": "object" },
+    "independent_audit": { "type": ["object", "null"] },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_set_digest", "replacement_pack_digest", "replaced_case_ids"],
+      "properties": {
+        "source_set_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "replacement_pack_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "replaced_case_ids": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^HIST-[0-9]{3}$" } }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["case_id", "expected_recommendation", "source", "label_provenance"],
+        "properties": {
+          "approved_evidence_record_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "set_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

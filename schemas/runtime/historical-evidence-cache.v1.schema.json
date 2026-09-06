@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HistoricalEvidenceCacheV1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "schema_version", "case_id", "captured_at", "source_type", "source_url", "exact_source", "complete", "liveness_state", "error_code", "title", "content", "content_hash", "record_digest"],
+  "properties": {
+    "schema": { "const": "HistoricalEvidenceCacheV1" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "case_id": { "type": "string", "pattern": "^HIST-[0-9]{3}$" },
+    "captured_at": { "type": "string", "format": "date-time" },
+    "source_type": { "enum": ["greenhouse", "workday", "ashby", "unsupported"] },
+    "source_url": { "type": "string", "format": "uri" },
+    "exact_source": { "type": "boolean" },
+    "complete": { "type": "boolean" },
+    "liveness_state": { "enum": ["YES", "NO", "UNKNOWN"] },
+    "error_code": { "type": ["string", "null"] },
+    "title": { "type": ["string", "null"] },
+    "content": { "type": ["string", "null"] },
+    "content_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "record_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

@@ -1,0 +1,274 @@
+# Copy to a local path such as config/runtime.local.yml. Provider and model
+# names live here only; deterministic policy never branches on a model name.
+runtime_version: 1
+api_billing: false
+subscription_overage: false
+writer_host: windows-spare
+
+reserves:
+  minimum_ratio: 0.20
+  emergency_ratio: 0.05
+  adaptive: true
+
+resource_pools:
+  chatgpt-plus:
+    schema: ResourcePoolV1
+    schema_version: 1
+    quota_state: UNKNOWN
+    remaining_ratio: 0
+    minimum_reserve_ratio: 0.20
+    emergency_reserve_ratio: 0.05
+  google-gemini:
+    schema: ResourcePoolV1
+    schema_version: 1
+    quota_state: UNKNOWN
+    remaining_ratio: 0
+    minimum_reserve_ratio: 0.20
+    emergency_reserve_ratio: 0.05
+  google-partner:
+    schema: ResourcePoolV1
+    schema_version: 1
+    quota_state: UNKNOWN
+    remaining_ratio: 0
+    minimum_reserve_ratio: 0.20
+    emergency_reserve_ratio: 0.05
+  provider-api:
+    schema: ResourcePoolV1
+    schema_version: 1
+    quota_state: UNKNOWN
+    remaining_ratio: 0
+    minimum_reserve_ratio: 0.20
+    emergency_reserve_ratio: 0.05
+  local-gpu:
+    schema: ResourcePoolV1
+    schema_version: 1
+    quota_state: AVAILABLE
+    remaining_ratio: 1
+    minimum_reserve_ratio: 0
+    emergency_reserve_ratio: 0
+
+# Providers start disabled and unqualified. `doctor`, the qualification harness,
+# shadow, and canary stages must populate fresh observations and qualifications.
+providers:
+  codex-terra:
+    type: codex_cli
+    enabled: false
+    command: [codex, exec, --model, gpt-5.6-terra, --config, 'model_reasoning_effort="high"', --sandbox, read-only, --ephemeral, --ignore-user-config, --ignore-rules, --skip-git-repo-check, '-']
+    input_mode: stdin_text
+    usage_mode: codex_total
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    json_schema_flag: --output-schema
+    json_schema_mode: path
+    model_vendor: openai
+    model_family: gpt-5.6
+    model_snapshot: gpt-5.6-terra
+    execution_surface: codex-cli
+    resource_pool: chatgpt-plus
+    capability_class: CONSEQUENTIAL
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: CONSEQUENTIAL
+  codex-luna:
+    type: codex_cli
+    enabled: false
+    command: [codex, exec, --model, gpt-5.6-luna, --config, 'model_reasoning_effort="medium"', --sandbox, read-only, --ephemeral, --ignore-user-config, --ignore-rules, --skip-git-repo-check, '-']
+    input_mode: stdin_text
+    usage_mode: codex_total
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    json_schema_flag: --output-schema
+    json_schema_mode: path
+    model_vendor: openai
+    model_family: gpt-5.6
+    model_snapshot: gpt-5.6-luna
+    execution_surface: codex-cli
+    resource_pool: chatgpt-plus
+    capability_class: STANDARD
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: MEDIUM
+  codex-astra-audit:
+    type: codex_cli
+    enabled: false
+    command: [codex, exec, --model, gpt-6-astra, --config, 'model_reasoning_effort="high"', --sandbox, read-only, --ephemeral, --ignore-user-config, --ignore-rules, --skip-git-repo-check, '-']
+    input_mode: stdin_text
+    usage_mode: codex_total
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    json_schema_flag: --output-schema
+    json_schema_mode: path
+    model_vendor: openai
+    model_family: gpt-6
+    model_snapshot: gpt-6-astra-high
+    execution_surface: codex-cli
+    resource_pool: chatgpt-plus
+    capability_class: INDEPENDENT_AUDIT
+    capabilities: [structured_output, evidence_citations, audit]
+    risk_ceiling: CONSEQUENTIAL
+  codex-astra-medium:
+    type: codex_cli
+    enabled: false
+    command: [codex, exec, --model, gpt-6-astra, --config, 'model_reasoning_effort="medium"', --sandbox, read-only, --ephemeral, --ignore-user-config, --ignore-rules, --skip-git-repo-check, '-']
+    input_mode: stdin_text
+    usage_mode: codex_total
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    json_schema_flag: --output-schema
+    json_schema_mode: path
+    model_vendor: openai
+    model_family: gpt-6
+    model_snapshot: gpt-6-astra-medium
+    execution_surface: codex-cli
+    resource_pool: chatgpt-plus
+    capability_class: CONSEQUENTIAL
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: CONSEQUENTIAL
+  codex-astra-high:
+    type: codex_cli
+    enabled: false
+    command: [codex, exec, --model, gpt-6-astra, --config, 'model_reasoning_effort="high"', --sandbox, read-only, --ephemeral, --ignore-user-config, --ignore-rules, --skip-git-repo-check, '-']
+    input_mode: stdin_text
+    usage_mode: codex_total
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    json_schema_flag: --output-schema
+    json_schema_mode: path
+    model_vendor: openai
+    model_family: gpt-6
+    model_snapshot: gpt-6-astra-high
+    execution_surface: codex-cli
+    resource_pool: chatgpt-plus
+    capability_class: CONSEQUENTIAL
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: CONSEQUENTIAL
+  antigravity-claude-audit:
+    type: antigravity_cli
+    enabled: false
+    command: [agy, --model, claude-sonnet-4-6, --sandbox, --disable-slash-commands, --output-format, json, --print-timeout, 5m]
+    timeout_ms: 300000
+    input_mode: stdin_text
+    output_mode: response_json_envelope
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    model_vendor: anthropic
+    model_family: claude
+    model_snapshot: claude-sonnet-4-6-provider-thinking
+    execution_surface: antigravity-cli
+    resource_pool: google-partner
+    capability_class: INDEPENDENT_AUDIT
+    capabilities: [structured_output, evidence_citations, audit]
+    risk_ceiling: CONSEQUENTIAL
+  antigravity-claude-opus-review:
+    type: antigravity_cli
+    enabled: false
+    command: [agy, --model, claude-opus-4-6-thinking, --sandbox, --disable-slash-commands, --output-format, json, --print-timeout, 5m]
+    timeout_ms: 300000
+    input_mode: stdin_text
+    output_mode: response_json_envelope
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    model_vendor: anthropic
+    model_family: claude-opus
+    model_snapshot: claude-opus-4-6-thinking
+    execution_surface: antigravity-cli
+    resource_pool: google-partner
+    capability_class: INDEPENDENT_AUDIT
+    capabilities: [structured_output, evidence_citations, audit]
+    risk_ceiling: CONSEQUENTIAL
+  antigravity-gemini-flash:
+    type: antigravity_cli
+    enabled: false
+    command: [agy, --model, gemini-3.8-flash-medium, --effort, medium, --sandbox, --disable-slash-commands, --output-format, json, --print-timeout, 2m]
+    input_mode: stdin_text
+    output_mode: response_json_envelope
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    model_vendor: google
+    model_family: gemini-3.8-flash
+    model_snapshot: gemini-3.8-flash-medium
+    execution_surface: antigravity-cli
+    resource_pool: google-gemini
+    capability_class: STANDARD
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: HIGH
+  antigravity-gemini-flash-low:
+    type: antigravity_cli
+    enabled: false
+    command: [agy, --model, gemini-3.8-flash-low, --effort, low, --sandbox, --disable-slash-commands, --output-format, json, --print-timeout, 90s]
+    input_mode: stdin_text
+    output_mode: response_json_envelope
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    model_vendor: google
+    model_family: gemini-3.8-flash
+    model_snapshot: gemini-3.8-flash-low
+    execution_surface: antigravity-cli
+    resource_pool: google-gemini
+    capability_class: STANDARD
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: MEDIUM
+  antigravity-gemini-pro-review:
+    type: antigravity_cli
+    enabled: false
+    command: [agy, --model, gemini-3.1-pro-high, --effort, high, --sandbox, --disable-slash-commands, --output-format, json, --print-timeout, 2m]
+    input_mode: stdin_text
+    output_mode: response_json_envelope
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    model_vendor: google
+    model_family: gemini-3.1-pro
+    model_snapshot: gemini-3.1-pro-high
+    execution_surface: antigravity-cli
+    resource_pool: google-gemini
+    capability_class: CONSEQUENTIAL
+    capabilities: [structured_output, evidence_citations, audit]
+    risk_ceiling: CONSEQUENTIAL
+  ollama-qwen3-4b:
+    type: openai_compatible
+    enabled: false
+    local_only: true
+    base_url: http://127.0.0.1:11434/v1
+    api_key_env: OLLAMA_DUMMY_KEY
+    model_vendor: local
+    model_family: qwen3
+    model_snapshot: qwen3:4b-instruct-q4
+    execution_surface: windows-ollama
+    resource_pool: local-gpu
+    capability_class: EXTRACTION
+    capabilities: [structured_output]
+    risk_ceiling: LOW
+  gemini-api:
+    type: gemini_api
+    enabled: false
+    base_url: https://generativelanguage.googleapis.com
+    api_key_env: GEMINI_API_KEY
+    model_vendor: google
+    model_family: configured-at-qualification
+    model_snapshot: replace-after-qualification
+    execution_surface: api
+    resource_pool: provider-api
+    capability_class: DETERMINISTIC
+    capabilities: []
+    risk_ceiling: LOW
+  anthropic-api:
+    type: anthropic_api
+    enabled: false
+    base_url: https://api.anthropic.com
+    api_key_env: ANTHROPIC_API_KEY
+    model_vendor: anthropic
+    model_family: configured-at-qualification
+    model_snapshot: replace-after-qualification
+    execution_surface: api
+    resource_pool: provider-api
+    capability_class: DETERMINISTIC
+    capabilities: []
+    risk_ceiling: LOW

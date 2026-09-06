@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RuntimePreparedQualificationSetV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schema_version", "evaluation_set_version", "created_at",
+    "representative", "human_approved", "truth_source", "label_scope", "source_label_semantics", "gate_labels_included",
+    "promotion_eligible", "promotion_blockers", "task_class", "risk",
+    "minimum_capability_class", "source_recommendation_set_digest", "case_count",
+    "incomplete_source_count", "live_ats_source_count", "live_ats_label_review_required_count",
+    "label_evidence_conflict_count", "context_dependent_outcome_count", "cases", "set_digest"
+  ],
+  "properties": {
+    "schema": { "const": "RuntimePreparedQualificationSetV1" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "evaluation_set_version": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "representative": { "type": "boolean", "const": true },
+    "human_approved": { "type": "boolean", "const": true },
+    "truth_source": { "const": "HUMAN_APPROVED_HISTORY" },
+    "label_scope": { "type": "array", "prefixItems": [{ "enum": ["advisory_recommendation", "policy_recommendation", "historical_final_outcome"] }], "items": false },
+    "source_label_semantics": { "enum": ["ADVISORY_RECOMMENDATION", "POLICY_DECISION", "FINAL_HISTORICAL_OUTCOME"] },
+    "gate_labels_included": { "type": "boolean", "const": false },
+    "promotion_eligible": { "type": "boolean", "const": false },
+    "promotion_blockers": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "task_class": { "const": "job_evaluation" },
+    "risk": { "type": "string" },
+    "minimum_capability_class": { "type": "string" },
+    "source_recommendation_set_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "case_count": { "type": "integer", "minimum": 50 },
+    "incomplete_source_count": { "type": "integer", "minimum": 0 },
+    "live_ats_source_count": { "type": "integer", "minimum": 0 },
+    "live_ats_label_review_required_count": { "type": "integer", "minimum": 0 },
+    "label_evidence_conflict_count": { "type": "integer", "minimum": 0 },
+    "context_dependent_outcome_count": { "type": "integer", "minimum": 0 },
+    "cases": {
+      "type": "array",
+      "minItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["id", "comparison_stage", "label_semantics", "task", "evidence_content", "expected_recommendation", "expected_gates", "source_quality", "evidence_digest"],
+        "properties": {
+          "id": { "type": "string" },
+          "comparison_stage": { "enum": ["ADVISORY_RECOMMENDATION", "POLICY_DECISION", "DIAGNOSTIC_FINAL_OUTCOME"] },
+          "label_semantics": { "enum": ["ADVISORY_RECOMMENDATION", "POLICY_DECISION", "FINAL_HISTORICAL_OUTCOME"] },
+          "expected_recommendation": { "enum": ["APPLY", "CONSIDER", "DO_NOT_APPLY"] },
+          "expected_gates": { "type": "object", "maxProperties": 0 },
+          "source_quality": { "enum": ["DISCOVERY_METADATA_ONLY", "HISTORICAL_REPORT_SUMMARY", "LIVE_ATS_EVIDENCE", "LIVE_ATS_EVIDENCE_UNREVIEWED"] },
+          "evidence_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "set_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

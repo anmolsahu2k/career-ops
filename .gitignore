@@ -58,6 +58,8 @@ __pycache__/
 .env
 .codex/config.toml
 .mcp.json
+config/runtime.local.yml
+**/.career-ops-runtime/
 
 # Generated
 .resolved-prompt-*

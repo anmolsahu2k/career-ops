@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HistoricalLabelAuditV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "decision",
+    "sample_strategy",
+    "reviewed_cases",
+    "discrepancies",
+    "summary"
+  ],
+  "properties": {
+    "schema": { "type": "string", "const": "HistoricalLabelAuditV1" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "decision": { "enum": ["APPROVE", "CHANGES_REQUIRED"] },
+    "sample_strategy": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "reviewed_cases": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["case_id", "recommendation_supported", "gates_supported", "notes"],
+        "properties": {
+          "case_id": { "type": "string", "pattern": "^HIST-[0-9]{3}$" },
+          "recommendation_supported": { "type": "boolean" },
+          "gates_supported": { "type": "boolean" },
+          "notes": { "type": "string", "maxLength": 1000 }
+        }
+      }
+    },
+    "discrepancies": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["case_id", "field", "observed", "proposed", "reason"],
+        "properties": {
+          "case_id": { "type": "string", "pattern": "^HIST-[0-9]{3}$" },
+          "field": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "observed": { "type": "string", "maxLength": 500 },
+          "proposed": { "type": "string", "maxLength": 500 },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        }
+      }
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "audit_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "model_vendor",
+        "model_snapshot",
+        "execution_surface",
+        "reasoning_effort",
+        "pack_digest"
+      ],
+      "properties": {
+        "provider_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "model_vendor": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "model_snapshot": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "execution_surface": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "reasoning_effort": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "pack_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "input_tokens": { "type": "integer", "minimum": 0 },
+        "output_tokens": { "type": "integer", "minimum": 0 },
+        "cache_read_tokens": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
