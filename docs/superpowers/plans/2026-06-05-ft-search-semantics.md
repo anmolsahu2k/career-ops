@@ -568,14 +568,15 @@ Leave the existing FTE/AI queries; they already skew full-time. Disable or trim 
 - [ ] **Step 2: `compensation` (65-70)** — replace hourly intern bands with FT new-grad base bands:
 ```yaml
 compensation:
-  # Full-time new-grad base bands (US, 2026/2027 cycle)
-  target_range: "$120-160k base (SWE/MLE at scaled tech) | $100-130k (data/analyst, mid-market)"
+  # Full-time new-grad base bands (US, 2026/2027 cycle).
+  # Actual numbers are personal config; see config/profile.yml (local-only, gitignored).
+  target_range: "<see config/profile.yml>"
   currency: "USD"
-  minimum: "$95k base (floor for US new-grad SWE/data)"
+  minimum: "<see config/profile.yml>"
   location_flexibility: "In-person any US metro, or remote-US; relocation OK"
 ```
 
-- [ ] **Step 3: `location`/`visa_status` (72-78)** — `visa_status:` → `"F-1; OPT-eligible (12mo + 24mo STEM extension); needs H-1B sponsorship for long term"`; drop CPT/Heinz wording; `onsite_availability:` → "Any US metro or remote-US; will relocate."
+- [ ] **Step 3: `location`/`visa_status` (72-78)** — set `visa_status:` and `onsite_availability:` to the FT work-authorization + geography facts; the exact wording is personal config, see config/profile.yml (local-only).
 
 - [ ] **Step 4: Rename `internship_constraints` → `ft_constraints` (80-86)**:
 ```yaml
@@ -583,7 +584,7 @@ ft_constraints:
   availability: "January 2027 (post-Dec-2026 graduation)"
   work_auth: "OPT at start; H-1B sponsorship required for long-term retention"
   geography: "US-only (in-person or remote-US); non-US roles out of scope"
-  amazon_sde_cooling_off: "If Amazon SDE was rejected Apr 2026, 12-month cooling-off until ~2027-04-08; non-SDE Amazon roles open"
+  # amazon_sde_cooling_off: personal status, see config/profile.yml (local-only)
 ```
 
 - [ ] **Step 5: Rename `internship_priority_companies` → `ft_priority_companies` (88-115)** — keep the lists but retitle the comment to full-time and add a short note to prefer known H-1B sponsors (the lists themselves can stay; Anthropic/OpenAI/Duolingo/etc. are all sponsors). Drop the "hackathon_sponsors_to_pursue" intern-outreach sub-block if it's intern-specific, or retitle to "warm_intros".

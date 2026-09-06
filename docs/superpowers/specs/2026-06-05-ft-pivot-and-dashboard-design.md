@@ -6,7 +6,7 @@
 
 ## 1. Context & goal
 
-The career-ops workspace is configured end-to-end for a Summer-2026 **internship** search. That search is concluded (Tabhi internship accepted). The owner graduates Dec 2026 and now wants the system pivoted to a **full-time / new-grad** search targeting a **Jan 2027** start, with a **separate dashboard** so the FT funnel is tracked independently of the frozen intern history.
+The career-ops workspace is configured end-to-end for a Summer-2026 **internship** search. That search is concluded (a summer internship was accepted; see STATUS.md, local-only). The owner graduates Dec 2026 and now wants the system pivoted to a **full-time / new-grad** search targeting a **Jan 2027** start, with a **separate dashboard** so the FT funnel is tracked independently of the frozen intern history.
 
 Goal: stand up an FT search that reuses the existing engine and dashboard binary, keeps the ~2,086-row intern tracker frozen as an archive, and routes all new FT activity (scan, eval, tracker, reports, gmail reconciliation) into a parallel `ft/` data subtree — without commingling.
 

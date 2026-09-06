@@ -405,7 +405,7 @@ Expected: all reference `ft/` paths / 0 rows; none touch root.
 
 **Files:** `scripts/gmail-sweep-merge.mjs:21-26` **and `:337`**, `scripts/apply-status-flips.mjs:22-24`, `scripts/split-tsv-for-merge.mjs:16-19`
 
-These hardcode `const ROOT = '/Users/anmolsahu2k/Stuff/Create/career-ops'`. Use `import { resolvePaths } from '../lib/paths.mjs';` (these live in `scripts/`).
+These hardcode `const ROOT = '<repo-root>'`. Use `import { resolvePaths } from '../lib/paths.mjs';` (these live in `scripts/`).
 
 - [ ] **Step 1: `gmail-sweep-merge.mjs`** — replace the block (21-26):
 ```javascript
