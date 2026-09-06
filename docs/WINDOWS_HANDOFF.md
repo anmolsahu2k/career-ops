@@ -4,9 +4,10 @@ Last updated: 2026-09-06
 
 This tracked document contains repository-safe implementation context. The
 Windows workspace now also has a private full copy of the Mac workspace,
-including ignored qualification artifacts and `ft/` data. Possession of that
-copy does not authorize Windows to mutate the live funnel or become the writer;
-qualification, canary, and migration gates still apply.
+including ignored qualification artifacts and `ft/` data. Under the
+user-authorized lean rollout, Windows is the operational sole writer. The Mac
+copy must remain read-only. Model routing remains disabled and separate from
+writer authorization.
 
 ## Current state
 
@@ -55,6 +56,11 @@ qualification, canary, and migration gates still apply.
   and zero hard-gate or authorization errors. Luna used no repairs. Gemini Flash
   Low had a 24 percent repair rate. Bundle construction correctly rejects both
   because their representative recommendation components did not pass.
+- A quota-limited `gpt-6-astra` high-reasoning challenge screen scored 0 of 10
+  against the difficult v14 recommendation cases. All ten responses were
+  `CONSIDER`; schema validation passed. The planned full run was stopped after
+  the screen to avoid spending more quota on a candidate that could not close
+  the recommendation gap.
 - Direct Gemini CLI is retired. Google and partner-model runs use `agy`.
 - All example providers are disabled by design. `available: false` with
   `usable: true` means the executable was found but the provider has not been
@@ -62,9 +68,19 @@ qualification, canary, and migration gates still apply.
 - API billing and subscription overages remain disabled.
 - Ollama/local Qwen is hardware-qualified only for `EXTRACTION`/`LOW`; the
   provider remains disabled and cannot perform consequential evaluation.
-- Windows is not yet authorized as the live writer. Do not copy or mutate the
-  live `ft/` funnel until qualification, isolated canaries, and verified
-  migration are complete.
+- Three isolated provider-free Windows commits passed receipt verification on
+  host `AnmolDaPredator`. Each produced a unique transaction and complete,
+  hash-matching decision, report, and tracker artifacts.
+- The copied `ft/` tree has a verified post-copy Windows baseline of 4,743 files
+  and 45,491,166 bytes with inventory digest
+  `301e81adeb43d5c2bb2c6ff2a1af9f0f48f21e196aef5d0f8f4742e7566b22b8`.
+  No Mac-side cryptographic manifest exists, so this proves internal integrity
+  of the Windows baseline, not source-to-target equality. Copy completeness is
+  based on the user's transfer attestation.
+- Windows is now authorized as the operational sole writer. The ignored audit
+  record is `.career-ops-runtime/migration/windows-writer-promotion-v1.json`.
+  The current CLI does not enforce `writer_host`, so the Mac workspace must be
+  kept read-only by operational discipline. No provider has been promoted.
 
 ## Start on Windows
 
@@ -111,15 +127,16 @@ an actual multi-year response time.
    quota-bounded historical shadows, and apply the explicit digest-bound
    recommendation-scope direction without exposing a local source-report index
    or inventing gate truth.
-5. Blocked by the quality floor: the deterministic hard-gate components pass,
-   but Luna and Gemini Flash Low score 76 percent and 80 percent recommendation
-   agreement against the required 95 percent. Do not build a passing bundle by
-   changing labels or lowering thresholds. Qualify a stronger candidate against
-   the same exact components instead.
-6. Run at least three isolated end-to-end canary commits and certify their
-   receipts on one Windows host.
-7. Only after every gate passes, perform the manifest-verified one-way live-data
-   migration and promote Windows to the sole writer.
+5. Paused by user direction: the deterministic hard-gate components pass, but
+   Luna, Gemini Flash Low, and the Astra challenge screen do not meet the
+   unchanged recommendation floor. All provider routes remain disabled. Resume
+   model qualification only when its value justifies the quota and elapsed time.
+6. Completed: three isolated provider-free end-to-end commits produced valid,
+   unique receipts on the Windows host.
+7. Completed under the user-authorized lean rollout: verify a post-copy Windows
+   data baseline and promote Windows to the operational sole writer. A Mac-side
+   source manifest was unavailable, and `writer_host` is not runtime-enforced;
+   both limitations are explicit in the ignored promotion audit record.
 
 Stop and report instead of weakening a capability class, qualification floor,
 quota reserve, policy gate, evidence requirement, or transaction safeguard.
@@ -150,7 +167,9 @@ preserve all ignored/personal data and unrelated worktree changes.
 Known state: npm ci succeeds; npm run runtime:test is fully green on native
 Windows; host ID is AnmolDaPredator; Codex CLI 0.153.4 and agy 1.1.27 are
 installed and usable. Providers are intentionally disabled and unqualified,
-API billing and overages are disabled, and Windows is not yet the live writer.
+API billing and overages are disabled, and Windows is the operational sole
+writer. Keep the Mac workspace read-only. This status is not yet enforced by
+the CLI's `writer_host` setting.
 Ollama `0.33.3` is loopback-only and the pinned Qwen 3 4B Q4 model passed a
 50-case `EXTRACTION` hardware qualification, but routing remains unauthorized.
 Small `gpt-5.6-luna` and `gemini-3.8-flash-low` Windows preflights also passed;
@@ -161,13 +180,13 @@ truth only and remains promotion-blocked until split labels are resolved.
 Gemini CLI is retired; use agy for Google and partner models.
 
 Begin with read-only verification of git state and config/runtime.local.yml.
-Then continue milestone 4 from docs/WINDOWS_HANDOFF.md: verify the prepared-set
-digests, run quota-bounded representative historical shadows, and resolve the
-split-label blocker without sending local indexes to providers. Continue with
-qualification bundling, isolated one-writer canaries, and only then
-manifest-verified writer promotion. Do not weaken policy,
-capability, evidence, quota, or transaction gates. Do not mutate the live ft/
-funnel, enable billing, send/submit anything, commit personal data, or push
-unless I explicitly request it. Report what you verified, changed, and what
-remains after each milestone.
+Model qualification is paused after Luna scored 76 percent, Gemini Flash Low
+scored 80 percent, and the Astra High challenge screen scored 0 of 10 against
+the unchanged 95 percent recommendation floor. Keep all provider routes
+disabled. Three provider-free Windows canaries and the post-copy data baseline
+passed, and Windows is the operational sole writer. Keep the Mac workspace
+read-only. Do not weaken policy, capability, evidence, quota, or transaction
+gates. Do not enable billing, send/submit anything, commit personal data, or
+push unless I explicitly request it. Report what you verified, changed, and
+what remains after each milestone.
 ```
