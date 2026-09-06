@@ -1,0 +1,33 @@
+{
+  "schema": "RuntimeQualificationSetV1",
+  "schema_version": 1,
+  "evaluation_set_version": "synthetic-oracle-v2",
+  "representative": false,
+  "truth_source": "DETERMINISTIC_ORACLE",
+  "label_scope": [
+    "hard_gates",
+    "policy_decision"
+  ],
+  "gate_labels_included": true,
+  "promotion_eligible": false,
+  "promotion_blockers": [
+    "SYNTHETIC_NON_REPRESENTATIVE"
+  ],
+  "case_count": 50,
+  "task_class": "job_evaluation",
+  "risk": "MEDIUM",
+  "minimum_capability_class": "STANDARD",
+  "scenarios": [
+    { "id": "eligible-apply", "score": 4.4, "advisory_recommendation": "APPLY", "expected_recommendation": "APPLY", "fit_summary": "The candidate meets the stated entry-level software requirements." },
+    { "id": "eligible-consider", "score": 3.6, "advisory_recommendation": "CONSIDER", "expected_recommendation": "CONSIDER", "fit_summary": "The candidate meets some requirements but lacks one preferred skill." },
+    { "id": "sponsorship-unknown", "score": 4.4, "advisory_recommendation": "APPLY", "expected_recommendation": "CONSIDER", "gates": { "sponsorship_compatible": "UNKNOWN" }, "fit_summary": "The candidate otherwise meets the requirements." },
+    { "id": "citizenship-unknown", "score": 4.4, "advisory_recommendation": "APPLY", "expected_recommendation": "CONSIDER", "gates": { "citizenship_restricted": "UNKNOWN" }, "fit_summary": "The candidate otherwise meets the requirements." },
+    { "id": "geography-unknown", "score": 4.4, "advisory_recommendation": "APPLY", "expected_recommendation": "CONSIDER", "gates": { "geography_eligible": "UNKNOWN" }, "fit_summary": "The candidate otherwise meets the requirements." },
+    { "id": "evidence-incomplete", "score": null, "advisory_recommendation": "REVIEW_REQUIRED", "expected_recommendation": "REVIEW_REQUIRED", "gates": { "required_evidence_complete": "NO" }, "fit_summary": "A final score cannot be assigned from the available evidence." },
+    { "id": "liveness-unknown", "score": 4.4, "advisory_recommendation": "APPLY", "expected_recommendation": "APPLY", "gates": { "posting_live": "UNKNOWN" }, "fit_summary": "The candidate meets the stated entry-level software requirements." },
+    { "id": "posting-closed", "score": 4.4, "advisory_recommendation": "APPLY", "expected_recommendation": "DEFERRED", "gates": { "posting_live": "NO" }, "fit_summary": "The candidate meets the requirements, but the posting is closed." },
+    { "id": "citizenship-restricted", "score": 4.4, "advisory_recommendation": "APPLY", "expected_recommendation": "DO_NOT_APPLY", "gates": { "citizenship_restricted": "YES" }, "fit_summary": "The role has a consequential citizenship restriction." },
+    { "id": "geography-ineligible", "score": 4.4, "advisory_recommendation": "APPLY", "expected_recommendation": "DO_NOT_APPLY", "gates": { "geography_eligible": "NO" }, "fit_summary": "The role is outside the eligible geography." },
+    { "id": "sponsorship-incompatible", "score": 4.4, "advisory_recommendation": "APPLY", "expected_recommendation": "DO_NOT_APPLY", "gates": { "sponsorship_compatible": "NO" }, "fit_summary": "The role does not support required sponsorship." }
+  ]
+}

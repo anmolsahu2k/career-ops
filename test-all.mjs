@@ -157,11 +157,18 @@ console.log('\n5. Data contract validation');
 
 // Check system files exist
 const systemFiles = [
-  'CLAUDE.md', 'VERSION', 'DATA_CONTRACT.md',
+  'AGENTS.md', 'CAREER_OPS.md', 'CLAUDE.md', 'VERSION', 'DATA_CONTRACT.md',
   'modes/_shared.md', 'modes/_profile.template.md',
-  'modes/oferta.md', 'modes/pdf.md', 'modes/scan.md',
+  'modes/offer.md', 'modes/pdf.md', 'modes/scan.md',
   'templates/states.yml', 'templates/cv-template.html',
   '.claude/skills/career-ops/SKILL.md',
+  '.agents/skills/career-ops/SKILL.md',
+  '.codex/config.example.toml',
+  'docs/CODEX.md',
+  'docs/RUNTIME.md',
+  'schemas/runtime/contracts.v1.schema.json',
+  'schemas/runtime/provider-response.v1.schema.json',
+  'schemas/runtime/qualification-batch-response.v1.schema.json',
 ];
 
 for (const f of systemFiles) {
@@ -203,6 +210,7 @@ const allowedFiles = [
   // Standard project files
   'LICENSE',
   'package.json', 'CLAUDE.md', 'go.mod', 'test-all.mjs',
+  'LEGACY_CLAUDE_CONTEXT.md',
   // Security disclosure files
   'SECURITY.md',
   // Dashboard credit string
@@ -242,7 +250,7 @@ console.log('\n7. Absolute path check');
 // Same git grep approach: only scans tracked files. Untracked AI tool
 // outputs, local debate artifacts, etc. can't false-positive here.
 const absPathResult = run(
-  `git grep -n "/Users/" -- '*.mjs' '*.sh' '*.md' '*.go' '*.yml' 2>/dev/null | grep -v README.md | grep -v LICENSE | grep -v CLAUDE.md | grep -v test-all.mjs`
+  `git grep -n "/Users/" -- '*.mjs' '*.sh' '*.md' '*.go' '*.yml' 2>/dev/null | grep -v README.md | grep -v LICENSE | grep -v CLAUDE.md | grep -v LEGACY_CLAUDE_CONTEXT.md | grep -v test-all.mjs`
 );
 if (!absPathResult) {
   pass('No absolute paths in code files');
@@ -257,9 +265,9 @@ if (!absPathResult) {
 console.log('\n8. Mode file integrity');
 
 const expectedModes = [
-  '_shared.md', '_profile.template.md', 'oferta.md', 'pdf.md', 'scan.md',
-  'batch.md', 'apply.md', 'auto-pipeline.md', 'contacto.md', 'deep.md',
-  'ofertas.md', 'project.md', 'tracker.md', 'training.md',
+  '_shared.md', '_profile.template.md', 'offer.md', 'pdf.md', 'scan.md',
+  'batch.md', 'apply.md', 'auto-pipeline.md', 'contact.md', 'deep.md',
+  'offers.md', 'project.md', 'tracker.md', 'training.md',
 ];
 // Note: pipeline.md mode removed in Anmol's workspace per no-triage-state rule.
 // Scan + evaluation always run together; there is no inbox/triage queue.
