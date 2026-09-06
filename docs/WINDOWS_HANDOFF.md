@@ -79,8 +79,9 @@ writer authorization.
   based on the user's transfer attestation.
 - Windows is now authorized as the operational sole writer. The ignored audit
   record is `.career-ops-runtime/migration/windows-writer-promotion-v1.json`.
-  The current CLI does not enforce `writer_host`, so the Mac workspace must be
-  kept read-only by operational discipline. No provider has been promoted.
+  Mutating CLI commands now require a configuration whose `writer_host` matches
+  the operating-system hostname. Keep the Mac workspace read-only. No provider
+  has been promoted.
 
 ## Start on Windows
 
@@ -135,8 +136,8 @@ an actual multi-year response time.
    unique receipts on the Windows host.
 7. Completed under the user-authorized lean rollout: verify a post-copy Windows
    data baseline and promote Windows to the operational sole writer. A Mac-side
-   source manifest was unavailable, and `writer_host` is not runtime-enforced;
-   both limitations are explicit in the ignored promotion audit record.
+   source manifest was unavailable. CLI writer-host enforcement is implemented;
+   the source-manifest limitation remains explicit in the ignored audit record.
 
 Stop and report instead of weakening a capability class, qualification floor,
 quota reserve, policy gate, evidence requirement, or transaction safeguard.
@@ -168,8 +169,8 @@ Known state: npm ci succeeds; npm run runtime:test is fully green on native
 Windows; host ID is AnmolDaPredator; Codex CLI 0.153.4 and agy 1.1.27 are
 installed and usable. Providers are intentionally disabled and unqualified,
 API billing and overages are disabled, and Windows is the operational sole
-writer. Keep the Mac workspace read-only. This status is not yet enforced by
-the CLI's `writer_host` setting.
+writer. Keep the Mac workspace read-only. Mutating CLI commands enforce the
+configured `writer_host`.
 Ollama `0.33.3` is loopback-only and the pinned Qwen 3 4B Q4 model passed a
 50-case `EXTRACTION` hardware qualification, but routing remains unauthorized.
 Small `gpt-5.6-luna` and `gemini-3.8-flash-low` Windows preflights also passed;

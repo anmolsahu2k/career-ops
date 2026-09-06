@@ -19,6 +19,7 @@ import { sanitizePresentation } from '../lib/runtime/sanitizer.mjs';
 import { evaluateShadowPreflight, runShadowQualification } from '../lib/runtime/shadow.mjs';
 import { commitEvaluation, persistencePaths, recoverTransactions } from '../lib/runtime/transaction.mjs';
 import { canonicalJson, record } from '../lib/runtime/util.mjs';
+import { assertWriterHost } from '../lib/runtime/writer-authorization.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -83,6 +84,17 @@ function output(value, path) {
   renameSync(temporary, resolved);
 }
 
+function authorizeMutation(flags, config = null) {
+  if (!flags.config) {
+    const error = new Error('Runtime mutation requires --config <runtime.yml> for writer authorization');
+    error.code = 'WRITER_CONFIG_REQUIRED';
+    throw error;
+  }
+  const selectedConfig = config || loadRuntimeConfig(flags.config);
+  assertWriterHost(selectedConfig);
+  return selectedConfig;
+}
+
 function validatedFromFiles(taskPath, responsePath) {
   const task = taskFrom(readJson(taskPath));
   const responseText = readFileSync(resolve(responsePath), 'utf8');
@@ -137,6 +149,7 @@ async function main() {
       output(record('CommitPreviewV1', { apply_required: true, decision: value.decision }));
       return;
     }
+    authorizeMutation(flags);
     const receipt = await commitEvaluation({ target, ...value });
     output(receipt, flags.out);
     return;
@@ -148,6 +161,7 @@ async function main() {
     if (manifest.schema !== 'RuntimeBatchManifestV1' || manifest.schema_version !== 1 || !Array.isArray(manifest.entries)) {
       throw new Error('batch manifest must be RuntimeBatchManifestV1 with an entries array');
     }
+    if (flags.apply) authorizeMutation(flags);
     const results = [];
     for (let index = 0; index < manifest.entries.length; index++) {
       const entry = manifest.entries[index];
@@ -286,6 +300,7 @@ async function main() {
   }
   if (command === 'recover') {
     if (!flags.apply) throw new Error('recover changes persisted state and requires --apply');
+    authorizeMutation(flags);
     output(record('RecoveryResultV1', { results: await recoverTransactions({ target }) }), flags.out);
     return;
   }
@@ -294,6 +309,7 @@ async function main() {
     const taskBundle = readJson(flags.task);
     const task = taskFrom(taskBundle);
     const config = mergeRuntimeState(loadRuntimeConfig(flags.config), readState(target));
+    if (flags.apply) authorizeMutation(flags, config);
     const routed = routeTask(task, { ...config, providers: { [flags.provider]: config.providers?.[flags.provider] } });
     if (routed.result !== 'ROUTED' || routed.provider_id !== flags.provider) throw new Error(`Provider is not eligible: ${routed.reason || routed.result}`);
     const providerConfig = config.providers?.[flags.provider];
@@ -304,7 +320,12 @@ async function main() {
       : Object.fromEntries((taskBundle.provider_request?.evidence || []).map(item => [item.id, item.content]));
     let result;
     try {
-      result = await evaluateWithProvider({ task, evidenceContent, provider, retentionTarget: target });
+      result = await evaluateWithProvider({
+        task,
+        evidenceContent,
+        provider,
+        retentionTarget: flags.apply ? target : null,
+      });
     } finally {
       provider.close?.();
     }
@@ -350,7 +371,9 @@ async function main() {
   }
   if (command === 'doctor') {
     if (!flags.config) throw new Error('doctor requires --config');
-    const observation = observeEnvironment(loadRuntimeConfig(flags.config));
+    const config = loadRuntimeConfig(flags.config);
+    if (flags.apply) authorizeMutation(flags, config);
+    const observation = observeEnvironment(config);
     if (flags.apply) {
       const state = readState(target);
       state.environment = observation.environment;
@@ -368,6 +391,7 @@ async function main() {
   if (command === 'quota' && subcommand === 'set') {
     if (!flags.pool || flags.remaining === undefined) throw new Error('quota set requires --pool and --remaining');
     if (!flags.apply) throw new Error('quota set changes runtime state and requires --apply');
+    authorizeMutation(flags);
     const remaining = Number(flags.remaining);
     if (!Number.isFinite(remaining) || remaining < 0 || remaining > 1) throw new Error('--remaining must be 0-1');
     const state = readState(target);
@@ -383,6 +407,7 @@ async function main() {
   }
   if (command === 'cleanup') {
     if (!flags.apply) throw new Error('cleanup deletes expired local retention files and requires --apply');
+    authorizeMutation(flags);
     output(record('CleanupResultV1', cleanupRetention(target)));
     return;
   }

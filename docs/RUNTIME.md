@@ -48,10 +48,11 @@ Preview a commit, then explicitly apply it:
 
 ```bash
 node bin/career-ops.mjs commit --task task.json --response response.json
-node bin/career-ops.mjs commit --task task.json --response response.json --apply
+node bin/career-ops.mjs commit --task task.json --response response.json \
+  --config config/runtime.local.yml --apply
 ```
 
-The second command is the only one above that writes a report and tracker row. It also persists an immutable decision, transaction journal, durable number reservation, and receipt. Repeating the same idempotency key returns the existing receipt.
+The second command is the only one above that writes a report and tracker row. It also persists an immutable decision, transaction journal, durable number reservation, and receipt. Repeating the same idempotency key returns the existing receipt. Every command that mutates the configured data or runtime root requires `--config`; the operating-system hostname must match its non-empty `writer_host`. Previews and other read-only commands do not require writer authorization.
 
 ## Providers and routing
 
@@ -189,7 +190,8 @@ One host owns the writer lease. Heartbeats occur every five seconds and expire a
 Recovery is explicit and deterministic:
 
 ```bash
-node bin/career-ops.mjs recover --target /path/to/data-root --apply
+node bin/career-ops.mjs recover --target /path/to/data-root \
+  --config config/runtime.local.yml --apply
 ```
 
 Recovery never invokes a model. Artifact paths must remain inside the selected root and cannot cross symlinks. Expected and observed hashes prevent recovery from overwriting concurrent edits.
