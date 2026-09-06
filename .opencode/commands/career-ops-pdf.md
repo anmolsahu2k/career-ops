@@ -1,8 +1,8 @@
 ---
-description: Generate ATS-optimized CV PDF
+description: Review resume selection and formatting guidance; CV PDF generation is disabled
 ---
 
-Generate ATS-optimized CV using career-ops pdf mode.
+Use career-ops pdf mode only as a formatting reference. Do not create or rebuild a CV PDF. Select the maintained SDE or MLE resume and provide review guidance.
 
 Load the career-ops skill:
 ```

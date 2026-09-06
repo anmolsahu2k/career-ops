@@ -10,10 +10,11 @@ This is the canonical format for every cover letter generated in this workspace,
 4. **No closing line.** Do not write `Resume attached.` or any equivalent meta-line about what is being submitted alongside.
 5. **No sign-off.** Do not write `Sincerely,`, `Thanks for the consideration,`, `Thanks,`, `Best,`, the candidate's name at the bottom, or any equivalent valediction. The letter ends on the last substantive sentence of the body.
 6. **No internal-tooling footer.** Do not append a `## Things deliberately NOT included` audit checklist or any meta-commentary about what was scrubbed. Scrubbing is the writer's job, not the user's.
+7. **Length cap: body <= 200 words.** Keep the whole body at or under 200 words. This cap exists to reduce the AI-tell of an over-long letter; short and specific reads as human, long and even reads as generated. The canonical reference `reports/sinfonik/426-...cover-letter.md` is a good model for the voice at this length.
 
 ## Body shape
 
-The body is 4 to 6 flowing paragraphs, 250 to 350 words total, one continuous line per paragraph in the markdown file (blank line between paragraphs, no hard wraps, no ```` ``` ```` code fence).
+The body is 4 to 6 flowing paragraphs, capped at 200 words total (see hard rule 7), one continuous line per paragraph in the markdown file (blank line between paragraphs, no hard wraps, no ```` ``` ```` code fence).
 
 Recommended structure (treat as a default, not a rigid template):
 
@@ -26,8 +27,8 @@ Recommended structure (treat as a default, not a rigid template):
 ## Style rules (inherited from `modes/_shared.md` and memory)
 
 - No em-dashes, no en-dashes (CLAUDE.md Rule 1). Use commas, periods, colons, or rephrase.
-- No F-1, CPT, Heinz, OIE, May 12, June 1, or visa explainer (CLAUDE.md Rule 3).
-- No proactive availability statement (`feedback_no_availability_phrases.md`). Do not write "Available for Summer 2026", "Available June 2026", "ready to start in...", etc.
+- No F-1, OPT, H-1B, Heinz, OIE, or visa/sponsorship explainer (CLAUDE.md Rule 3).
+- No proactive availability statement (`feedback_no_availability_phrases.md`). Do not write "Available January 2027", "ready to start in...", etc.
 - No internal snake_case tracker tokens (`feedback_no_internal_jargon.md`). `on_site`, `in_person`, `remote_us`, etc. never appear in candidate-facing prose.
 - No clichés: `passionate about`, `leveraged`, `spearheaded`, `facilitated`, `synergies`, `robust`, `seamless`, `cutting-edge`, `innovative`, `proven track record`, `results-oriented`.
 - Reference past tense for finished work, present tense for ongoing (`project_highmark_idl_state.md`: Highmark cancer-staging pipeline is FINISHED, IDL coursework is COMPLETE).
@@ -35,9 +36,9 @@ Recommended structure (treat as a default, not a rigid template):
 
 ## Reference letters
 
-- **Canonical voice / structure reference**: [reports/sinfonik/426-sinfonik-ai-engineering-intern-cover-letter.md](../reports/sinfonik/426-sinfonik-ai-engineering-intern-cover-letter.md) — body-only, paste-ready, five paragraphs, ~480 words.
-- **Voice secondary**: [reports/evolution-design-lab/2140-evolution-design-lab-ai-operations-intern-cover-letter.md](../reports/evolution-design-lab/2140-evolution-design-lab-ai-operations-intern-cover-letter.md) — flowing-paragraph format, but predates the body-only rule so still has the greeting + sign-off; copy the voice, not the framing.
-- **Anti-patterns**: [reports/tifin/616-tifin-ai-engineering-intern-cover-letter.md](../reports/tifin/616-tifin-ai-engineering-intern-cover-letter.md) — uses the ```` ``` ``` ```` code-fence + hard-wrap layout that mangles email pastes. Do not copy the format.
+- **Canonical voice / structure reference**: [reports/sinfonik/426-sinfonik-ai-engineering-intern-cover-letter.md](../reports/sinfonik/426-sinfonik-ai-engineering-intern-cover-letter.md), body-only, paste-ready, flowing paragraphs. Copy the voice; note it predates the 200-word cap (hard rule 7), so trim if you model on it.
+- **Voice secondary**: [reports/evolution-design-lab/2140-evolution-design-lab-ai-operations-intern-cover-letter.md](../reports/evolution-design-lab/2140-evolution-design-lab-ai-operations-intern-cover-letter.md), flowing-paragraph format, but predates the body-only rule so still has the greeting + sign-off; copy the voice, not the framing.
+- **Anti-patterns**: [reports/tifin/616-tifin-ai-engineering-intern-cover-letter.md](../reports/tifin/616-tifin-ai-engineering-intern-cover-letter.md), uses the ```` ``` ``` ```` code-fence + hard-wrap layout that mangles email pastes. Do not copy the format.
 
 ## Filename convention (unchanged)
 

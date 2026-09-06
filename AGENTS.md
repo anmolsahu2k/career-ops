@@ -1,10 +1,7 @@
 # Career-Ops for Codex
 
-Read `CLAUDE.md` for all project instructions, routing, and behavioral rules. They apply equally to Codex.
+Read [CAREER_OPS.md](CAREER_OPS.md) once as the provider-neutral rules and authorization contract. Do not preload the longer legacy `CLAUDE.md` unless a selected mode explicitly needs historical detail absent from the canonical contract.
 
-Key points:
-- Reuse the existing modes, scripts, templates, and tracker flow — do not create parallel logic.
-- Store user-specific customization in `config/profile.yml`, `modes/_profile.md`, or `article-digest.md` — never in `modes/_shared.md`.
-- Never submit an application on the user's behalf.
+For a Career-Ops workflow, use [.agents/skills/career-ops/SKILL.md](.agents/skills/career-ops/SKILL.md) and load only the mode files it routes to. Read `STATUS.md` only for current funnel state. For runtime implementation, load only `docs/RUNTIME.md`, the relevant schema, and the module being changed.
 
-For Codex-specific setup, see `docs/CODEX.md`.
+Preserve the dirty worktree and gitignored personal data. The `.claude/`, `.gemini/`, and `.opencode/` integrations are compatibility adapters, not separate pipelines.

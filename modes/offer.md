@@ -1,0 +1,217 @@
+# Mode: offer — Full A-G Evaluation
+
+When the candidate pastes a posting (text or URL), ALWAYS deliver the 7 blocks (A-F evaluation + G legitimacy):
+
+## Step 0 — Archetype Detection
+
+Classify the posting into one of the 6 archetypes (see `_shared.md`). If it is a hybrid, indicate the 2 closest ones. This determines:
+- Which proof points to prioritize in block B
+- How to rewrite the summary in block E
+- Which STAR stories to prepare in block F
+
+## Block A — Role Summary
+
+Table with:
+- Detected archetype
+- Domain (platform/agentic/LLMOps/ML/enterprise)
+- Function (build/consult/manage/deploy)
+- Seniority
+- Remote (full/hybrid/onsite)
+- Team size (if mentioned)
+- TL;DR in 1 sentence
+
+## Block B — CV Match
+
+Read `cv.md`. Create a table with each JD requirement mapped to exact CV lines.
+
+**Adapted to the archetype:**
+- If FDE → prioritize fast-delivery and client-facing proof points
+- If SA → prioritize systems design and integrations
+- If PM → prioritize product discovery and metrics
+- If LLMOps → prioritize evals, observability, pipelines
+- If Agentic → prioritize multi-agent, HITL, orchestration
+- If Transformation → prioritize change management, adoption, scaling
+
+**Gaps** section with a mitigation strategy for each one. For each gap:
+1. Is it a hard blocker or a nice-to-have?
+2. Can the candidate demonstrate adjacent experience?
+3. Is there a portfolio project that covers this gap?
+4. Concrete mitigation plan (cover letter phrase, quick project, etc.)
+
+## Block C — Level and Strategy
+
+1. **Level detected** in the JD vs **the candidate's natural level for that archetype**
+2. **"Sell senior without lying" plan**: specific phrases adapted to the archetype, concrete achievements to highlight, how to position founder experience as an advantage
+3. **"If I get downleveled" plan**: accept if comp is fair, negotiate a 6-month review, clear promotion criteria
+
+## Block D — Comp and Demand
+
+Use WebSearch for:
+- Current salaries for the role (Glassdoor, Levels.fyi, Blind)
+- The company's compensation reputation
+- Demand trend for the role
+
+Table with data and cited sources. If there is no data, say so instead of making it up.
+
+## Block E — Personalization Plan
+
+| # | Section | Current state | Proposed change | Why |
+|---|---------|---------------|------------------|---------|
+| 1 | Summary | ... | ... | ... |
+| ... | ... | ... | ... | ... |
+
+Top 5 CV changes + Top 5 LinkedIn changes to maximize match.
+
+## Block F — Interview Plan
+
+6-10 STAR+R stories mapped to JD requirements (STAR + **Reflection**):
+
+| # | JD Requirement | STAR+R Story | S | T | A | R | Reflection |
+|---|-----------------|-----------------|---|---|---|---|------------|
+
+The **Reflection** column captures what was learned or what would be done differently. This signals seniority — junior candidates describe what happened, senior candidates extract lessons.
+
+**Story Bank:** If `interview-prep/story-bank.md` exists, check if any of these stories are already there. If not, append new ones. Over time this builds a reusable bank of 5-10 master stories that can be adapted to any interview question.
+
+**Selected and framed according to the archetype:**
+- FDE → emphasize delivery speed and client-facing
+- SA → emphasize architecture decisions
+- PM → emphasize discovery and trade-offs
+- LLMOps → emphasize metrics, evals, production hardening
+- Agentic → emphasize orchestration, error handling, HITL
+- Transformation → emphasize adoption, organizational change
+
+Also include:
+- 1 recommended case study (which of their projects to present and how)
+- Red-flag questions and how to answer them (e.g.: "why did you sell your company?", "do you have direct reports?")
+
+## Block G — Posting Legitimacy
+
+Analyze the job posting for signals that indicate whether this is a real, active opening. This helps the user prioritize their effort on opportunities most likely to result in a hiring process.
+
+**Ethical framing:** Present observations, not accusations. Every signal has legitimate explanations. The user decides how to weigh them.
+
+### Signals to analyze (in order):
+
+**1. Posting Freshness** (from Playwright snapshot, already captured in Step 0):
+- Date posted or "X days ago" -- extract from page (this is the **true ATS age**)
+- **Hard filter (21 days):** if the true ATS age is > 21 days, the row was already aborted at Step 0.5 (`skipped_stale`) and never reaches this block. Anything you are scoring here is <= 21 days old (or has an unconfirmable age). Record its `FRESHNESS` tier (`FRESH` <=7d / `RECENT` 8-14d / `AGING` 15-21d / `unknown`) as an application-priority signal -- fresher survivors get applied to first. Freshness does NOT change the A-F fit score.
+- Apply button state (active / closed / missing / redirects to generic page)
+- If URL redirected to generic careers page, note it
+
+**2. Description Quality** (from JD text):
+- Does it name specific technologies, frameworks, tools?
+- Does it mention team size, reporting structure, or org context?
+- Are requirements realistic? (years of experience vs technology age)
+- Is there a clear scope for the first 6-12 months?
+- Is salary/compensation mentioned?
+- What ratio of the JD is role-specific vs generic boilerplate?
+- Any internal contradictions? (entry-level title + staff requirements, etc.)
+
+**3. Company Hiring Signals** (2-3 WebSearch queries, combine with Block D research):
+- Search: `"{company}" layoffs {year}` -- note date, scale, departments
+- Search: `"{company}" hiring freeze {year}` -- note any announcements
+- If layoffs found: are they in the same department as this role?
+
+**4. Reposting Detection** (from scan-history.tsv):
+- Check if company + similar role title appeared before with a different URL
+- Note how many times and over what period
+
+**5. Role Market Context** (qualitative, no additional queries):
+- Is this a common role that typically fills in 4-6 weeks?
+- Does the role make sense for this company's business?
+- Is the seniority level one that legitimately takes longer to fill?
+
+### Output format:
+
+**Assessment:** One of three tiers:
+- **High Confidence** -- Multiple signals suggest a real, active opening
+- **Proceed with Caution** -- Mixed signals worth noting
+- **Suspicious** -- Multiple ghost job indicators, investigate before investing time
+
+**Signals table:** Each signal observed with its finding and weight (Positive / Neutral / Concerning).
+
+**Context Notes:** Any caveats (niche role, government job, evergreen position, etc.) that explain potentially concerning signals.
+
+### Edge case handling:
+- **Government/academic postings:** Longer timelines are standard. Adjust thresholds (60-90 days is normal).
+- **Evergreen/continuous hire postings:** If the JD explicitly says "ongoing" or "rolling," note it as context -- this is not a ghost job, it is a pipeline role.
+- **Niche/executive roles:** Staff+, VP, Director, or highly specialized roles legitimately stay open for months. Adjust age thresholds accordingly.
+- **Startup / pre-revenue:** Early-stage companies may have vague JDs because the role is genuinely undefined. Weight description vagueness less heavily.
+- **No date available:** If posting age cannot be determined and no other signals are concerning, default to "Proceed with Caution" with a note that limited data was available. NEVER default to "Suspicious" without evidence.
+- **Recruiter-sourced (no public posting):** Freshness signals unavailable. Note that active recruiter contact is itself a positive legitimacy signal.
+
+---
+
+## Post-evaluation
+
+**ALWAYS** after generating blocks A-G:
+
+### 1. Save the report .md
+
+Save the full evaluation to `ft/reports/{company-slug}/{###}-{role-slug}-{YYYY-MM-DD}.md` (path resolves under `$CAREER_OPS_DATA_DIR`, default `ft/`; see `_shared.md`).
+
+- `{###}` = report number, reserved atomically via `node reserve-report-num.mjs` (3 digits, zero-padded; do NOT compute max+1 by hand)
+- `{company-slug}` = company name in lowercase, no spaces (use hyphens)
+- `{YYYY-MM-DD}` = current date
+
+**Report format** (header is the canonical one from `templates/eval-report.md`; the full Block A-G body is mandatory, no compact variant):
+
+```markdown
+# {NNN}, {Company} | {Role}
+
+**URL:** {single canonical apply URL}
+
+**Score:** {X.X}/5  **Status:** {canonical status from templates/states.yml}  **Resume:** {SDE|MLE}
+**Legitimacy:** {High Confidence | Medium | Low} ({source, e.g. Greenhouse, active})
+**Level strategy:** {New-grad-only | New-grad + experienced | Mixed}
+**Comp research:** {salary range with source, or "unknown"}
+**Sponsorship flag:** {Y | N | Unknown}
+**Freshness:** {FRESH | RECENT | AGING | unknown} ({N}d true ATS age)
+
+## Block A, Role Summary
+(full content of block A)
+
+## Block B, CV Match
+(full content of block B)
+
+## Block C, Level and Strategy
+(full content of block C)
+
+## Block D, Comp and Demand
+(full content of block D)
+
+## Block E, Personalization Plan
+(full content of block E)
+
+## Block F, Interview Plan
+(full content of block F)
+
+## Block G, Legitimacy
+(full content of block G)
+
+## Block H, Draft Application Answers
+(ONLY on explicit user request, per CLAUDE.md Rule 4, not auto-generated by score. When requested, answers live in `{NN}-{role-slug}-application-questions.md`, or inline here if the user asks for them in the report.)
+
+## Extracted Keywords
+(list of 15-20 keywords from the JD for ATS optimization)
+```
+
+### 2. Register in tracker
+
+**NEVER edit `ft/data/applications.md` directly.** Write a TSV line to `ft/batch/tracker-additions/{NN}.tsv` (a single line, no header, 9 tab-separated columns); the later merge incorporates it into the tracker. Fields:
+- The reserved report number — the row number IS the report number (one number space, reconciled 2026-07-27). merge-tracker.mjs never renumbers; a collision means the number must be re-reserved via `reserve-report-num.mjs`
+- Current date
+- Company
+- Role
+- Score: match average (1-5)
+- Status: `Evaluated`
+- PDF: ❌ (no PDFs are generated; the user submits their own resume from `resumes/`)
+- Report: relative link to the report .md (e.g.: `[001](reports/company/001-company-2026-01-01.md)`)
+- Notes: `Submit SDE resume` or `Submit MLE resume` according to the archetype (SDE/backend/infra → SDE; AI/ML/DS/DE → MLE)
+
+**Tracker schema (9 columns, do NOT change):**
+
+```markdown
+| # | Date | Company | Role | Score | Status | PDF | Report | Notes |
+```

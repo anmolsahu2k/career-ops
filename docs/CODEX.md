@@ -1,64 +1,89 @@
 # Codex Setup
 
-Career-Ops supports Codex through the root `AGENTS.md` file.
+Career-Ops is configured for Codex through two repository files:
 
-If your Codex client reads project instructions automatically, `AGENTS.md`
-is enough for routing and behavior. Codex should reuse the same checked-in
-mode files, templates, tracker flow, and scripts that already power the
-Claude workflow.
+- `AGENTS.md` is the automatically discovered project entry point.
+- `.agents/skills/career-ops/SKILL.md` is the native `$career-ops` workflow router.
+- `.codex/config.example.toml` is the credential-free project configuration template.
+
+`CLAUDE.md` remains the shared rules contract because existing scripts and compatibility adapters depend on that path. Its filename is historical; its rules apply to Codex.
 
 ## Prerequisites
 
-- A Codex client that can work with project `AGENTS.md`
+- ChatGPT desktop with Codex, the Codex CLI, or the Codex IDE extension
 - Node.js 18+
-- Playwright Chromium installed for PDF generation and reliable job verification
-- Go 1.21+ if you want the TUI dashboard
+- Playwright Chromium for liveness checks and job-page verification
+- Go 1.21+ only if you use the TUI dashboard
 
 ## Install
 
 ```bash
 npm install
 npx playwright install chromium
+npm run doctor
 ```
 
-## Recommended Starting Prompts
+Open this repository in Codex. Codex discovers `AGENTS.md` and the repo skill automatically. If a newly added skill is not visible, restart Codex.
 
-- `Evaluate this job URL with Career-Ops and run the full pipeline.`
-- `Scan my configured portals for new roles that match my profile.`
-- `Generate the tailored ATS PDF for this role using Career-Ops.`
+Copy `.codex/config.example.toml` to the ignored `.codex/config.toml` when you want project-scoped Playwright. Other clients can copy `.mcp.example.json` to the ignored `.mcp.json`. Both local files may contain machine-specific settings and must stay untracked.
 
-## Routing Map
+## Invoke Career-Ops
 
-| User intent | Files Codex should read |
-|-------------|-------------------------|
+Codex skills use `$` mentions rather than the Claude slash-command syntax:
+
+```text
+$career-ops
+$career-ops scan
+$career-ops tracker
+$career-ops offer <job URL>
+$career-ops <job URL or pasted JD>
+```
+
+Natural-language requests also work because the skill supports implicit selection:
+
+- `Evaluate this job URL and run the full Career-Ops pipeline.`
+- `Scan my configured sources for matching new-grad roles.`
+- `Show the current application tracker summary.`
+
+The old `/career-ops` spelling remains in Claude, Gemini, and OpenCode compatibility files. Use `$career-ops` in Codex.
+
+## Routing
+
+| User intent | Shared mode files |
+|---|---|
 | Raw JD text or job URL | `modes/_shared.md` + `modes/auto-pipeline.md` |
-| Single evaluation only | `modes/_shared.md` + `modes/oferta.md` |
-| Multiple offers | `modes/_shared.md` + `modes/ofertas.md` |
-| Portal scan | `modes/_shared.md` + `modes/scan.md` |
-| PDF generation | `modes/_shared.md` + `modes/pdf.md` |
+| Single evaluation | `modes/_shared.md` + `modes/offer.md` |
+| Multiple roles | `modes/_shared.md` + `modes/offers.md` |
+| Portal and source scan | `modes/_shared.md` + `modes/scan.md` |
 | Live application help | `modes/_shared.md` + `modes/apply.md` |
-| Tracker status | `modes/tracker.md` |
-| Deep company research | `modes/deep.md` |
-| Training / certification review | `modes/training.md` |
-| Project evaluation | `modes/project.md` |
+| Batch evaluation | `modes/_shared.md` + `modes/batch.md` |
+| Contact research and draft | `modes/_shared.md` + `modes/contact.md` |
+| Tracker, research, training, project, follow-up, or interview prep | Matching file under `modes/` |
 
-The key point: Codex support is additive. It should route into the existing
-Career-Ops modes and scripts rather than introducing a parallel automation
-layer.
+The live full-time funnel is under `ft/`. Root `data/` and `reports/` are the frozen intern archive. The default resolver already selects `ft`; use `CAREER_OPS_DATA_DIR=.` only for an explicitly requested archive operation.
 
-## Behavioral Rules
+## Workspace Rules That Matter Most
 
-- Treat raw JD text or a job URL as the full auto-pipeline path unless the user explicitly asks for evaluation only.
-- Keep all personalization in `config/profile.yml`, `modes/_profile.md`, `article-digest.md`, or `portals.yml`.
-- Never verify a job’s live status with generic web fetch when Playwright is available.
-- Never submit an application for the user.
-- Never add new tracker rows directly to `data/applications.md`; use the TSV addition flow and `merge-tracker.mjs`.
+- Every evaluation produces the full Block A-G report and a 9-column tracker addition.
+- The user supplies their own SDE and MLE resume PDFs. Career-Ops selects one but never generates a CV PDF.
+- Cover letters and application-question files are created only on explicit request.
+- Scans are user-triggered, never scheduled, and must pass the liveness gate before evaluation.
+- Tracker additions go through per-worker TSV files and `merge-tracker.mjs`, never direct ad hoc row edits.
+- Codex may use parallel subagents, but workers must reserve unique report numbers before writing shared artifacts.
+- Codex never submits an application, sends a message, pushes a commit, or changes the tracker schema without explicit authorization.
+
+## Claude Code Import
+
+Importing old chats or personal Claude settings is optional. In the ChatGPT desktop app, use **Settings > Import**. In Codex CLI, run `/import` and choose Claude Code. The repository itself does not require import because its instructions and skill are checked in. See the [official import guide](https://learn.chatgpt.com/docs/import).
+
+Claude's Gmail MCP registrations are not migrated by repository files. The direct Python `gmail-sweep` uses the existing OAuth credential files and does not require MCP. Reconnect Gmail separately only for MCP-backed interactive work or draft staging. Do not copy OAuth secrets into tracked Codex configuration.
 
 ## Verification
 
 ```bash
+npm test
 npm run verify
-
-# optional dashboard build
-cd dashboard && go build ./...
+(cd dashboard && go test ./...)
 ```
+
+Run `node test-all.mjs` when changing cross-runtime system files or the dashboard build.

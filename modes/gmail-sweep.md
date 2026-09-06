@@ -1,9 +1,16 @@
 # mode: gmail-sweep
 
-Sweep Anmol's two Gmail accounts and reconcile findings against `data/applications.md`.
+Sweep Anmol's two Gmail accounts and reconcile findings against the active tracker (see Data-dir routing below).
 
 - **anmolsahu2k@gmail.com** (personal) — used on most external application portals; receives confirmation + rejection emails directly from ATSes (Workday, Lever, Greenhouse, Ashby, etc.)
 - **anmolsah@andrew.cmu.edu** (CMU) — used on Handshake; receives Handshake "✅ You applied to" confirmation emails
+
+## Data-dir routing (read BEFORE running)
+
+All five sweep scripts (`gmail-sweep.py`, `split-sweep-batches.py`, `gmail-sweep-merge.mjs`, `apply-status-flips.mjs`, `split-tsv-for-merge.mjs`) resolve their paths via `CAREER_OPS_DATA_DIR`. Paths written as `data/...` and `batch/...` in this runbook live under that root: **`ft/` by default** (the FT/new-grad funnel), the repo root (frozen intern archive) when `CAREER_OPS_DATA_DIR=.`.
+
+- **FT-cycle sweeps** (reconciling FT applications): run the commands as written, no env var needed.
+- **Historical intern sweep** (STATUS #4: flipping the archive's intern `Applied` rows to `Rejected`): prefix EVERY command below with `CAREER_OPS_DATA_DIR=.` — otherwise the sweep matches against the near-empty FT tracker and backfills every intern rejection as a NEW row there instead of flipping the archive rows.
 
 Three sub-sweeps:
 1. **personal-apps** — confirmation emails on personal → add unseen rows as `Applied`
@@ -12,12 +19,14 @@ Three sub-sweeps:
 
 ## Prerequisites
 
-Gmail MCP must be registered for both accounts. One-time setup (already done 2026-06-05 — verify with `claude mcp list`):
+The direct Python sweep needs valid OAuth credential files for both accounts but does not require Gmail MCP. Gmail MCP is needed only for interactive Gmail-tool work. Claude registrations do not carry into Codex; verify Codex connections with `/mcp` or **Settings > MCP servers** before requesting MCP-backed actions.
+
+One-time OAuth setup (completed for the legacy environment on 2026-06-05):
 - `gmail-personal` → `~/.gmail-mcp/personal-credentials.json`
 - `gmail-cmu` → `~/.gmail-mcp/cmu-credentials.json`
 - Shared OAuth client at `~/.gmail-mcp/gcp-oauth.keys.json`
 
-If MCP servers aren't connected, follow setup steps at [docs/gmail-mcp-setup.md](docs/gmail-mcp-setup.md) (Cloud Console OAuth client + `npx @gongrzhe/server-gmail-autoauth-mcp auth` twice with `GMAIL_CREDENTIALS_PATH` per account).
+If credentials are missing or expired, follow [docs/gmail-mcp-setup.md](docs/gmail-mcp-setup.md). Reconnecting the MCP to Codex is a separate user-authorized step.
 
 ## Workflow (user-triggered, no schedules)
 
@@ -58,7 +67,7 @@ Each agent:
 node scripts/gmail-sweep-merge.mjs
 ```
 
-Loads all parsed JSONs, dedupes by `msg_id`, buckets by `(normalized_company, fuzzy_role)`, resolves final state per bucket (REJECTION trumps APPLIED_CONFIRMATION), matches against `data/applications.md`, and writes:
+Loads all parsed JSONs, dedupes by `msg_id`, buckets by `(normalized_company, fuzzy_role)`, resolves final state per bucket (REJECTION trumps APPLIED_CONFIRMATION), matches against the resolved `applications.md`, and writes:
 - `batch/tracker-additions/gmail-<source>-<today>.tsv` — new rows (multi-row TSV)
 - `batch/status-flips/gmail-rejections-<today>.tsv` — proposed flips for existing rows
 - `data/gmail-sweeps/merge-report-<today>.json` — full diagnostic (additions, flips, no-op-skipped, etc.)
@@ -74,7 +83,7 @@ node scripts/apply-status-flips.mjs            # dry-run
 node scripts/apply-status-flips.mjs --apply    # commit
 ```
 
-Edits `data/applications.md` in place. Makes a `.backup-<today>` copy first. Dedupes by `tracker_row` — if multiple rejection emails target the same row, latest `rejection_date` wins.
+Edits the resolved `applications.md` in place. Makes a `.backup-<today>` copy first. Dedupes by `tracker_row` — if multiple rejection emails target the same row, latest `rejection_date` wins.
 
 #### b. Additions (new tracker rows)
 

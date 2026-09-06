@@ -1,20 +1,20 @@
 # Career-Ops
 
-A multi-agent job-search command center for AI coding CLIs (Claude Code / Gemini CLI / OpenCode): evaluates roles, generates tailored CVs, scans portals, and tracks applications. Private fork of [santifer/career-ops](https://github.com/santifer/career-ops) with upstream marketing assets removed.
+A Codex-first, model-agnostic job-search command center that evaluates roles, scans sources, and tracks applications. Antigravity CLI supplies Google and partner-model review; Claude Code, Gemini CLI, and OpenCode files remain only as compatibility adapters. Private fork of [santifer/career-ops](https://github.com/santifer/career-ops) with upstream marketing assets removed.
 
 ## What Is This
 
 Career-Ops turns any AI coding CLI into a full job search command center. Instead of manually tracking applications in a spreadsheet, you get an AI-powered pipeline that:
 
-- **Evaluates offers** with a structured A-F scoring system (10 weighted dimensions)
-- **Generates tailored PDFs** -- ATS-optimized CVs customized per job description
-- **Scans portals** automatically (Greenhouse, Ashby, Lever, company pages)
-- **Processes in batch** -- evaluate 10+ offers in parallel with sub-agents
+- **Evaluates roles** with the full structured Block A-G report format
+- **Selects the right resume** from the user's maintained SDE and MLE PDFs without generating a new CV
+- **Scans sources on demand** (Greenhouse, Ashby, Lever, Workday, company pages, and configured aggregators)
+- **Processes in batch** with parallel subagents and collision-safe report numbering
 - **Tracks everything** in a single source of truth with integrity checks
 
 > **Important: This is NOT a spray-and-pray tool.** Career-ops is a filter -- it helps you find the few offers worth your time out of hundreds. The system strongly recommends against applying to anything scoring below 4.0/5. Your time is valuable, and so is the recruiter's. Always review before submitting.
 
-Career-ops is agentic: Claude Code navigates career pages with Playwright, evaluates fit by reasoning about your CV vs the job description (not keyword matching), and adapts your resume per listing.
+Career-ops is agentic: Codex verifies career pages, evaluates fit by reasoning about your CV versus the job description, writes a full report, selects the appropriate submission resume, and updates the tracker through the guarded TSV merge flow.
 
 > **Heads up: the first evaluations won't be great.** The system doesn't know you yet. Feed it context -- your CV, your career story, your proof points, your preferences, what you're good at, what you want to avoid. The more you nurture it, the better it gets. Think of it as onboarding a new recruiter: the first week they need to learn about you, then they become invaluable.
 
@@ -22,13 +22,13 @@ Career-ops is agentic: Claude Code navigates career pages with Playwright, evalu
 
 | Feature | Description |
 |---------|-------------|
-| **Auto-Pipeline** | Paste a URL, get a full evaluation + PDF + tracker entry |
-| **6-Block Evaluation** | Role summary, CV match, level strategy, comp research, personalization, interview prep (STAR+R) |
+| **Auto-Pipeline** | Paste a URL, get a full evaluation, report, resume selection, and tracker entry |
+| **7-Block Evaluation** | Role summary, CV match, level strategy, comp research, personalization, interview prep, and posting legitimacy |
 | **Interview Story Bank** | Accumulates STAR+Reflection stories across evaluations -- 5-10 master stories that answer any behavioral question |
 | **Negotiation Scripts** | Salary negotiation frameworks, geographic discount pushback, competing offer leverage |
-| **ATS PDF Generation** | Keyword-injected CVs with Space Grotesk + DM Sans design |
+| **Resume Selection** | Chooses the maintained SDE or MLE resume; this fork never generates CV PDFs |
 | **Portal Scanner** | 45+ companies pre-configured (Anthropic, OpenAI, ElevenLabs, Retool, n8n...) + custom queries across Ashby, Greenhouse, Lever, Wellfound |
-| **Batch Processing** | Parallel evaluation with `claude -p` workers |
+| **Batch Processing** | Parallel evaluation with Codex subagents; legacy agent adapters remain isolated |
 | **Dashboard TUI** | Terminal UI to browse, filter, and sort your pipeline |
 | **Human-in-the-Loop** | AI evaluates and recommends, you decide and act. The system never submits an application -- you always have the final call |
 | **Pipeline Integrity** | Automated merge, dedup, status normalization, health checks |
@@ -39,7 +39,7 @@ Career-ops is agentic: Claude Code navigates career pages with Playwright, evalu
 # 1. Clone and install
 git clone https://github.com/santifer/career-ops.git
 cd career-ops && npm install
-npx playwright install chromium   # Required for PDF generation
+npx playwright install chromium   # Required for liveness and job-page verification
 
 # 2. Check setup
 npm run doctor                     # Validates all prerequisites
@@ -51,88 +51,61 @@ cp templates/portals.example.yml portals.yml       # Customize companies
 # 4. Add your CV
 # Create cv.md in the project root with your CV in markdown
 
-# 5. Personalize with Claude
-claude   # Open Claude Code in this directory
+# 5. Open this folder in the ChatGPT desktop app with Codex
+# Or run `codex` after the Codex CLI is installed and working
 
-# Then ask Claude to adapt the system to you:
+# Then ask Codex to adapt the system to you:
 # "Change the archetypes to backend engineering roles"
-# "Translate the modes to English"
 # "Add these 5 companies to portals.yml"
 # "Update my profile with this CV I'm pasting"
 
 # 6. Start using
-# Paste a job URL or run /career-ops
+# Paste a job URL or invoke $career-ops
 ```
 
-> **The system is designed to be customized by Claude itself.** Modes, archetypes, scoring weights, negotiation scripts -- just ask Claude to change them. It reads the same files it uses, so it knows exactly what to edit.
+Playwright Chromium is used for liveness checks and job-page verification, not for resume generation.
 
-See [docs/SETUP.md](docs/SETUP.md) for the full setup guide.
+> **The system is designed to be customized by the coding agent itself.** Modes, archetypes, scoring weights, and negotiation scripts are plain repository files, so Codex can update the same logic it executes.
 
-## Gemini CLI Integration
+See [docs/CODEX.md](docs/CODEX.md) for Codex usage and [docs/SETUP.md](docs/SETUP.md) for the full setup guide.
 
-Career-ops supports [Gemini CLI](https://github.com/google-gemini/gemini-cli) natively — the same way it supports Claude Code and OpenCode. All 15 slash commands are available, using the same `modes/*.md` evaluation logic.
+## Antigravity CLI Integration
 
-### Option A — Native Gemini CLI (Recommended)
+Career-Ops routes Google and partner models through Antigravity CLI (`agy`).
+Model names and effort levels live only in runtime configuration; policy,
+validation, rendering, and persistence remain provider-neutral.
 
 ```bash
-# 1. Install Gemini CLI
-npm install -g @google/gemini-cli
-# or: npx @google/gemini-cli --version
-
-# 2. Authenticate (free — uses your Google account)
-gemini auth
-
-# 3. Run in the career-ops directory
-cd career-ops
-gemini
-
-# 4. Use slash commands just like Claude Code
-/career-ops "Senior AI Engineer at Anthropic..."
-/career-ops-evaluate --file ./jds/openai.txt
-/career-ops-scan
-/career-ops-pdf
-/career-ops-tracker
+agy models
+node bin/career-ops.mjs doctor --config config/runtime.example.yml
 ```
 
-The `GEMINI.md` file is auto-loaded as context. All 15 commands are defined in `.gemini/commands/*.toml`.
-
-### Option B — Standalone API Script (No CLI install needed)
-
-```bash
-# 1. Get a free API key at https://aistudio.google.com/apikey
-cp .env.example .env
-# Edit .env → set GEMINI_API_KEY=your_key_here
-
-# 2. Install dependencies
-npm install
-
-# 3. Evaluate a job description
-node gemini-eval.mjs "We are looking for a Senior AI Engineer..."
-node gemini-eval.mjs --file ./jds/my-job.txt
-npm run gemini:eval -- "JD text here"
-```
-
-> **Free tier:** Both options work without billing. Native CLI uses Google OAuth; the API script uses `gemini-2.0-flash` (15 RPM, 1M tokens/day free).
+The example providers are disabled by default. Copy the runtime config locally,
+enable only the Antigravity routes you intend to qualify, and acknowledge quota
+explicitly for shadow runs. The optional HTTP Gemini adapter remains disabled
+unless API billing is deliberately enabled. `GEMINI.md` and `.gemini/` are
+legacy adapters, not an active execution path.
 
 ## Usage
 
-Career-ops is a single slash command with multiple modes:
+In Codex, Career-Ops is a repository skill with multiple modes:
 
 ```
-/career-ops                → Show all available commands
-/career-ops {paste a JD}   → Full auto-pipeline (evaluate + PDF + tracker)
-/career-ops scan           → Scan portals for new offers
-/career-ops pdf            → Generate ATS-optimized CV
-/career-ops batch          → Batch evaluate multiple offers
-/career-ops tracker        → View application status
-/career-ops apply          → Fill application forms with AI
-/career-ops contacto       → LinkedIn outreach message
-/career-ops deep           → Deep company research
-/career-ops training       → Evaluate a course/cert
-/career-ops project        → Evaluate a portfolio project
+$career-ops                → Show all available modes
+$career-ops {paste a JD}   → Full auto-pipeline (evaluate + report + tracker)
+$career-ops scan           → Scan configured sources and evaluate survivors
+$career-ops offer          → Full A-G evaluation of one role
+$career-ops offers         → Compare multiple roles
+$career-ops batch          → Batch evaluate with Codex subagents
+$career-ops tracker        → View application status
+$career-ops apply          → Assist with an application form
+$career-ops contact        → Research a contact and draft outreach
+$career-ops deep           → Deep company research
+$career-ops training       → Evaluate a course or certification
+$career-ops project        → Evaluate a portfolio project
 ```
 
-Or just paste a job URL or description directly -- career-ops auto-detects it and runs the full pipeline.
+You can also paste a job URL or description directly. The skill can be selected implicitly and routes it to the full pipeline. Claude, Gemini, and OpenCode retain their existing slash-command adapters.
 
 ## How It Works
 
@@ -146,14 +119,14 @@ You paste a job URL or description
 └────────┬─────────┘
          │
 ┌────────▼─────────┐
-│  A-F Evaluation  │  Match, gaps, comp research, STAR stories
+│  A-G Evaluation  │  Match, gaps, comp, STAR stories, legitimacy
 │  (reads cv.md)   │
 └────────┬─────────┘
          │
     ┌────┼────┐
     ▼    ▼    ▼
- Report  PDF  Tracker
-  .md   .pdf   .tsv
+ Report Resume Tracker
+  .md    pick   .tsv
 ```
 
 ## Pre-configured Portals
@@ -178,24 +151,29 @@ The built-in terminal dashboard lets you browse your pipeline visually:
 ```bash
 cd dashboard
 go build -o career-dashboard .
-./career-dashboard --path ..
+./career-dashboard --path ../ft   # live FT funnel (this workspace's default)
+# ./career-dashboard --path ..    # opens the read-only intern archive at the repo root
 ```
 
 Features: 6 filter tabs, 4 sort modes, grouped/flat view, lazy-loaded previews, inline status changes.
+
+> **Note:** CV PDF generation is deprecated in this fork. The user submits their own resume PDFs; career-ops provides evaluations, form answers, and cover letters only.
 
 ## Project Structure
 
 ```
 career-ops/
-├── CLAUDE.md                    # Agent instructions
+├── AGENTS.md                    # Codex entry point
+├── CLAUDE.md                    # Shared legacy-named rules contract
+├── .agents/skills/career-ops/   # Native Codex skill router
 ├── cv.md                        # Your CV (create this)
 ├── article-digest.md            # Your proof points (optional)
 ├── config/
 │   └── profile.example.yml      # Template for your profile
 ├── modes/                       # 14 skill modes
 │   ├── _shared.md               # Shared context (customize this)
-│   ├── oferta.md                # Single evaluation
-│   ├── pdf.md                   # PDF generation
+│   ├── offer.md                 # Single evaluation
+│   ├── pdf.md                   # Legacy formatting reference; generation disabled
 │   ├── scan.md                  # Portal scanner
 │   ├── batch.md                 # Batch processing
 │   └── ...
@@ -209,22 +187,22 @@ career-ops/
 ├── dashboard/                   # Go TUI pipeline viewer
 ├── data/                        # Your tracking data (gitignored)
 ├── reports/                     # Evaluation reports (gitignored)
-├── output/                      # Generated PDFs (gitignored)
-├── fonts/                       # Space Grotesk + DM Sans
+├── output/                      # Legacy generated artifacts (gitignored)
+├── fonts/                       # Legacy resume-template fonts
 └── docs/                        # Setup, customization, architecture
 ```
 
 ## Tech Stack
 
-![Claude Code](https://img.shields.io/badge/Claude_Code-000?style=flat&logo=anthropic&logoColor=white)
+![OpenAI Codex](https://img.shields.io/badge/OpenAI_Codex-000?style=flat&logo=openai&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat&logo=playwright&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white)
 ![Bubble Tea](https://img.shields.io/badge/Bubble_Tea-FF75B5?style=flat&logo=go&logoColor=white)
 
-- **Agent**: Claude Code with custom skills and modes
-- **PDF**: Playwright/Puppeteer + HTML template
-- **Scanner**: Playwright + Greenhouse API + WebSearch
+- **Agent**: Codex with a repository skill and shared mode files
+- **Compatibility**: Antigravity is active; Claude Code, Gemini CLI, and OpenCode files are legacy adapters
+- **Scanner**: Playwright + public ATS APIs + live web research
 - **Dashboard**: Go + Bubble Tea + Lipgloss (Catppuccin Mocha theme)
 - **Data**: Markdown tables + YAML config + TSV batch files
 

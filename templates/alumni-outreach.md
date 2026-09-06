@@ -6,20 +6,21 @@ For LinkedIn DMs, CMU Alumni Online Community ([community.cmu.edu/s/](https://co
 
 ---
 
-## Default — generic outreach
+## Default: generic outreach
 
 Use when reaching out cold to any CMU alum at a target company without prior context.
 
 ```
-Hi [Name], fellow Tartan. I'm a CMU MISM master's student, currently shipping
-ML on the Highmark cancer-staging project and recently built Cloudify, a
-multi-agent automation platform on OpenAI plus Anthropic Claude APIs
-(github.com/anmolsahu2k/cloudify).
+Hi [Name], fellow Tartan. I'm a CMU MISM master's student graduating this
+December, with 2.5 years of SDE experience behind me. Recent work: Cloudify,
+a multi-agent automation platform on OpenAI plus Anthropic Claude
+(github.com/anmolsahu2k/cloudify), plus my Tabhi AI Engineer work on agentic
+systems.
 
-I'm looking for a Summer 2026 SDE / ML / Data intern role. If [Company] has
-open intern reqs in your area, or you know someone hiring, would you be
-willing to refer me or point me to the right team? Happy to keep it brief.
-Resume attached.
+I'm looking for full-time new-grad SDE / ML / Data roles starting January
+2027. If [Company] has open new-grad reqs in your area, or you know someone
+hiring, would you be willing to refer me or point me to the right team?
+Happy to keep it brief.
 
 Thanks,
 Anmol
@@ -27,14 +28,14 @@ Anmol
 
 ---
 
-## Variant A — already applied to the role
+## Variant A: already applied to the role
 
 Use when you've already submitted an application and want a referral / advocate.
 
 ```
 Hi [Name], fellow Tartan. I just applied for the [exact role title] at
-[Company] (req [#]). I'm a CMU MISM working on Highmark cancer-staging ML
-and recently built Cloudify (multi-agent OpenAI + Claude,
+[Company] (req [#]). I'm a CMU MISM graduating this December, with 2.5 years
+of SDE behind me, and I recently built Cloudify (multi-agent OpenAI + Claude,
 github.com/anmolsahu2k/cloudify).
 
 If you'd be open to a 15-minute coffee chat or willing to refer me
@@ -47,7 +48,7 @@ Anmol
 
 ---
 
-## Variant B — targeted engineer on a specific team
+## Variant B: targeted engineer on a specific team
 
 Use when reaching out to a specific engineer (not recruiter) whose team you'd
 want to join. Strong because it's flattering, specific, and asks for actual
@@ -55,13 +56,13 @@ information, not just a referral.
 
 ```
 Hi [Name], fellow Tartan. I noticed you work on [team / specific product] at
-[Company]. I'm a CMU MISM finishing my first year, and the work I'm doing
-right now (Cloudify, a multi-agent automation platform on OpenAI + Claude;
+[Company]. I'm a CMU MISM graduating this December, and the work I've been
+doing (Cloudify, a multi-agent automation platform on OpenAI + Claude;
 github.com/anmolsahu2k/cloudify) maps closely to [their team's space].
 
 I'd love 15 minutes to hear about your work and ask a few specific
-questions. I'm also applying for the [role title] this week and would value
-any pointers on what makes a strong applicant for your team.
+questions. I'm targeting full-time new-grad roles starting January 2027 and
+would value any pointers on what makes a strong applicant for your team.
 
 Thanks,
 Anmol
@@ -69,20 +70,19 @@ Anmol
 
 ---
 
-## Variant C — to a recruiter or talent partner (not engineer)
+## Variant C: to a recruiter or talent partner (not engineer)
 
 Use when reaching out specifically to a recruiter or university recruiting
 team member.
 
 ```
-Hi [Name], fellow Tartan. I'm a CMU MISM master's student finishing my first
-year, looking for Summer 2026 SDE / ML / Data intern roles. I just shipped
-Cloudify (multi-agent OpenAI + Claude on Dedalus,
-github.com/anmolsahu2k/cloudify) at TartanHacks 2026, and I'm currently
-working on a healthcare-ML pipeline with Highmark Health on 6M+ claims
-records.
+Hi [Name], fellow Tartan. I'm a CMU MISM master's student graduating this
+December, looking for full-time new-grad SDE / ML / Data roles starting
+January 2027. I shipped Cloudify (multi-agent OpenAI + Claude on Dedalus,
+github.com/anmolsahu2k/cloudify) at TartanHacks 2026, and I bring 2.5 years
+of prior SDE experience.
 
-If [Company] has open SDE / ML / Data intern reqs that would fit, I'd
+If [Company] has open new-grad SDE / ML / Data reqs that would fit, I'd
 appreciate a pointer to the right req or recruiting flow. Happy to share
 resume directly via email.
 
@@ -92,7 +92,7 @@ Anmol
 
 ---
 
-## Variant D — winner-angle for hackathon-sponsor companies
+## Variant D: winner-angle for hackathon-sponsor companies
 
 Use only at companies whose hackathons you've won. Direct path: "I'm a
 previous winner; here's what I've shipped since."
@@ -100,12 +100,12 @@ previous winner; here's what I've shipped since."
 ```
 Hi [Name], fellow Tartan. Some context: I'm a previous winner of [Hackathon
 Name] sponsored by [Company] ($[X] prize, [#] of [N] teams). I'm a CMU
-MISM master's student now, looking for Summer 2026 SDE / ML / Data intern
-roles. Since the hackathon I shipped Cloudify (multi-agent OpenAI + Claude,
-github.com/anmolsahu2k/cloudify) and I'm currently building a healthcare-ML
-pipeline at CMU.
+MISM master's student graduating this December, looking for full-time
+new-grad SDE / ML / Data roles starting January 2027. Since the hackathon I
+shipped Cloudify (multi-agent OpenAI + Claude, github.com/anmolsahu2k/cloudify)
+and did agentic AI work as a Tabhi AI Engineer.
 
-If [Company] has open intern reqs in SDE / ML / Data, I'd really value a
+If [Company] has open new-grad reqs in SDE / ML / Data, I'd really value a
 pointer to the right team or recruiter. Happy to share resume directly.
 
 Thanks,
@@ -144,7 +144,7 @@ Plan for ~5-10 useful conversations from 30 messages. Roughly 2-3 actual referra
 
 ## Volume target
 
-Per the master plan in `/Users/anmolsahu2k/.claude/plans/okay-so-now-built-eventual-scone.md`:
+Per the master plan in `~/.claude/plans/okay-so-now-built-eventual-scone.md`:
 
 - 20 alumni messages by Friday May 2, across the companies you've applied to + the ones still in evaluation
 - Of those 20: split roughly 10 default / variant A (existing app companies), 5 variant B (targeted engineers), 3 variant C (recruiters), 2 variant D (hackathon sponsors)

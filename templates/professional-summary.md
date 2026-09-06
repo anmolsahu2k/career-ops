@@ -34,17 +34,17 @@ Six hackathon wins totaling ~$22,000, including 1st prize at Red Hat Hack APAC.
 
 Append one of these only if the form field has clear room and you want a directional close. Otherwise leave the summary as-is, since most "Summary" fields do not expect a "Why this role" sentence.
 
-- **For SDE / backend / infra roles**: "Looking for a Summer 2026 SDE seat where I can ship infrastructure end to end."
-- **For AI / MLE / applied-scientist roles**: "Looking for a Summer 2026 AI/MLE seat where I can ship production model and agent infrastructure."
-- **For data science / DA / DE roles**: "Looking for a Summer 2026 data role where I can own a pipeline from ingest through decision."
-- **For startup / founder-office / generalist roles**: "Looking for a Summer 2026 seat at a startup where I can build the layer that compounds rather than tune the 12th metric on something someone else owns."
+- **For SDE / backend / infra roles**: "Looking for a full-time new-grad SDE role starting January 2027 where I can ship infrastructure end to end."
+- **For AI / MLE / applied-scientist roles**: "Looking for a full-time new-grad AI/MLE role starting January 2027 where I can ship production model and agent infrastructure."
+- **For data science / DA / DE roles**: "Looking for a full-time new-grad data role starting January 2027 where I can own a pipeline from ingest through decision."
+- **For startup / founder-office / generalist roles**: "Looking for a full-time new-grad role at a startup starting January 2027 where I can build the layer that compounds rather than tune the 12th metric on something someone else owns."
 
 ---
 
 ## Edit-in-place rules (if you tweak these for a specific application)
 
-1. Do not introduce em-dashes (`—`) or en-dashes (`–`). Use commas, periods, colons, parentheses, or rephrase.
-2. Do not add an availability sentence ("Available June 2026", "Ready to start June 1", etc.). The application form has a separate field for that.
-3. Do not add the F-1/CPT/Heinz/OIE/May 12/June 1 explainer. The school identifier "CMU MISM-BIDA student at Heinz" is fine; the visa explainer is not.
+1. Do not introduce em-dashes (Unicode U+2014) or en-dashes (Unicode U+2013). Use commas, periods, colons, parentheses, or rephrase.
+2. Do not add an availability sentence ("Available January 2027", "Ready to start in January", etc.). The application form has a separate field for that.
+3. Do not add the F-1/OPT/H-1B/Heinz/OIE explainer. The school identifier "CMU MISM-BIDA student at Heinz" is fine; the visa explainer is not.
 4. Do not write Highmark cancer-staging or the EEG project in present tense. Both are completed work.
 5. Do not introduce snake_case tracker tokens (`on_site`, `in_person`, `remote_us`, etc.). Use the English phrases ("in person", "remote in the US") if relevant.

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "/bin/sh",
+      "args": [
+        "-lc",
+        "exec npx -y @playwright/mcp@latest --user-data-dir \"$HOME/.career-ops/browser-profile\""
+      ],
+      "env": {}
+    }
+  }
+}

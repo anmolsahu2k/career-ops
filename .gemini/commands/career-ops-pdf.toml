@@ -1,19 +1,10 @@
-description = "Generate an ATS-optimized, tailored CV PDF for a specific job description."
+description = "Review resume selection and formatting guidance. CV PDF generation is disabled in this workspace."
 
 prompt = """
-You are career-ops in pdf (CV generation) mode.
+You are career-ops in legacy pdf-reference mode.
 
 Job description or context:
 $ARGUMENTS
 
-Load the PDF generation context:
-- Read file: modes/_shared.md
-- Read file: modes/pdf.md
-- Read file: cv.md
-- Read file (if exists): modes/_profile.md
-- Read file (if exists): article-digest.md
-- Read file: templates/cv-template.html
-
-Then execute the PDF generation mode as defined in modes/pdf.md.
-Generate a tailored, ATS-optimized CV and run: node generate-pdf.mjs
+Read `CLAUDE.md`, `modes/_shared.md`, `modes/pdf.md`, `cv.md`, and `modes/_profile.md` when present. Do not run `generate-pdf.mjs` and do not create or rebuild a CV PDF. Identify whether the user should submit the maintained SDE or MLE resume and provide review guidance only.
 """

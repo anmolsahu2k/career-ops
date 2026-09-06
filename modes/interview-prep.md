@@ -2,6 +2,8 @@
 
 When the user asks to prep for an interview at a specific company+role, or when an evaluation scores 4.0+ and the user updates status to `Interview`, run this mode.
 
+> **Data-dir note:** `reports/` here resolves under `$CAREER_OPS_DATA_DIR`, default `ft/` (so `reports/` means `ft/reports/`). `interview-prep/` (story-bank + output files), `templates/`, `cv.md`, and `config/` are NOT resolver-relative; they always live at the repo root.
+
 ## Inputs
 
 1. **Company name** and **role title** (required)
@@ -24,6 +26,16 @@ Run these WebSearch queries. Extract structured data, not summaries. Cite source
 | `"{company} interview process {role}"` (general) | Fills gaps from above — blog posts, YouTube, prep guides, candidate write-ups |
 
 If the company is small or obscure and yields few results, broaden: search for the role archetype at similar-stage companies, and note that intel is sparse.
+
+**Interviewer-angle mapping.** When interviewer names are known (from the tracker Notes, the scheduling email, or the user), look up their public professional profile and note the angle each is likely to probe. Do not speculate beyond public information, and do not put personal details in the prep doc.
+
+| Who | What they are usually probing | What to bring |
+|-----|-------------------------------|---------------|
+| Recruiter / HR screen | CV timeline, motivation, logistics, comp range | A clean 90-second narrative and a consistent timeline |
+| Hiring manager | Team fit, ownership, "why us", how you handle ambiguity | The "why this company" answer built on verified hooks |
+| Senior / staff engineer | Technical depth on ONE thing you claimed | The deepest project on the submitted resume, defensible three questions down |
+| Cross-functional peer | Communication, collaboration, how you explain your work | A STAR+R story about working across a boundary |
+| Executive / final round | Judgment, values, long-term intent | Questions that show you evaluated THEM |
 
 **Do NOT fabricate questions.** If a source says "they asked about distributed systems," report that. Do not invent a specific distributed systems question. When generating likely questions from JD analysis, label them clearly as `[inferred from JD]` not sourced from candidates.
 
@@ -60,6 +72,15 @@ If round structure is unknown, state that and provide the best available intel o
 
 ## Step 4 — Likely Questions
 
+**Source priority (highest first).** Research is not the top source once a process is underway:
+
+1. **Recorded feedback from earlier rounds** — anything an interviewer flagged, doubted, or left unresolved WILL come back in the next round. Read the tracker Notes and `data/follow-ups.md` for this application, and ask the user directly what came up in rounds already completed. This outranks every Glassdoor thread.
+2. **The evaluation report's gaps** (Block B/E) — the requirements where the CV is weakest are the likeliest probes. Each gets an honest bridge answer: acknowledge the gap, connect the nearest adjacent experience, name the learning path. **Never prepare an answer that invents experience** — that is CLAUDE.md's no-fabrication rule applied to speech instead of paper.
+3. **Sourced research** from Step 1 (labeled with its source).
+4. **The JD's stated requirements**, competency by competency (labeled `[inferred from JD]`).
+5. **The stage type** — screens probe motivation and timeline; technical rounds probe the stack; final rounds probe values, comp, and "any reservations".
+
+
 Categorize all discovered and inferred questions:
 
 ### Technical
@@ -77,6 +98,21 @@ For each: the question, why they're likely asking it (what JD requirement it map
 ### Background Red Flags
 Questions the interviewer will probably ask about gaps, transitions, or unusual elements in the candidate's background. Read `_profile.md` and `cv.md` to identify what might raise questions.
 For each: the likely question, why it comes up, and a recommended framing (honest, specific, forward-looking — never defensive).
+
+## Step 4.5 — Consistency Brief
+
+The interviewer has read the resume that was actually submitted, and the cover letter if one was sent. That is the contract for the conversation:
+
+> **No claim in the room that isn't on the paper, and every claim on the paper defensible in depth.**
+
+Build a short list of the specific claims the submitted materials make that this interviewer is most likely to probe:
+
+1. Read the tracker Notes for which resume was submitted (`Submit SDE resume` / `Submit MLE resume`) and read that resume's content from `cv.md` plus the master resume (see CLAUDE.md for its location outside the repo). The SDE and MLE PDFs carry **different bullet sets** — prepping against the wrong one is how a candidate gets asked about a bullet they cannot see. `node verify-resume-ats.mjs` prints the exact text layer of each PDF if you need to confirm what a given bullet actually says.
+2. Read the cover letter, if the Notes carry a `CL:` pointer.
+2b. Read the archived posting at `reports/{company-slug}/{NN}-{role-slug}-jd.md` (written at apply time by `modes/apply.md`). This is the exact text the candidate applied against — prefer it over refetching the URL, which by interview time has often expired. If no archive exists, say so plainly rather than reconstructing the posting from the evaluation report's summary.
+3. List the metrics, technologies, and outcomes claimed — each with the answer to "and how exactly did you do that?" one level deeper than the bullet.
+4. Flag any claim the user cannot currently defend in depth. That is the highest-value prep item on the page, above any Glassdoor question.
+
 
 ## Step 5 — Story Bank Mapping
 
@@ -136,6 +172,8 @@ After delivering the report:
 ## Rules
 
 - **NEVER invent interview questions and attribute them to sources.** Inferred questions must be labeled `[inferred from JD]`.
+- **NEVER coach a claim beyond the submitted documents.** Prep must be consistent with the resume and cover letter the interviewer read (Step 4.5). Gaps get bridge answers, never invented experience.
+- **Verify before use.** Every company specific that lands in the prep pack must be independently confirmed. An unverified "fact" delivered confidently in an interview is worse than no fact at all.
 - **NEVER fabricate Glassdoor ratings or statistics.** If the data isn't there, say so.
 - **Cite everything.** Every question, every stat, every claim gets a source or an `[inferred]` tag.
 - Generate in the language of the JD (EN default).

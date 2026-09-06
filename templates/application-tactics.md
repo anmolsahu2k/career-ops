@@ -10,7 +10,7 @@ Recurring application-form questions and how to handle each. Conservative, ATS-a
 |---|---|
 | **Real referral** (alum said "yes, I'll refer you") | Their full name, coordinated with them so the ATS match works. |
 | **Messaged alum, no response yet** | Leave blank or "N/A". Don't name them without permission. |
-| **Talked to alum but no explicit referral consent** | Leave blank. In "How did you hear" use: *"Found via [source]; also in conversation with [Name] about [Company]"* — honest, doesn't claim referral. |
+| **Talked to alum but no explicit referral consent** | Leave blank. In "How did you hear" use: *"Found via [source]; also in conversation with [Name] about [Company]"*, honest, doesn't claim referral. |
 | **Casual friend tip, no formal referral** | Leave blank. |
 | **No connection** | Leave blank. Use "Direct portal scan" or job board name in "How did you hear" instead. |
 
@@ -29,7 +29,7 @@ Honest, brief options ranked by quality:
 2. **CMU Alumni Online Community / Tartan Connect**
 3. **LinkedIn job search**
 4. **Handshake (CMU)**
-5. **SimplifyJobs / Pitt CSC / cvrve / ouckah** (curated intern boards)
+5. **SimplifyJobs / Pitt CSC / cvrve / ouckah** (curated new-grad boards)
 6. **YC Work at a Startup** (for YC-backed companies)
 7. **A specific blog post or conference talk** (e.g., Cloudflare's Agents Week 2026)
 
@@ -41,28 +41,29 @@ Avoid: "Saw on social media" (too vague), "Friend told me" (without naming the f
 
 Answer truthfully but minimally:
 
-- **"Authorized to work?"** → **Yes** (CPT counts as work authorization for the internship term)
-- **"Require sponsorship for this role?"** → For internship: **No** (CPT does not require employer sponsorship). For full-time conversion: **Yes, in the future** (technically true; H-1B will be needed eventually).
-- **"Are you a U.S. citizen or permanent resident?"** → **No, but authorized to work via F-1 CPT for the intern term.** (If form has a free-text "comments" box, can add this clarification; otherwise leave blank.)
+- **"Authorized to work?"** → **Yes** (OPT work authorization after December 2026 graduation; 12 months OPT plus the 24-month STEM extension).
+- **"Will you now or in the future require sponsorship?"** → **Yes** (H-1B sponsorship will be needed in the future). If the option "Yes, in the future" exists, pick it; it is the most accurate single answer.
+- **"Are you a U.S. citizen or permanent resident?"** → **No.** (No further explainer. If a free-text "comments" box appears, leave it blank.)
 
 **Do NOT volunteer the full visa explainer paragraph** unless explicitly asked. Most application forms don't have a "tell us about your visa" field, and adding unsolicited visa context to a "Why this role?" answer is a known anti-pattern.
 
 ---
 
-## "What is your expected salary / hourly rate?"
+## "What is your expected salary?"
+
+New-grad full-time roles are quoted as an annual base salary. Treat these as guidance bands, not a number you must commit to on the form.
 
 If the field has a dropdown or salary band:
-- Pick the band you'd be happy with, not the highest possible
-- For Summer 2026 SDE intern at top-tier US companies: **$45-55/hr** is a reasonable mid-band
+- Pick the band you'd be happy with, not the highest possible.
+- For new-grad SDE / ML / DS at top-tier US companies: a base in the **$140K-180K** band is a reasonable mid-market ask (total comp runs higher with equity and bonus).
 
 If the field is a single number:
-- For SDE / ML / DS interns at Stripe / Airbnb / Cloudflare / Brex / Anthropic-tier: **$50/hr**
-- For mid-tier US tech (Pinterest, Reddit, DoorDash, Lyft, Instacart): **$45/hr**
-- For early-stage AI startups (Lindy, Sierra, Cohere): **$45/hr**
-- For CMU spinoffs / Pittsburgh-local: **$35-40/hr**
-- For Indian companies (Razorpay, CRED, etc.): equivalent INR (don't convert in the form; submit local-currency bands)
+- For SDE / ML / DS new-grad at FAANG / top AI labs: base around **$160K-180K**.
+- For mid-tier US tech: base around **$130K-150K**.
+- For early-stage AI startups: base around **$120K-150K plus equity**.
+- For CMU spinoffs / Pittsburgh-local: base around **$110K-130K**.
 
-If the field is "any" or text: write **"Open to standard intern band for this role and location"** to avoid pre-anchoring.
+If the field is "any" or text: write **"Open to standard new-grad base for this role and location"** to avoid pre-anchoring.
 
 **Don't lowball.** Recruiters respect candidates who know their market value. Lowballing makes you look desperate or junior.
 
@@ -75,12 +76,12 @@ The 4-part formula:
 1. **Specific reason for THIS role at THIS company** (1-2 sentences, citing something concrete from JD or company materials)
 2. **Most relevant project from your work** (2-3 sentences, with a metric or specific technical detail)
 3. **What you'd want to build / contribute** (1-2 sentences, ideally referencing a specific product or feature)
-4. **Availability** (1 sentence: "Available for Summer 2026")
+4. **Availability** (1 sentence, only if the field asks: "Available January 2027")
 
 What NOT to do:
 - Don't open with "I'm a CMU MISM master's student". Resume already says this.
 - Don't say "passionate about" / "leveraged" / "results-oriented".
-- Don't include the CPT/visa paragraph.
+- Don't include the visa/sponsorship paragraph.
 
 ---
 
@@ -90,11 +91,11 @@ Almost always **No** (unless you have a current paid CMU RA position). Even if y
 
 ---
 
-## "Why are you leaving your current job?" (rare for intern roles, but appears occasionally)
+## "Why are you leaving your current job?" (appears occasionally)
 
-For intern applications: **N/A — currently a full-time master's student at CMU**.
+If the form treats the master's as current status: **N/A, currently a full-time master's student at CMU (graduating December 2026)**.
 
-If asking about Byju's specifically: **Pursued full-time master's at Carnegie Mellon to deepen my AI / ML expertise. Returning to industry roles in summer 2026.**
+If asking about Byju's specifically: **Pursued a full-time master's at Carnegie Mellon to deepen my AI / ML expertise. Returning to full-time industry roles after my December 2026 graduation.**
 
 ---
 
@@ -107,12 +108,12 @@ Be truthful. If you applied before and were rejected:
 
 ---
 
-## "What are your salary expectations for full-time post-graduation?" (rare for interns, sometimes asked)
+## "What are your total-compensation expectations?" (when the form asks for total comp, not base)
 
-For US Summer 2026 → Dec 2026 graduation → Full-time 2027 cycle:
+For the US Dec 2026 graduation, full-time January 2027 start cycle:
 - Tier-1 (FAANG / top AI labs): **$180K-220K total comp** for new-grad SWE
 - Mid-tier (Stripe-tier, mid-sized): **$150K-180K**
-- Startups (Lindy, Sierra, smaller AI): **$130K-160K + equity**
+- Startups (smaller AI): **$130K-160K plus equity**
 
 Or write: **"Open to discussion based on role scope and total compensation structure."**
 
@@ -120,18 +121,55 @@ Or write: **"Open to discussion based on role scope and total compensation struc
 
 ## "Any conditions for accepting an offer?"
 
-- **For internship**: standard visa logistics; CPT processing through CMU OIE post-offer; typical offer-to-start lead time of 2-4 weeks.
-- **Don't include**: Specific dates from the master plan (May 12 / June 1 / etc. — the visa-explainer rule applies). Just "available for Summer 2026" if asked.
+- **Default**: none to volunteer. If a start date is asked, "Available January 2027" stands alone.
+- **Don't include**: any visa, OPT, or sponsorship logistics in this answer (the visa-explainer rule applies). Do not name a specific start-date beyond "Available January 2027".
 
 ---
 
 ## General principles
 
 1. **Truth first**. ATSes and recruiters cross-check, and the cost of being caught lying once is permanent at that company.
-2. **Brevity**. Most form fields reward concise answers. 200 words is a lot.
+2. **Brevity**. Most form fields reward concise answers. 200 words is a lot. See [Answer length](#answer-length-the-standard) for the hard numbers.
 3. **Specificity**. Recruiters skim hundreds of apps; specific details (project names, metrics, specific products you want to work on) signal a real candidate.
 4. **No boilerplate**. If you wouldn't write a phrase to a friend, don't write it on the form. "Passionate about" / "results-driven" / "leveraged" are dead giveaways.
 5. **Match the company's voice**. Stripe (terse, direct). Airbnb (story-driven, values-led). Cloudflare (AI-native, builder-energy). Brex (production-fintech, bottom-line). Sierra (high-formality, founder-pedigree).
+
+---
+
+## Answer length: the standard
+
+Researched 2026-07-27 after a drafted answer ran 357 words on a no-limit form. Sources at the bottom of this section. Default to these numbers; do not re-litigate per question.
+
+### Target by field type
+
+| Situation | Target | Ceiling |
+|---|---|---|
+| **Stated word limit** (e.g. "max 300 words") | ~15% under the max (300 → **~255**) | Never exceed. Over-limit is a screening risk, not a flourish. |
+| **No limit stated, large text box / Google Forms long-answer** | **150-250 words** | 300. Past that you are writing for yourself. |
+| **No limit stated, single-line input** | 1-2 sentences | 40 words |
+| **Character-capped field** (LinkedIn-style) | Count it before drafting | Hard cap |
+| **Behavioral / STAR answer, written** | **150-200 words** | 250 |
+| **Cover-letter STAR story (inside a letter)** | One paragraph, 4-5 sentences | See the 200-word body cap in `templates/cover-letter.md` |
+
+### Rules
+
+1. **Multi-part questions partition the budget, they do not multiply it.** A question asking four things ("make the case, name a real decision, what it cost, what it bought") still gets ~200 words total, roughly a sentence or two per part. Answer every part explicitly, because a missing part reads as evasion, but do not give each part a paragraph. This is the exact error that triggered this section.
+2. **Brevity is a differentiator, not a shortfall.** Reviewers read a very high volume of these. An answer notable for saying the thing and stopping stands out; there is no penalty for finishing under a stated limit. Padding to reach a limit reads as waffle and is a negative signal.
+3. **But do not under-fill a large box.** Box size is the only length signal a form gives you. Fill it or about three-quarters of it. Two or three sentences in a full-page textarea looks like low effort. When the box is a Google Forms long-answer field (no size signal at all), fall back to the 150-250 band.
+4. **Spend the words on what you did.** Rough STAR allocation: ~10% situation, ~10% task, **~60% action**, ~20% result. Diagnostic: if the setup and the thesis together outrun what you actually did, rebalance rather than trim the ending.
+5. **One length, not two.** Draft a single answer at the right length. Shipping a long version plus a short variant is deferring the decision to the user, and the variants then drift out of sync.
+6. **Cut restatement first.** The reviewer just read the question. Re-narrating it is the cheapest 40 words to delete, followed by scene-setting and any sentence that only announces what the next sentence will say.
+
+### When longer is actually defensible
+
+Only two cases, and both need evidence from the posting itself:
+
+- The form **states** a higher limit (500+ words), or the box is explicitly a writing sample.
+- The JD screens on written communication (Eulerity's does: "clear technical documentation"). Even then the answer earns length through density, not volume. Ceiling stays 300.
+
+A JD merely being senior, technical, or interesting is not a reason to write more.
+
+**Sources:** [Claire Jutsum, writing to the word count](https://www.linkedin.com/pulse/how-approach-writing-your-application-within-word-count-claire-jutsum) (~15% under a stated limit) · [AllAboutSchoolLeavers, application mistakes](https://www.allaboutschoolleavers.co.uk/school-leaver-options/apprenticeships/application-mistakes-to-avoid) (fill the box or three-quarters; blank space and waffle both hurt) · [Probably Good, application questions](https://probablygood.org/how-to-get-a-job/application-questions/) (shorter answers are easier to read and remember; add insight rather than padding) · [The Interview Guys, STAR method](https://blog.theinterviewguys.com/the-star-method/) (150-200 words written; 10/10/60/20 allocation) · [DC OCFO, supplemental questions guide](https://cfo.dc.gov/page/application-guide-responding-supplemental-questions) (3-4 developed sentences answers most prompts) · [StandOut CV, recruiter reading-time study 2026](https://standout-cv.com/stats/how-long-recruiters-spend-looking-at-cv) (skim behavior under volume)
 
 ---
 
@@ -396,12 +434,12 @@ Do not put "available on request" in a portfolio field. Recruiters skim and the 
 
 ## Pittsburgh / on-site / relocation + AI-disclosure questions
 
-These prompts appear on most forms in some shape. Honest, brief answers below. **Never** include the F-1 / CPT / Heinz / OIE / May 12 / June 1 explainer paragraph in any of these answers. If start date is asked, just say "Available June 2026."
+These prompts appear on most forms in some shape. Honest, brief answers below. **Never** include the F-1 / OPT / H-1B / sponsorship explainer paragraph in any of these answers. If start date is asked, just say "Available January 2027."
 
 ### "Where are you currently located?" / "What is your current city?"
 
 ```
-Pittsburgh, PA (CMU graduate student through December 2026).
+Pittsburgh, PA (CMU graduate student, graduating December 2026).
 ```
 
 ### "Are you willing to relocate?" (Yes/No)
@@ -413,38 +451,37 @@ Yes.
 If a free-text follow-up appears:
 
 ```
-Yes, willing to relocate for the summer to [SPECIFIC OFFICE NAMED IN JD]. Available June 2026.
+Yes, willing to relocate to [SPECIFIC OFFICE NAMED IN JD]. Available January 2027.
 ```
 
 ### "Are you willing to work on-site / in-office?" (when JD is in-office only)
 
 ```
-Yes, willing to work on-site at [OFFICE NAMED IN JD] for the summer term.
+Yes, willing to work on-site at [OFFICE NAMED IN JD].
 ```
 
 ### "When can you start?" / "Earliest start date?"
 
 ```
-Available June 2026.
+Available January 2027.
 ```
 
-Do not add CPT-processing context, OIE timeline, May 12 / June 1 dates, or "pending visa logistics." The June 2026 line stands alone.
+Do not add any OPT / sponsorship context or "pending visa logistics." The January 2027 line stands alone.
 
 ### "Are you authorized to work in the US?"
 
 ```
-Yes, I'm authorized to work in the US through CPT for the summer term.
+Yes.
 ```
 
-No further explainer. Do not mention Heinz, OIE, or course code. Do not mention the 12-month CPT cap. Do not mention India remote alternatives.
+No further explainer. Work authorization comes through OPT after the December 2026 graduation, but the form answer is simply "Yes." Do not volunteer the visa mechanism unless a sponsorship-specific field asks.
 
 ### "Do you require sponsorship now or in the future?"
 
 This question IS sponsorship-relevant; it is not the same as the visa-explainer. Answer honestly.
 
 ```
-For this internship: No, I am authorized via CPT.
-For full-time employment after graduation: Yes, I will require sponsorship.
+Yes, I will require H-1B sponsorship in the future.
 ```
 
 If the form is a single dropdown with one answer:
@@ -472,8 +509,8 @@ surface, and which company-specific details to cite are mine.
 
 ### What NOT to do on any of the above
 
-- Do not volunteer CPT / Heinz / OIE / I-20 / SEVIS / June 1 / May 12 in any answer.
-- Do not say "available pending visa logistics" or "subject to CPT processing." June 2026 stands alone.
+- Do not volunteer F-1 / OPT / STEM-extension / I-20 / SEVIS / Heinz / OIE in any answer.
+- Do not say "available pending visa logistics" or "subject to OPT processing." January 2027 stands alone.
 - Do not lie about AI tool use on a form that asked.
 - Do not fake a permanent address near a target office to look "local." Pittsburgh through Dec 2026 is the honest answer.
-- Do not promise to relocate to a country you cannot get a visa for in 6 weeks (e.g., Toronto for a Canadian-HQ company without a Canadian work permit). Pre-empt this in the cover letter (see Cohere precedent in `reports/cohere/002-cohere-cover-letter.md`).
+- Do not promise to relocate to a country you cannot get a visa for (e.g., Toronto for a Canadian-HQ company without a Canadian work permit). Pre-empt this in the cover letter (see Cohere precedent in `reports/cohere/002-cohere-cover-letter.md`).

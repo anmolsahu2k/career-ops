@@ -49,10 +49,32 @@ states:
     description: Rejected by company
     dashboard_group: rejected
 
+  - id: rejected_at_eval
+    label: Rejected-at-eval
+    aliases: [rejected-at-eval, rejected_at_eval, eval-reject, screened-out]
+    description: >-
+      Eval agent judged the role not a fit on the merits (no sponsorship, ITAR,
+      level mismatch, comp below floor). A verdict about the role, not about a
+      dead link and not the candidate's own call. Written by eval agents only.
+    dashboard_group: rejected_at_eval
+
+  - id: purged
+    label: Purged
+    aliases: [purge, auto-discarded, age-purged, liveness-purged]
+    description: >-
+      Removed mechanically, with no judgement about the role: posting went dead
+      (liveness sweep), or it sat unapplied past the shelf life (age purge), or
+      the req was too old at intake (STALE-REQ). Written by hygiene-sweep.mjs
+      and the dashboard --expire-days sweep only.
+    dashboard_group: purged
+
   - id: discarded
     label: Discarded
     aliases: [descartado, descartada, cerrada, cancelada]
-    description: Discarded by candidate or offer closed
+    description: >-
+      The candidate's own call, made by hand in the dashboard (d key). Nothing
+      automated may write this status: see rejected_at_eval for agent verdicts
+      and purged for mechanical sweeps.
     dashboard_group: discarded
 
   - id: skip

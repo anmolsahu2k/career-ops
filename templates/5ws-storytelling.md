@@ -4,7 +4,7 @@ A complementary frame to STAR plus R. Source: cassidoo's getting-a-gig storytell
 
 ## Why this file matters
 
-Anmol's Byju's resume bullets are, by self-rating, around 5/10 on real proficiency. A senior interviewer who probes past the bullet will quickly find a gap unless the answer is grounded in what actually happened. The ground truth is in `/Users/anmolsahu2k/Stuff/Create/Amazon/Work experience-Project based 19a056360b5280798943fb0c02aef26c.md`. This template extracts the real technical detail per bullet and pre-computes 2 to 3 levels of probing answers so the conversation can go deep honestly.
+Anmol's Byju's resume bullets are, by self-rating, around 5/10 on real proficiency. A senior interviewer who probes past the bullet will quickly find a gap unless the answer is grounded in what actually happened. The ground truth is in `../Amazon/Work experience-Project based 19a056360b5280798943fb0c02aef26c.md` (relative to the career-ops repo root). This template extracts the real technical detail per bullet and pre-computes 2 to 3 levels of probing answers so the conversation can go deep honestly.
 
 **Honesty rule.** When the bullet inflates what you owned, the 5W answer should:
 

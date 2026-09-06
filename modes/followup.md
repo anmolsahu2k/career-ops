@@ -1,5 +1,7 @@
 # Mode: followup -- Follow-up Cadence Tracker
 
+> **Data-dir note:** All `data/` and `reports/` paths here resolve under `$CAREER_OPS_DATA_DIR`, default `ft/` (the live FT funnel). `data/applications.md` means `ft/data/applications.md`, `data/follow-ups.md` means `ft/data/follow-ups.md`, `reports/` means `ft/reports/`. `followup-cadence.mjs` resolves these via `lib/paths.mjs`.
+
 ## Purpose
 
 Track follow-up cadence for active applications. Flag overdue follow-ups, extract contacts from notes, and generate tailored follow-up email/LinkedIn drafts using report context.
@@ -66,6 +68,8 @@ Generate a 3-4 sentence email:
 4. **Sentence 4 (optional):** Brief mention of a relevant recent project or achievement.
 
 **Rules:**
+- **NO NEW CLAIMS (hard rule).** Every substantive statement must trace to something already submitted: the application itself, the resume PDF that was sent (`Submit SDE resume` / `Submit MLE resume` in the tracker Notes), the cover letter if one exists, or `cv.md`. A follow-up is a fabrication vector precisely because it feels like small talk. A skill, metric, or project that was not in the submitted materials does not appear here.
+- **Target 60-120 words** for the body (the 150-word ceiling below is a hard cap, not the goal). Short reads as confident; long reads as anxious.
 - Professional but warm, NOT desperate
 - **NEVER** use "just checking in", "just following up", "touching base", or "circling back"
 - Lead with value, not with the ask
@@ -88,9 +92,9 @@ Generate a 3-4 sentence email:
 
 ### LinkedIn Follow-up (if no email contact found)
 
-Reuse the contacto framework: 3 sentences, 300 character max.
+Reuse the contact framework: 3 sentences, 300 character max.
 - Hook specific to company → proof point → soft ask
-- Suggest the user run `/career-ops contacto {company}` to find the right person first
+- Suggest the user run `/career-ops contact {company}` to find the right person first
 
 ### Second Follow-up (followupCount == 1)
 
@@ -104,8 +108,27 @@ Shorter than first (2-3 sentences). Take a **new angle**:
 Do NOT generate another follow-up. Instead suggest:
 > "This application has had {N} follow-ups with no response. Consider:
 > - Updating status to `Discarded` if the role seems filled
-> - Trying a different contact via `/career-ops contacto`
+> - Trying a different contact via `/career-ops contact`
 > - Keeping in `Applied` status but deprioritizing"
+
+## Source Discipline (applies to every draft in this mode)
+
+Follow-ups, thank-you notes, and nudges are candidate-facing text the user will send under their own name. They inherit every hard rule in `CLAUDE.md` and `modes/_shared.md`, and add one of their own:
+
+1. **No new claims.** See the rule above. Before sending a draft, name (to yourself) the submitted artifact each claim came from. If a claim has no source, cut it. The archived posting at `reports/{company-slug}/{NN}-{role-slug}-jd.md` (written at apply time) is the reference for what the role actually asked for; the report's Block B match is the reference for what was offered against it.
+2. **No visa, OPT, H-1B, or sponsorship content** (CLAUDE.md Rule 3). If asked about start date, "Available January 2027." Nothing more.
+3. **No em-dashes or en-dashes** (CLAUDE.md Rule 1). Run the scrub pass before presenting.
+4. **No internal jargon** — no `on_site`, `remote_us`, archetype names, block letters, or scores leak into a message.
+5. **Draft only, never send.** This mode produces text for the user. It never emails, messages, or submits. It must not be wired to a tool that does.
+6. **Maximum two follow-ups per application.** After the second silence, the honest move is recording the outcome, not persistence. See the Cold Application branch above.
+
+## Thank-You Notes (triggered by recording an interview stage)
+
+The trigger is **recording the stage, not scanning for one**. The moment an application's status moves to `Interview` (or a new round is logged), offer in the same turn:
+
+> "Want a short thank-you note for the interviewer? Sending one within 24 hours is standard practice."
+
+If accepted, draft it under this mode's Source Discipline rules, with one addition: a thank-you note may reference **what was discussed in the interview**, which the user supplies. Ask what came up rather than inventing it. Keep it to 60-100 words: thanks, one specific thing from the conversation, one sentence of continued interest. Log it in `data/follow-ups.md` with Channel `Email` and a note naming the round, so the cadence math stays correct.
 
 ## Step 4 — Present Drafts
 
@@ -114,7 +137,7 @@ For each draft, show:
 ```
 ## Follow-up: {Company} — {Role} (#{num})
 
-**To:** {email or "No contact found — run `/career-ops contacto` first"}
+**To:** {email or "No contact found — run `/career-ops contact` first"}
 **Subject:** {subject line}
 **Days since application:** {N}
 **Follow-ups sent:** {N}

@@ -1,8 +1,8 @@
 ---
-description: Evaluate job offer (A-F scoring, no auto PDF)
+description: Evaluate a job offer with the full A-G report format and no CV generation
 ---
 
-Evaluate the following job description using career-ops oferta mode:
+Evaluate the following job description using career-ops offer mode:
 
 $ARGUMENTS
 
