@@ -2,11 +2,11 @@
 
 Last updated: 2026-09-06
 
-This document transfers repository-safe implementation context to the Windows
-machine. It intentionally excludes credentials, the live `ft/` funnel,
-generated `.career-ops-runtime/` state, source-report indexes, and personal
-artifacts. Those remain local and must use the manifest-verified migration
-process after qualification and canary gates pass.
+This tracked document contains repository-safe implementation context. The
+Windows workspace now also has a private full copy of the Mac workspace,
+including ignored qualification artifacts and `ft/` data. Possession of that
+copy does not authorize Windows to mutate the live funnel or become the writer;
+qualification, canary, and migration gates still apply.
 
 ## Current state
 
@@ -32,10 +32,17 @@ process after qualification and canary gates pass.
   preflight in one provider call with 100 percent agreement and schema success,
   zero hard-gate or authorization errors, zero repairs, and zero failures. The
   metrics-only records are under `.career-ops-runtime/shadow/`.
-- No redacted prepared historical qualification set is present on Windows yet.
-  Milestone 4 requires transferring only the latest
-  `historical-prepared-v*.json` artifact from the source machine. Do not transfer
-  either `historical-*-local-index.md` file.
+- The full private workspace transfer is complete and Windows has
+  `.career-ops-runtime/qualification-sets/historical-prepared-v14.json`.
+  Its file SHA-256 is
+  `a9f7bfbfb9749da83a6028c806420b02469152a9f68993fc46b7508368d76331`;
+  its internal set digest is
+  `40cb882eb00548e885f10676ee48487a0ae62078e5cdbd4ca1ff96506a4564f9`.
+  It is a 50-case representative, human-approved recommendation component,
+  not full promotion truth: `gate_labels_included` and `promotion_eligible`
+  are false, with `RECOMMENDATION_ONLY_LABELS` and
+  `SPLIT_LABEL_REVIEW_REQUIRED` blockers. Local indexes may exist on Windows
+  for human navigation but must never be included in provider input.
 - Direct Gemini CLI is retired. Google and partner-model runs use `agy`.
 - All example providers are disabled by design. `available: false` with
   `usable: true` means the executable was found but the provider has not been
@@ -88,10 +95,10 @@ an actual multi-year response time.
 3. Completed: run small, quota-acknowledged Codex and Antigravity shadow checks
    against the committed deterministic fixture set. These diagnostic preflights
    do not qualify either model snapshot.
-4. Blocked pending source-machine transfer: transfer only the latest redacted
-   `historical-prepared-v*.json` qualification component needed for historical
-   shadowing. Do not upload either local source-report index to a provider and
-   do not commit it to Git.
+4. Ready on Windows: verify both digests for `historical-prepared-v14.json`,
+   then run quota-bounded representative historical shadows. Treat the file as
+   recommendation-only and do not expose either local source-report index to a
+   provider. Resolve the split-label blocker independently before promotion.
 5. Build the representative recommendation and deterministic hard-gate
    qualification bundle. Enforce the thresholds in `docs/RUNTIME.md`.
 6. Run at least three isolated end-to-end canary commits and certify their
@@ -132,14 +139,18 @@ API billing and overages are disabled, and Windows is not yet the live writer.
 Ollama `0.33.3` is loopback-only and the pinned Qwen 3 4B Q4 model passed a
 50-case `EXTRACTION` hardware qualification, but routing remains unauthorized.
 Small `gpt-5.6-luna` and `gemini-3.8-flash-low` Windows preflights also passed;
-neither diagnostic run is a production qualification. Gemini CLI is retired;
-use agy for Google and partner models.
+neither diagnostic run is a production qualification. The full private Mac
+workspace has been copied to Windows, including historical-prepared-v14.json
+and local review indexes. The prepared set is representative recommendation
+truth only and remains promotion-blocked until split labels are resolved.
+Gemini CLI is retired; use agy for Google and partner models.
 
 Begin with read-only verification of git state and config/runtime.local.yml.
-Then continue the next incomplete milestone from docs/WINDOWS_HANDOFF.md:
-transfer only the redacted historical qualification component, followed by
+Then continue milestone 4 from docs/WINDOWS_HANDOFF.md: verify the prepared-set
+digests, run quota-bounded representative historical shadows, and resolve the
+split-label blocker without sending local indexes to providers. Continue with
 qualification bundling, isolated one-writer canaries, and only then
-manifest-verified live-data migration. Do not weaken policy,
+manifest-verified writer promotion. Do not weaken policy,
 capability, evidence, quota, or transaction gates. Do not mutate the live ft/
 funnel, enable billing, send/submit anything, commit personal data, or push
 unless I explicitly request it. Report what you verified, changed, and what
