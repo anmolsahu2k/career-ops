@@ -43,6 +43,18 @@ qualification, canary, and migration gates still apply.
   are false, with `RECOMMENDATION_ONLY_LABELS` and
   `SPLIT_LABEL_REVIEW_REQUIRED` blockers. Local indexes may exist on Windows
   for human navigation but must never be included in provider input.
+- The v14 digests and all 50 case evidence digests were verified on Windows.
+  Quota-bounded 20-run historical diagnostics completed for `gpt-5.6-luna`
+  and `gemini-3.8-flash-low` without retaining raw responses. Under the user's
+  explicit digest-bound recommendation-scope direction, the existing advisory
+  traces scored 76 percent and 80 percent recommendation agreement,
+  respectively. This clears only `SPLIT_LABEL_REVIEW_REQUIRED`; both candidates
+  remain below the unchanged 95 percent recommendation floor.
+- Both model snapshots passed the separate 50-case deterministic hard-gate
+  component with 100 percent agreement, schema success, and evidence accuracy,
+  and zero hard-gate or authorization errors. Luna used no repairs. Gemini Flash
+  Low had a 24 percent repair rate. Bundle construction correctly rejects both
+  because their representative recommendation components did not pass.
 - Direct Gemini CLI is retired. Google and partner-model runs use `agy`.
 - All example providers are disabled by design. `available: false` with
   `usable: true` means the executable was found but the provider has not been
@@ -95,12 +107,15 @@ an actual multi-year response time.
 3. Completed: run small, quota-acknowledged Codex and Antigravity shadow checks
    against the committed deterministic fixture set. These diagnostic preflights
    do not qualify either model snapshot.
-4. Ready on Windows: verify both digests for `historical-prepared-v14.json`,
-   then run quota-bounded representative historical shadows. Treat the file as
-   recommendation-only and do not expose either local source-report index to a
-   provider. Resolve the split-label blocker independently before promotion.
-5. Build the representative recommendation and deterministic hard-gate
-   qualification bundle. Enforce the thresholds in `docs/RUNTIME.md`.
+4. Completed: verify both digests for `historical-prepared-v14.json`, run
+   quota-bounded historical shadows, and apply the explicit digest-bound
+   recommendation-scope direction without exposing a local source-report index
+   or inventing gate truth.
+5. Blocked by the quality floor: the deterministic hard-gate components pass,
+   but Luna and Gemini Flash Low score 76 percent and 80 percent recommendation
+   agreement against the required 95 percent. Do not build a passing bundle by
+   changing labels or lowering thresholds. Qualify a stronger candidate against
+   the same exact components instead.
 6. Run at least three isolated end-to-end canary commits and certify their
    receipts on one Windows host.
 7. Only after every gate passes, perform the manifest-verified one-way live-data

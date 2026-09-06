@@ -38,6 +38,7 @@ If no mode or actionable input is supplied, show the available modes and make no
 ## Execute
 
 - Follow the selected mode and the hard rules in `CAREER_OPS.md`. The full A-G report format is mandatory on every evaluation path.
+- For runtime qualification, an explicit user direction may designate one exact digest-verified, human-approved historical prepared set as recommendation-only truth without a second per-case review. Bind the override to the prepared-set and source-shadow digests, reuse only the recorded advisory recommendations, keep `gate_labels_included: false`, retain `RECOMMENDATION_ONLY_LABELS`, and clear only `SPLIT_LABEL_REVIEW_REQUIRED`. Never infer gate truth, lower qualification thresholds, rerun a provider when the existing trace is sufficient, or describe the result as promotion-eligible.
 - Use Codex subagents for independent URL batches when that improves latency. All subagents share the workspace, so reserve unique report numbers first and keep tracker writes in per-worker TSV files until merge.
 - Never invoke the legacy `claude -p` batch runner from Codex. Use Codex subagents and the existing mode contract instead.
 - Do not generate a resume PDF. Record whether the user should submit the SDE or MLE resume.

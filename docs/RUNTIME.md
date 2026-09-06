@@ -92,6 +92,26 @@ The qualification command accepts either precomputed `--metrics` or per-case `--
 
 Shadow records retain the normalized advisory recommendation, deterministic policy recommendation, tri-state gate values, policy reason codes, score, and confidence alongside the compared recommendation. This safe decision trace contains no raw response or presentation text and makes model-versus-policy disagreements diagnosable. A legacy final historical outcome is not treated as atomic advisory or policy truth: it may encode both merit judgment and a hard-gate decision. Such cases run as `DIAGNOSTIC_FINAL_OUTCOME`, are excluded from recommendation-agreement denominators, and add `SPLIT_LABEL_REVIEW_REQUIRED` until advisory recommendation and gate disposition are independently approved. Individual gate accuracy comes only from the separate deterministic hard-gate suite. Successful raw provider responses are not retained.
 
+When the user explicitly designates one exact prepared-set digest as
+recommendation-only truth without a second per-case review, reuse the completed
+diagnostic trace instead of invoking the provider again:
+
+```bash
+npm run runtime:reinterpret-history -- \
+  --suite historical-prepared.json \
+  --run historical-diagnostic-shadow.json \
+  --attestation scope-direction-id \
+  --accept-final-outcomes-as-recommendations \
+  --out recommendation-shadow.json
+```
+
+This digest-bound override compares only the recorded advisory recommendation,
+clears only `SPLIT_LABEL_REVIEW_REQUIRED`, and retains
+`RECOMMENDATION_ONLY_LABELS`, `gate_labels_included: false`, and
+`promotion_eligible: false`. It rejects any other prepared-set blocker and does
+not create or infer gate truth. All numerical qualification thresholds remain
+unchanged.
+
 Human-approved historical labels are prepared with `npm run runtime:historical-fixtures`. The prepared evidence body removes prior overall scores, statuses, final recommendations, direct target-company strings, URLs, and direct candidate identity. It retains bounded evidence from every decision-relevant historical block; prose lines receive enough room to preserve late constraint clauses, while section budgets still cap total context. Removing risk or constraint sections to save tokens is forbidden because it changes recommendation quality. The provider receives a fixed recommendation rubric and calibration rules from trusted task rules, and task input cannot weaken or replace them. A concrete, honestly disclosed skill gap does not by itself force `CONSIDER` when the experience bar is met and the role remains a strategically reasonable 4/5-or-better pursuit; `CONSIDER` covers 3-3.9/5 fits and unresolved evidence, level, eligibility, or merits uncertainty. Historical outcomes that depend on comparing another role, an application cap, or portfolio ordering block qualification because a standalone TaskEnvelope cannot reproduce that decision. Because the set has no approved hard-gate labels, it is a recommendation component and cannot promote a model by itself.
 
 Before rebuilding the prepared set, `npm run runtime:historical-evidence` may replace discovery-only stubs with current evidence from the exact Greenhouse, Workday, or Ashby posting already bound to the approved tracker row. The command writes only to the ignored local qualification cache, requires an explicit apply flag in its underlying script, checks the returned title, and fails closed for removed jobs, generic company pages, redirects to a different requisition, or unsupported sources. Cached records are digest-bound and never turn a recommendation label into a hard-gate label. Because a label approved from an unresolved stub is not automatically valid against later job evidence, such a case adds `LIVE_EVIDENCE_LABEL_REVIEW_REQUIRED` until its recommendation record contains the exact `approved_evidence_record_digest`. Recommendation-set revisions also preserve their source-set and replacement-pack digests; a historical report whose explicit outcome contradicts the proposed label blocks the component instead of being silently scored.

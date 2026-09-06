@@ -7,7 +7,11 @@ import {
   buildHistoricalQualificationFixtures,
   writeHistoricalQualificationFixtures,
 } from '../lib/runtime/historical-fixtures.mjs';
-import { expandQualificationSet, runShadowQualification } from '../lib/runtime/shadow.mjs';
+import {
+  expandQualificationSet,
+  reinterpretHistoricalRecommendationTruth,
+  runShadowQualification,
+} from '../lib/runtime/shadow.mjs';
 import { record, sha256 } from '../lib/runtime/util.mjs';
 import { makeResponse } from './runtime-fixtures.mjs';
 import { captureHistoricalEvidence } from '../lib/runtime/historical-evidence.mjs';
@@ -121,6 +125,89 @@ test('historical final outcomes remain diagnostic and cannot promote without spl
   assert.equal(run.promotion_eligible, false);
   assert.equal(run.qualification.lifecycle_state, 'candidate');
   assert.equal(run.qualification.checks.shadow_passed, false);
+});
+
+test('explicit scope direction reuses diagnostic advisory traces without inventing gate truth', () => {
+  const { target, recommendationSet } = makeSource();
+  const built = buildHistoricalQualificationFixtures({ target, recommendationSet, now: NOW });
+  const { set_digest: _builtDigest, ...preparedUnsigned } = built;
+  const preparedBody = {
+    ...preparedUnsigned,
+    incomplete_source_count: 0,
+    promotion_blockers: ['RECOMMENDATION_ONLY_LABELS', 'SPLIT_LABEL_REVIEW_REQUIRED'],
+  };
+  const prepared = { ...preparedBody, set_digest: sha256(preparedBody) };
+  const results = prepared.cases.map(item => ({
+    case_id: item.id,
+    completed: true,
+    schema_success: true,
+    expected_recommendation: item.expected_recommendation,
+    recommendation_comparison_eligible: false,
+    actual_recommendation: 'CONSIDER',
+    advisory_recommendation: item.expected_recommendation,
+    policy_recommendation: 'CONSIDER',
+    hard_gate_errors: 0,
+    authorization_errors: 0,
+    consequential_gate_count: 0,
+    consequential_unknown_count: 0,
+    evidence_correct: false,
+    attempts: 1,
+    latency_ms: 1,
+  }));
+  const sourceRun = record('ShadowQualificationRunV1', {
+    provider_id: 'fake',
+    model_snapshot: 'fake-1',
+    evaluation_set_version: prepared.evaluation_set_version,
+    qualification_set_digest: prepared.set_digest,
+    truth_source: prepared.truth_source,
+    label_scope: prepared.label_scope,
+    gate_labels_included: false,
+    promotion_eligible: false,
+    promotion_blockers: prepared.promotion_blockers,
+    component_passed: false,
+    offset: 0,
+    requested_count: 50,
+    planned_provider_run_count: 20,
+    fallback_provider_run_count: 0,
+    provider_run_count: 20,
+    provider_call_count: 20,
+    results,
+    metrics: {
+      provider_id: 'fake', model_snapshot: 'fake-1', task_class: 'job_evaluation', capability_class: 'STANDARD',
+    },
+  });
+  const reinterpreted = reinterpretHistoricalRecommendationTruth({
+    definition: prepared,
+    run: sourceRun,
+    attestationId: 'test-scope-direction',
+    now: NOW,
+  });
+  assert.equal(reinterpreted.component_passed, true);
+  assert.equal(reinterpreted.metrics.sample_count, 50);
+  assert.equal(reinterpreted.metrics.recommendation_agreement, 1);
+  assert.deepEqual(reinterpreted.label_scope, ['advisory_recommendation']);
+  assert.deepEqual(reinterpreted.promotion_blockers, ['RECOMMENDATION_ONLY_LABELS']);
+  assert.equal(reinterpreted.gate_labels_included, false);
+  assert.equal(reinterpreted.promotion_eligible, false);
+  assert.equal(reinterpreted.scope_override.source_prepared_set_digest, prepared.set_digest);
+  assert.ok(reinterpreted.results.every(item => item.actual_recommendation === item.advisory_recommendation));
+
+  assert.throws(() => reinterpretHistoricalRecommendationTruth({
+    definition: prepared,
+    run: { ...sourceRun, label_scope: ['advisory_recommendation'] },
+    attestationId: 'test-scope-direction',
+    now: NOW,
+  }), /final-outcome diagnostic/);
+
+  const blocked = { ...prepared, promotion_blockers: [...prepared.promotion_blockers, 'INCOMPLETE_HISTORICAL_EVIDENCE'] };
+  const { set_digest: _digest, ...blockedUnsigned } = blocked;
+  blocked.set_digest = sha256(blockedUnsigned);
+  assert.throws(() => reinterpretHistoricalRecommendationTruth({
+    definition: blocked,
+    run: { ...sourceRun, qualification_set_digest: blocked.set_digest },
+    attestationId: 'test-scope-direction',
+    now: NOW,
+  }), /cannot clear blockers/);
 });
 
 test('context-dependent portfolio outcomes block standalone qualification', () => {
