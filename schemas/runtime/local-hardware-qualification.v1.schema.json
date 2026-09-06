@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LocalHardwareQualificationV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schema_version", "observed_at", "host_id", "platform",
+    "provider_id", "model_snapshot", "model_digest", "capability_class",
+    "risk_ceiling", "endpoint", "sample_count", "metrics", "checks",
+    "qualified", "routing_authorized", "results"
+  ],
+  "properties": {
+    "schema": { "const": "LocalHardwareQualificationV1" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "host_id": { "type": "string", "minLength": 1 },
+    "platform": { "type": "string", "minLength": 1 },
+    "provider_id": { "type": "string", "minLength": 1 },
+    "model_snapshot": { "type": "string", "minLength": 1 },
+    "model_digest": { "type": ["string", "null"] },
+    "capability_class": { "const": "EXTRACTION" },
+    "risk_ceiling": { "const": "LOW" },
+    "endpoint": { "type": "string", "pattern": "^http://(127\\.0\\.0\\.1|localhost|\\[::1\\])(?::[0-9]+)?$" },
+    "sample_count": { "type": "integer", "minimum": 50, "maximum": 200 },
+    "metrics": { "type": "object" },
+    "checks": { "type": "object" },
+    "qualified": { "type": "boolean" },
+    "routing_authorized": { "type": "boolean", "const": false },
+    "results": { "type": "array", "minItems": 50 }
+  }
+}

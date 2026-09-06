@@ -6,7 +6,7 @@ import { advanceLifecycle, aggregateQualificationResults, composeQualificationEv
 import { effectiveReserveRatio, routeTask } from '../lib/runtime/router.mjs';
 import { makeTask, NOW } from './runtime-fixtures.mjs';
 import { createProvider } from '../lib/runtime/providers/index.mjs';
-import { resolveSchemaPath } from '../lib/runtime/providers/command.mjs';
+import { allowedEnvironment, resolveSchemaPath } from '../lib/runtime/providers/command.mjs';
 import { evaluateShadowPreflight, expandQualificationSet, runShadowQualification } from '../lib/runtime/shadow.mjs';
 import { record } from '../lib/runtime/util.mjs';
 import { makeResponse } from './runtime-fixtures.mjs';
@@ -270,6 +270,26 @@ test('command adapter supports path-based schema flags for Codex-style CLIs', ()
     resolveSchemaPath('/D:/Create/career-ops/schemas/runtime/provider-response.v1.schema.json', 'win32'),
     'D:\\Create\\career-ops\\schemas\\runtime\\provider-response.v1.schema.json',
   );
+});
+
+test('command adapter preserves only required Windows profile variables for CLI credentials', () => {
+  const environment = allowedEnvironment([], {
+    Path: 'C:\\bin',
+    USERPROFILE: 'C:\\Users\\candidate',
+    HOMEDRIVE: 'C:',
+    HOMEPATH: '\\Users\\candidate',
+    APPDATA: 'C:\\Users\\candidate\\AppData\\Roaming',
+    LOCALAPPDATA: 'C:\\Users\\candidate\\AppData\\Local',
+    SystemRoot: 'C:\\Windows',
+    CAREER_OPS_RUNTIME: 'v1',
+    SECRET_TOKEN: 'must-not-pass',
+  }, 'win32');
+  assert.equal(environment.Path, 'C:\\bin');
+  assert.equal(environment.USERPROFILE, 'C:\\Users\\candidate');
+  assert.equal(environment.APPDATA, 'C:\\Users\\candidate\\AppData\\Roaming');
+  assert.equal(environment.LOCALAPPDATA, 'C:\\Users\\candidate\\AppData\\Local');
+  assert.equal(environment.CAREER_OPS_RUNTIME, 'v1');
+  assert.equal(environment.SECRET_TOKEN, undefined);
 });
 
 test('command adapter conservatively records Codex total-token stderr', async () => {

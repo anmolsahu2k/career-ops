@@ -18,16 +18,31 @@ process after qualification and canary gates pass.
 - The user confirmed `npm run runtime:test` is fully green on native Windows.
 - Windows host ID: `AnmolDaPredator`.
 - Observed hardware: 20 logical CPUs, 16 GB RAM, approximately 6 GB free at
-  observation time. The RTX 4050 has 6 GB VRAM and still needs local-model
-  qualification.
+  observation time. The RTX 4050 has 6 GB VRAM.
+- Ollama `0.33.3` is bound to `127.0.0.1:11434`, and
+  `qwen3:4b-instruct-2507-q4_K_M` is installed. It passed the 50-case
+  `EXTRACTION` hardware qualification with 100 percent completion, schema
+  success, and exact match. Median latency was 575 ms, p95 latency was 595 ms,
+  and all 3,178,149,969 model bytes were GPU-resident. The ignored record is
+  `.career-ops-runtime/hardware/ollama-qwen3-4b.json` and explicitly does not
+  authorize routing.
 - Codex CLI `0.153.4` and Antigravity CLI (`agy`) `1.1.27` were discovered on
   Windows and passed their version probes.
+- `gpt-5.6-luna` and `gemini-3.8-flash-low` each passed a two-case Windows
+  preflight in one provider call with 100 percent agreement and schema success,
+  zero hard-gate or authorization errors, zero repairs, and zero failures. The
+  metrics-only records are under `.career-ops-runtime/shadow/`.
+- No redacted prepared historical qualification set is present on Windows yet.
+  Milestone 4 requires transferring only the latest
+  `historical-prepared-v*.json` artifact from the source machine. Do not transfer
+  either `historical-*-local-index.md` file.
 - Direct Gemini CLI is retired. Google and partner-model runs use `agy`.
 - All example providers are disabled by design. `available: false` with
   `usable: true` means the executable was found but the provider has not been
   enabled and qualified.
 - API billing and subscription overages remain disabled.
-- Ollama/local Qwen is not yet installed, running, or qualified.
+- Ollama/local Qwen is hardware-qualified only for `EXTRACTION`/`LOW`; the
+  provider remains disabled and cannot perform consequential evaluation.
 - Windows is not yet authorized as the live writer. Do not copy or mutate the
   live `ft/` funnel until qualification, isolated canaries, and verified
   migration are complete.
@@ -65,17 +80,18 @@ an actual multi-year response time.
 
 ## Next implementation milestones
 
-1. Confirm the clean checkout and local configuration without changing billing,
-   quota, provider, or writer authorization.
-2. Install Ollama on Windows, bind it to loopback only, select a model that fits
-   the 6 GB GPU, and record an `EXTRACTION`-class hardware qualification. Do not
-   route consequential evaluation to the local model.
-3. Run small, quota-acknowledged Codex and Antigravity shadow checks against the
-   committed deterministic fixture set. A discovered CLI is not a qualified
-   model snapshot.
-4. Transfer only the redacted qualification component needed for historical
-   shadowing. Do not upload the local source-report index to a provider and do
-   not commit it to Git.
+1. Completed: confirm the checkout and local configuration without changing
+   billing, quota, provider, or writer authorization.
+2. Completed: install Ollama on Windows, bind it to loopback only, select a
+   model that fits the 6 GB GPU, and record an `EXTRACTION`-class hardware
+   qualification. Do not route consequential evaluation to the local model.
+3. Completed: run small, quota-acknowledged Codex and Antigravity shadow checks
+   against the committed deterministic fixture set. These diagnostic preflights
+   do not qualify either model snapshot.
+4. Blocked pending source-machine transfer: transfer only the latest redacted
+   `historical-prepared-v*.json` qualification component needed for historical
+   shadowing. Do not upload either local source-report index to a provider and
+   do not commit it to Git.
 5. Build the representative recommendation and deterministic hard-gate
    qualification bundle. Enforce the thresholds in `docs/RUNTIME.md`.
 6. Run at least three isolated end-to-end canary commits and certify their
@@ -112,15 +128,18 @@ preserve all ignored/personal data and unrelated worktree changes.
 Known state: npm ci succeeds; npm run runtime:test is fully green on native
 Windows; host ID is AnmolDaPredator; Codex CLI 0.153.4 and agy 1.1.27 are
 installed and usable. Providers are intentionally disabled and unqualified,
-API billing and overages are disabled, Ollama is not yet qualified, and Windows
-is not yet the live writer. Gemini CLI is retired; use agy for Google and
-partner models.
+API billing and overages are disabled, and Windows is not yet the live writer.
+Ollama `0.33.3` is loopback-only and the pinned Qwen 3 4B Q4 model passed a
+50-case `EXTRACTION` hardware qualification, but routing remains unauthorized.
+Small `gpt-5.6-luna` and `gemini-3.8-flash-low` Windows preflights also passed;
+neither diagnostic run is a production qualification. Gemini CLI is retired;
+use agy for Google and partner models.
 
 Begin with read-only verification of git state and config/runtime.local.yml.
 Then continue the next incomplete milestone from docs/WINDOWS_HANDOFF.md:
-Windows Ollama hardware qualification, followed by small quota-acknowledged
-Codex/Antigravity shadows, qualification bundling, isolated one-writer canaries,
-and only then manifest-verified live-data migration. Do not weaken policy,
+transfer only the redacted historical qualification component, followed by
+qualification bundling, isolated one-writer canaries, and only then
+manifest-verified live-data migration. Do not weaken policy,
 capability, evidence, quota, or transaction gates. Do not mutate the live ft/
 funnel, enable billing, send/submit anything, commit personal data, or push
 unless I explicitly request it. Report what you verified, changed, and what

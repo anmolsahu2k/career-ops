@@ -11,8 +11,9 @@
  *   node test-all.mjs --quick   # Skip dashboard build (faster)
  */
 
-import { execSync, execFileSync } from 'child_process';
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { readFileSync, existsSync, readdirSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -30,12 +31,24 @@ function warn(msg) { console.log(`  ⚠️  ${msg}`); warnings++; }
 
 function run(cmd, args = [], opts = {}) {
   try {
-    if (Array.isArray(args) && args.length > 0) {
-      return execFileSync(cmd, args, { cwd: ROOT, encoding: 'utf-8', timeout: 30000, ...opts }).trim();
-    }
-    return execSync(cmd, { cwd: ROOT, encoding: 'utf-8', timeout: 30000, ...opts }).trim();
+    return execFileSync(cmd, args, { cwd: ROOT, encoding: 'utf-8', timeout: 30000, ...opts }).trim();
   } catch (e) {
     return null;
+  }
+}
+
+function gitGrep(pattern, pathspecs) {
+  try {
+    const output = execFileSync(
+      'git',
+      ['grep', '-n', '-e', pattern, '--', ...pathspecs],
+      { cwd: ROOT, encoding: 'utf-8', timeout: 30000, stdio: ['pipe', 'pipe', 'pipe'] },
+    ).trim();
+    return { ok: true, output };
+  } catch (e) {
+    // git grep uses exit code 1 to report a successful search with no matches.
+    if (e.status === 1) return { ok: true, output: '' };
+    return { ok: false, output: '' };
   }
 }
 
@@ -141,7 +154,16 @@ try {
 
 if (!QUICK) {
   console.log('\n4. Dashboard build');
-  const goBuild = run('cd dashboard && go build -o /tmp/career-dashboard-test . 2>&1');
+  const dashboardBinary = join(
+    tmpdir(),
+    `career-dashboard-test-${process.pid}${process.platform === 'win32' ? '.exe' : ''}`,
+  );
+  const goBuild = run(
+    'go',
+    ['build', '-o', dashboardBinary, '.'],
+    { cwd: join(ROOT, 'dashboard'), stdio: ['pipe', 'pipe', 'pipe'] },
+  );
+  rmSync(dashboardBinary, { force: true });
   if (goBuild !== null) {
     pass('Dashboard compiles');
   } else {
@@ -167,6 +189,7 @@ const systemFiles = [
   'docs/CODEX.md',
   'docs/RUNTIME.md',
   'schemas/runtime/contracts.v1.schema.json',
+  'schemas/runtime/local-hardware-qualification.v1.schema.json',
   'schemas/runtime/provider-response.v1.schema.json',
   'schemas/runtime/qualification-batch-response.v1.schema.json',
 ];
@@ -207,6 +230,10 @@ const scanExtensions = ['md', 'yml', 'html', 'mjs', 'sh', 'go', 'json'];
 const allowedFiles = [
   // English README (legitimately credits upstream / Santiago)
   'README.md',
+  // Plugin and legacy metadata preserve upstream authorship.
+  '.claude-plugin/marketplace.json',
+  '.claude-plugin/plugin.json',
+  '_meta/CLAUDE.career-ops-tool.md',
   // Standard project files
   'LICENSE',
   'package.json', 'CLAUDE.md', 'go.mod', 'test-all.mjs',
@@ -215,6 +242,7 @@ const allowedFiles = [
   'SECURITY.md',
   // Dashboard credit string
   'dashboard/internal/ui/screens/pipeline.go',
+  'dashboard/internal/ui/screens/progress.go',
 ];
 
 // Build pathspec for git grep — only scan tracked files matching these
@@ -222,15 +250,18 @@ const allowedFiles = [
 // untracked files (debate artifacts, AI tool scratch, local plans/) and
 // gitignored files can't trigger false positives because they were never
 // going to reach a commit anyway.
-const grepPathspec = scanExtensions.map(e => `'*.${e}'`).join(' ');
+const grepPathspec = scanExtensions.map(e => `*.${e}`);
 
 let leakFound = false;
+let leakScanFailed = false;
 for (const pattern of leakPatterns) {
-  const result = run(
-    `git grep -n "${pattern}" -- ${grepPathspec} 2>/dev/null`
-  );
-  if (result) {
-    for (const line of result.split('\n')) {
+  const result = gitGrep(pattern, grepPathspec);
+  if (!result.ok) {
+    leakScanFailed = true;
+    continue;
+  }
+  if (result.output) {
+    for (const line of result.output.split('\n')) {
       const file = line.split(':')[0];
       if (allowedFiles.some(a => file.includes(a))) continue;
       if (file.includes('dashboard/go.mod')) continue;
@@ -239,7 +270,9 @@ for (const pattern of leakPatterns) {
     }
   }
 }
-if (!leakFound) {
+if (leakScanFailed) {
+  fail('Personal data leak scan could not run');
+} else if (!leakFound) {
   pass('No personal data leaks outside allowed files');
 }
 
@@ -249,13 +282,24 @@ console.log('\n7. Absolute path check');
 
 // Same git grep approach: only scans tracked files. Untracked AI tool
 // outputs, local debate artifacts, etc. can't false-positive here.
-const absPathResult = run(
-  `git grep -n "/Users/" -- '*.mjs' '*.sh' '*.md' '*.go' '*.yml' 2>/dev/null | grep -v README.md | grep -v LICENSE | grep -v CLAUDE.md | grep -v LEGACY_CLAUDE_CONTEXT.md | grep -v test-all.mjs`
-);
-if (!absPathResult) {
+const absPathSearch = gitGrep('/Users/', ['*.mjs', '*.sh', '*.md', '*.go', '*.yml']);
+const absPathAllowedFiles = new Set([
+  'README.md',
+  'LICENSE',
+  'CLAUDE.md',
+  'LEGACY_CLAUDE_CONTEXT.md',
+  'test-all.mjs',
+]);
+const absPathMatches = absPathSearch.output
+  .split('\n')
+  .filter(Boolean)
+  .filter(line => !absPathAllowedFiles.has(line.split(':')[0]));
+if (!absPathSearch.ok) {
+  fail('Absolute path scan could not run');
+} else if (absPathMatches.length === 0) {
   pass('No absolute paths in code files');
 } else {
-  for (const line of absPathResult.split('\n').filter(Boolean)) {
+  for (const line of absPathMatches) {
     fail(`Absolute path: ${line.slice(0, 100)}`);
   }
 }

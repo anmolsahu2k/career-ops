@@ -17,6 +17,19 @@ Capture a metadata-only baseline with `node bin/career-ops.mjs baseline`. It cou
 
 API billing and subscription overages default to disabled. Enabling an API adapter requires both global `api_billing: true` and `enabled: true` for that provider. Ollama configurations marked `local_only` must use a loopback host.
 
+Qualify local Ollama hardware without enabling routing or API billing:
+
+```bash
+node bin/career-ops.mjs hardware-qualify \
+  --config config/runtime.local.yml \
+  --provider ollama-qwen3-4b \
+  --out .career-ops-runtime/hardware/ollama-qwen3-4b.json
+```
+
+The command requires an `EXTRACTION`/`LOW` local provider, runs at least 50
+synthetic exact-match cases, verifies model residency through Ollama's loopback
+status endpoint, and always records `routing_authorized: false`.
+
 ## Provider-free evaluation
 
 Prepare a versioned task from a local seed:
@@ -55,6 +68,9 @@ The legacy evaluator and batch runner are thin compatibility entrypoints. By def
 The shell wrapper requires Bash. On native Windows without WSL or Git Bash,
 invoke the same cross-platform path directly with
 `node bin/career-ops.mjs batch ...`.
+Command providers forward the minimal Windows profile variables needed for an
+installed CLI to locate its credentials while continuing to exclude unrelated
+environment secrets.
 
 ```json
 {

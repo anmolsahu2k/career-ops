@@ -6,6 +6,7 @@ import { loadRuntimeConfig, mergeRuntimeState } from '../lib/runtime/config.mjs'
 import { captureBaseline, compareBaselines } from '../lib/runtime/baseline.mjs';
 import { certifyCanary } from '../lib/runtime/canary.mjs';
 import { observeEnvironment } from '../lib/runtime/doctor.mjs';
+import { runLocalHardwareQualification } from '../lib/runtime/local-hardware-qualification.mjs';
 import { normalizeEvaluation } from '../lib/runtime/normalize.mjs';
 import { evaluateResponse, evaluateWithProvider } from '../lib/runtime/orchestrator.mjs';
 import { decide } from '../lib/runtime/policy-engine.mjs';
@@ -100,7 +101,7 @@ async function main() {
   const { positional, flags } = argsOf(process.argv.slice(2));
   const [command, subcommand] = positional;
   if (!command || command === 'help') {
-    process.stdout.write('Usage: career-ops <baseline|prepare|respond|validate|commit|batch|shadow|canary-certify|recover|route|qualify|qualify-bundle|doctor|quota|cleanup> [options]\n');
+    process.stdout.write('Usage: career-ops <baseline|prepare|respond|validate|commit|batch|shadow|hardware-qualify|canary-certify|recover|route|qualify|qualify-bundle|doctor|quota|cleanup> [options]\n');
     return;
   }
   const target = targetFrom(flags);
@@ -242,6 +243,29 @@ async function main() {
       return;
     }
     output(result, flags.out);
+    return;
+  }
+  if (command === 'hardware-qualify') {
+    if (!flags.config || !flags.provider) throw new Error('hardware-qualify requires --config and --provider');
+    const config = loadRuntimeConfig(flags.config);
+    const providerConfig = config.providers?.[flags.provider];
+    if (!providerConfig) throw new Error(`Unknown provider: ${flags.provider}`);
+    if (providerConfig.type !== 'openai_compatible' || providerConfig.local_only !== true) {
+      throw new Error('hardware-qualify accepts only a local openai_compatible provider');
+    }
+    const caseCount = flags.cases === undefined ? 50 : Number(flags.cases);
+    const provider = createProvider(flags.provider, { ...providerConfig, enabled: true }, config);
+    const qualification = await runLocalHardwareQualification({
+      provider,
+      providerId: flags.provider,
+      providerConfig,
+      caseCount,
+      onProgress(progress) {
+        process.stderr.write(`${JSON.stringify({ event: 'hardware_qualification_progress', ...progress })}\n`);
+      },
+    });
+    output(qualification, flags.out);
+    if (!qualification.qualified) process.exitCode = 2;
     return;
   }
   if (command === 'canary-certify') {

@@ -4,6 +4,11 @@
 
 `provider-response.v1.schema.json` is the constrained model-facing response shape used by CLI providers that support schema-enforced output.
 
+`local-hardware-qualification.v1.schema.json` records a loopback-only local
+model's deterministic extraction transport, exact-match, latency, and GPU
+residency checks. It never authorizes routing or raises the provider above the
+`EXTRACTION` capability class.
+
 `qualification-batch-response.v1.schema.json` constrains two-to-three-case shadow batches so provider startup context is amortized without combining their scoring records.
 
 `historical-recommendation-set.v1.schema.json` records human-approved recommendation labels. `prepared-qualification-set.v1.schema.json` binds those labels to redacted, outcome-free provider inputs. Historical recommendation-only sets are deliberately non-promotable until a separate deterministic hard-gate suite is combined with them.

@@ -238,9 +238,12 @@ providers:
     local_only: true
     base_url: http://127.0.0.1:11434/v1
     api_key_env: OLLAMA_DUMMY_KEY
+    timeout_ms: 30000
+    temperature: 0
+    max_output_tokens: 128
     model_vendor: local
     model_family: qwen3
-    model_snapshot: qwen3:4b-instruct-q4
+    model_snapshot: qwen3:4b-instruct-2507-q4_K_M
     execution_surface: windows-ollama
     resource_pool: local-gpu
     capability_class: EXTRACTION
