@@ -161,3 +161,6 @@ Recovery never invokes a model. Artifact paths must remain inside the selected r
 ## Rollout
 
 Keep `CAREER_OPS_RUNTIME=legacy` entrypoints available while fixtures, shadow comparisons, provider qualification, and one-writer canaries run. Do not move writer ownership to Windows until hardware qualification and a manifest-verified one-way migration pass. The Mac can remain a read-only client and recovery copy.
+
+For the current Windows-machine state, ordered next milestones, and a
+ready-to-paste continuation prompt, see [WINDOWS_HANDOFF.md](WINDOWS_HANDOFF.md).
