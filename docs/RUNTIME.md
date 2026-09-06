@@ -52,6 +52,10 @@ default API capability and cannot run while `api_billing` is false.
 
 The legacy evaluator and batch runner are thin compatibility entrypoints. By default, `gemini-eval.mjs` delegates to `career-ops respond`, and `batch/batch-runner.sh` delegates to `career-ops batch`. Set `CAREER_OPS_RUNTIME=legacy` to reach the historical implementations during rollout. A provider-free batch manifest is:
 
+The shell wrapper requires Bash. On native Windows without WSL or Git Bash,
+invoke the same cross-platform path directly with
+`node bin/career-ops.mjs batch ...`.
+
 ```json
 {
   "schema": "RuntimeBatchManifestV1",

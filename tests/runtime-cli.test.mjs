@@ -41,7 +41,7 @@ test('provider-free CLI prepares, validates, previews, and explicitly commits on
   assert.equal(existsSync(join(target, 'data', 'applications.md')), true);
 });
 
-test('legacy batch entrypoint delegates to provider-free runtime batch validation and explicit commit', () => {
+test('batch entrypoint delegates to provider-free runtime batch validation and explicit commit', () => {
   const dir = mkdtempSync(join(tmpdir(), 'career-ops-batch-cli-'));
   const target = join(dir, 'target');
   const seedPath = join(dir, 'seed.json');
@@ -64,7 +64,11 @@ test('legacy batch entrypoint delegates to provider-free runtime batch validatio
     entries: [{ id: 'batch-1', task: 'task.json', response: 'response.json' }],
   }));
   const wrapper = join(root, 'batch', 'batch-runner.sh');
-  const preview = JSON.parse(execFileSync('bash', [wrapper, '--manifest', manifestPath, '--target', target], {
+  const previewCommand = process.platform === 'win32' ? process.execPath : 'bash';
+  const previewArgs = process.platform === 'win32'
+    ? [cli, 'batch', '--manifest', manifestPath, '--target', target]
+    : [wrapper, '--manifest', manifestPath, '--target', target];
+  const preview = JSON.parse(execFileSync(previewCommand, previewArgs, {
     cwd: root, encoding: 'utf8', env: { ...process.env, CAREER_OPS_RUNTIME: 'v1' },
   }));
   assert.equal(preview.schema, 'RuntimeBatchPreviewV1');

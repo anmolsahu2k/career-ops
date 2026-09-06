@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { advanceLifecycle, aggregateQualificationResults, composeQualificationEvidence, qualifyModel, wilsonInterval } from '../lib/runtime/qualification.mjs';
 import { effectiveReserveRatio, routeTask } from '../lib/runtime/router.mjs';
 import { makeTask, NOW } from './runtime-fixtures.mjs';
 import { createProvider } from '../lib/runtime/providers/index.mjs';
+import { resolveSchemaPath } from '../lib/runtime/providers/command.mjs';
 import { evaluateShadowPreflight, expandQualificationSet, runShadowQualification } from '../lib/runtime/shadow.mjs';
 import { record } from '../lib/runtime/util.mjs';
 import { makeResponse } from './runtime-fixtures.mjs';
@@ -256,7 +258,7 @@ test('command failure diagnostics omit an echoed prompt prefix', async () => {
 });
 
 test('command adapter supports path-based schema flags for Codex-style CLIs', () => {
-  const schemaPath = new URL('../schemas/runtime/provider-response.v1.schema.json', import.meta.url).pathname;
+  const schemaPath = fileURLToPath(new URL('../schemas/runtime/provider-response.v1.schema.json', import.meta.url));
   const adapter = createProvider('schema-cli', {
     type: 'command', command: [process.execPath, '-e', '', '-'],
     json_schema_file: schemaPath, json_schema_flag: '--output-schema', json_schema_mode: 'path',
@@ -264,6 +266,10 @@ test('command adapter supports path-based schema flags for Codex-style CLIs', ()
     capability_class: 'STANDARD', execution_surface: 'test',
   }, {});
   assert.deepEqual(adapter.command.slice(-3), ['--output-schema', schemaPath, '-']);
+  assert.equal(
+    resolveSchemaPath('/D:/Create/career-ops/schemas/runtime/provider-response.v1.schema.json', 'win32'),
+    'D:\\Create\\career-ops\\schemas\\runtime\\provider-response.v1.schema.json',
+  );
 });
 
 test('command adapter conservatively records Codex total-token stderr', async () => {

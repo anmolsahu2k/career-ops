@@ -113,7 +113,9 @@ test('commit rechecks symlink crossings immediately before artifact rename', asy
     target, ...value,
     hooks: {
       afterState(state) {
-        if (state === 'STAGED') symlinkSync(outside, join(target, 'reports', 'example-systems'));
+        if (state === 'STAGED') {
+          symlinkSync(outside, join(target, 'reports', 'example-systems'), process.platform === 'win32' ? 'junction' : 'dir');
+        }
       },
     },
   }), error => error.code === 'SYMLINK_CROSSING');
