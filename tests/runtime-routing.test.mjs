@@ -137,6 +137,15 @@ test('qualification evidence rejects incomplete history and mismatched snapshots
   }), /model_snapshot values do not match/);
 });
 
+test('qualification evidence rejects a scope override without personal-review provenance', () => {
+  assert.throws(() => composeQualificationEvidence({
+    recommendationRun: componentRun('recommendations', {
+      scope_override: { authority: 'user', method: 'explicit_scope_direction_without_per_case_review' },
+    }),
+    hardGateRun: componentRun('hard-gates'),
+  }), /lacks personal-review label provenance/);
+});
+
 test('router never falls below minimum capability class', () => {
   const task = makeTask({ minimum_capability_class: 'CONSEQUENTIAL' });
   const result = routeTask(task, { providers: { local: provider({ capability_class: 'EXTRACTION' }) }, resource_pools: pools }, { now: NOW });

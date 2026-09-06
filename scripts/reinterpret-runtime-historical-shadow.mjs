@@ -37,6 +37,9 @@ const args = flags(process.argv.slice(2));
 if (args['accept-final-outcomes-as-recommendations'] !== true) {
   throw new Error('Explicit --accept-final-outcomes-as-recommendations flag is required');
 }
+if (args['labels-personally-reviewed'] !== true) {
+  throw new Error('Explicit --labels-personally-reviewed flag is required');
+}
 if (!args.suite || !args.run || !args.out || !args.attestation) {
   throw new Error('--suite, --run, --out, and --attestation are required');
 }
@@ -44,6 +47,7 @@ const result = reinterpretHistoricalRecommendationTruth({
   definition: readJson(args.suite),
   run: readJson(args.run),
   attestationId: String(args.attestation),
+  labelsPersonallyReviewed: true,
 });
 const path = writeJson(result, args.out);
 process.stdout.write(`${JSON.stringify({

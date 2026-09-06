@@ -180,6 +180,7 @@ test('explicit scope direction reuses diagnostic advisory traces without inventi
     definition: prepared,
     run: sourceRun,
     attestationId: 'test-scope-direction',
+    labelsPersonallyReviewed: true,
     now: NOW,
   });
   assert.equal(reinterpreted.component_passed, true);
@@ -190,12 +191,21 @@ test('explicit scope direction reuses diagnostic advisory traces without inventi
   assert.equal(reinterpreted.gate_labels_included, false);
   assert.equal(reinterpreted.promotion_eligible, false);
   assert.equal(reinterpreted.scope_override.source_prepared_set_digest, prepared.set_digest);
+  assert.equal(reinterpreted.scope_override.label_provenance, 'USER_PERSONALLY_REVIEWED');
   assert.ok(reinterpreted.results.every(item => item.actual_recommendation === item.advisory_recommendation));
+
+  assert.throws(() => reinterpretHistoricalRecommendationTruth({
+    definition: prepared,
+    run: sourceRun,
+    attestationId: 'model-generated-labels',
+    now: NOW,
+  }), /personally reviewed/);
 
   assert.throws(() => reinterpretHistoricalRecommendationTruth({
     definition: prepared,
     run: { ...sourceRun, label_scope: ['advisory_recommendation'] },
     attestationId: 'test-scope-direction',
+    labelsPersonallyReviewed: true,
     now: NOW,
   }), /final-outcome diagnostic/);
 
@@ -206,6 +216,7 @@ test('explicit scope direction reuses diagnostic advisory traces without inventi
     definition: blocked,
     run: { ...sourceRun, qualification_set_digest: blocked.set_digest },
     attestationId: 'test-scope-direction',
+    labelsPersonallyReviewed: true,
     now: NOW,
   }), /cannot clear blockers/);
 });

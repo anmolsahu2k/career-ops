@@ -93,15 +93,16 @@ The qualification command accepts either precomputed `--metrics` or per-case `--
 
 Shadow records retain the normalized advisory recommendation, deterministic policy recommendation, tri-state gate values, policy reason codes, score, and confidence alongside the compared recommendation. This safe decision trace contains no raw response or presentation text and makes model-versus-policy disagreements diagnosable. A legacy final historical outcome is not treated as atomic advisory or policy truth: it may encode both merit judgment and a hard-gate decision. Such cases run as `DIAGNOSTIC_FINAL_OUTCOME`, are excluded from recommendation-agreement denominators, and add `SPLIT_LABEL_REVIEW_REQUIRED` until advisory recommendation and gate disposition are independently approved. Individual gate accuracy comes only from the separate deterministic hard-gate suite. Successful raw provider responses are not retained.
 
-When the user explicitly designates one exact prepared-set digest as
-recommendation-only truth without a second per-case review, reuse the completed
-diagnostic trace instead of invoking the provider again:
+When the user truthfully attests that they personally reviewed the recommendation
+labels in one exact prepared-set digest, the completed diagnostic trace may be
+reused without a second review or another provider invocation:
 
 ```bash
 npm run runtime:reinterpret-history -- \
   --suite historical-prepared.json \
   --run historical-diagnostic-shadow.json \
   --attestation scope-direction-id \
+  --labels-personally-reviewed \
   --accept-final-outcomes-as-recommendations \
   --out recommendation-shadow.json
 ```
@@ -111,7 +112,11 @@ clears only `SPLIT_LABEL_REVIEW_REQUIRED`, and retains
 `RECOMMENDATION_ONLY_LABELS`, `gate_labels_included: false`, and
 `promotion_eligible: false`. It rejects any other prepared-set blocker and does
 not create or infer gate truth. All numerical qualification thresholds remain
-unchanged.
+unchanged. A model-generated historical decision is not human-approved truth;
+it remains diagnostic unless the user later reviews the underlying labels. A
+user-designated flagship model may serve as the authoritative advisory reference
+for subjective recommendation judgment, but agreement with that reference is
+not an accuracy metric and cannot satisfy qualification truth requirements.
 
 Human-approved historical labels are prepared with `npm run runtime:historical-fixtures`. The prepared evidence body removes prior overall scores, statuses, final recommendations, direct target-company strings, URLs, and direct candidate identity. It retains bounded evidence from every decision-relevant historical block; prose lines receive enough room to preserve late constraint clauses, while section budgets still cap total context. Removing risk or constraint sections to save tokens is forbidden because it changes recommendation quality. The provider receives a fixed recommendation rubric and calibration rules from trusted task rules, and task input cannot weaken or replace them. A concrete, honestly disclosed skill gap does not by itself force `CONSIDER` when the experience bar is met and the role remains a strategically reasonable 4/5-or-better pursuit; `CONSIDER` covers 3-3.9/5 fits and unresolved evidence, level, eligibility, or merits uncertainty. Historical outcomes that depend on comparing another role, an application cap, or portfolio ordering block qualification because a standalone TaskEnvelope cannot reproduce that decision. Because the set has no approved hard-gate labels, it is a recommendation component and cannot promote a model by itself.
 
