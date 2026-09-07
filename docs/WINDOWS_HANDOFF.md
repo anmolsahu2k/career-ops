@@ -74,6 +74,21 @@ writer authorization.
   the historical Claude Opus 5 Max labels on 32 of 50 (64 percent). Astra High
   agreed on all 10 cases in its existing challenge subset, but every reference
   label in that subset was `CONSIDER`, so it is not ranked with the full runs.
+- The expanded user-directed benchmark found Gemini Flash Medium at 28 of 50
+  Astra-reference agreements (56 percent), with 100 percent schema completion,
+  a 12 percent repair rate, and a strong bias toward `APPLY`. A balanced Flash
+  High screen agreed on 4 of 10 cases, completed 9 of 10, and had a 50 percent
+  repair rate; the full run was stopped because repeated long retries provided
+  poor marginal value. Qwen 3 4B at thinking off/low/high, Llama 3.2 1B, Gemma
+  3 4B, and Phi-4 Mini Reasoning each failed the response contract on all three
+  balanced transport-screen cases after repair, so none advanced to a full
+  judgment run. The ignored consolidated record is
+  `.career-ops-runtime/shadow/astra-medium-reference-benchmark-v2.json`.
+- Model choice from this benchmark: use Astra Medium when reference-level
+  judgment quality is the priority; use Luna when efficiency matters. Do not
+  use the tested Gemini Flash or local variants for autonomous job-evaluation
+  judgment. Local Qwen remains suitable only for its already qualified
+  extraction task.
 - Direct Gemini CLI is retired. Google and partner-model runs use `agy`.
 - All example providers are disabled by design. `available: false` with
   `usable: true` means the executable was found but the provider has not been
@@ -142,10 +157,13 @@ an actual multi-year response time.
    without exposing a local source-report index. The labels are Claude Opus 5
    Max outputs, not human truth; the earlier scope attestation is revoked.
 5. Completed as a user-directed model-reference benchmark: Astra Medium produced
-   50 reference labels, Luna matched 80 percent, and Gemini Flash Low matched 64
-   percent. The deterministic hard-gate components still pass. Formal model
-   qualification remains paused because a model reference cannot qualify itself
-   or another model; all provider routes remain disabled.
+   50 reference labels; among complete comparisons, Luna matched 80 percent,
+   Gemini Flash Low 64 percent, and Gemini Flash Medium 56 percent. Flash High
+   matched 4 of 10 balanced screen cases with one failure. Six local
+   model/reasoning variants failed all three response-contract screens. The
+   deterministic hard-gate components still pass. Formal model qualification
+   remains paused because a model reference cannot qualify itself or another
+   model; all provider routes remain disabled.
 6. Completed: three isolated provider-free end-to-end commits produced valid,
    unique receipts on the Windows host.
 7. Completed under the user-authorized lean rollout: verify a post-copy Windows
@@ -196,13 +214,17 @@ Gemini CLI is retired; use agy for Google and partner models.
 
 Begin with read-only verification of git state and config/runtime.local.yml.
 The user-designated Astra Medium reference run completed on all 50 v14 cases.
-Luna matched 40 of 50 labels (80 percent), Gemini Flash Low matched 32 of 50
-(64 percent), and the historical Claude labels matched 32 of 50 (64 percent).
-Astra High matched all ten labels in its existing all-CONSIDER challenge subset.
+Among complete comparisons, Luna matched 40 of 50 labels (80 percent), Gemini
+Flash Low matched 32 of 50 (64 percent), and Gemini Flash Medium matched 28 of
+50 (56 percent). A balanced Gemini Flash High screen matched 4 of 10 and failed
+one case. Qwen 3 4B at three thinking levels, Llama 3.2 1B, Gemma 3 4B, and
+Phi-4 Mini Reasoning failed their three-case response-contract screens. Astra
+High matched all ten labels in its earlier all-CONSIDER challenge subset.
 Use Astra Medium as the advisory reference for subjective recommendation
 judgment while deterministic runtime gates remain authoritative. This benchmark
-does not enable routing or satisfy formal qualification. Keep all providers
-disabled.
+supports Astra Medium for quality-first use and Luna for efficiency-first use.
+It does not enable routing or satisfy formal qualification. Keep all providers
+disabled and keep local Qwen restricted to qualified extraction work.
 Three provider-free Windows canaries and the post-copy data baseline
 passed, and Windows is the operational sole writer. Keep the Mac workspace
 read-only. Do not weaken policy, capability, evidence, quota, or transaction
