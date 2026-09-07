@@ -66,6 +66,14 @@ writer authorization.
   reference for future subjective recommendation judgment. This is a policy
   preference, not human or objective qualification truth. Deterministic gates
   remain authoritative, and the designation does not enable runtime routing.
+- Astra Medium completed the exact 50-case v14 reference run in 20 provider
+  calls with 100 percent schema success, zero repairs, zero failures, and no
+  fallback calls. Its labels were 3 `APPLY`, 28 `CONSIDER`, and 19
+  `DO_NOT_APPLY`. Against those user-designated reference labels, Luna agreed on
+  40 of 50 cases (80 percent), Gemini Flash Low on 32 of 50 (64 percent), and
+  the historical Claude Opus 5 Max labels on 32 of 50 (64 percent). Astra High
+  agreed on all 10 cases in its existing challenge subset, but every reference
+  label in that subset was `CONSIDER`, so it is not ranked with the full runs.
 - Direct Gemini CLI is retired. Google and partner-model runs use `agy`.
 - All example providers are disabled by design. `available: false` with
   `usable: true` means the executable was found but the provider has not been
@@ -133,11 +141,11 @@ an actual multi-year response time.
    `historical-prepared-v14.json` and run quota-bounded historical shadows
    without exposing a local source-report index. The labels are Claude Opus 5
    Max outputs, not human truth; the earlier scope attestation is revoked.
-5. Paused by user direction: the deterministic hard-gate components pass, but
-   no valid human-approved representative recommendation component exists. All
-   provider routes remain disabled. Astra Medium is the preferred advisory
-   reference, but cannot qualify itself. Resume formal model qualification only
-   after new human-reviewed or deterministic recommendation truth exists.
+5. Completed as a user-directed model-reference benchmark: Astra Medium produced
+   50 reference labels, Luna matched 80 percent, and Gemini Flash Low matched 64
+   percent. The deterministic hard-gate components still pass. Formal model
+   qualification remains paused because a model reference cannot qualify itself
+   or another model; all provider routes remain disabled.
 6. Completed: three isolated provider-free end-to-end commits produced valid,
    unique receipts on the Windows host.
 7. Completed under the user-authorized lean rollout: verify a post-copy Windows
@@ -187,12 +195,14 @@ model-reference diagnostic only, not human-approved recommendation truth.
 Gemini CLI is retired; use agy for Google and partner models.
 
 Begin with read-only verification of git state and config/runtime.local.yml.
-Model qualification is paused. Luna agreed with the Claude reference on 76
-percent of cases, Gemini Flash Low on 80 percent, and Astra disagreed on all ten
-selected challenge cases; none of these is an accuracy or qualification score.
-Use Astra Medium as the user-designated advisory reference for subjective
-recommendation judgment, while deterministic runtime gates remain authoritative.
-This designation does not enable routing. Keep all provider routes disabled.
+The user-designated Astra Medium reference run completed on all 50 v14 cases.
+Luna matched 40 of 50 labels (80 percent), Gemini Flash Low matched 32 of 50
+(64 percent), and the historical Claude labels matched 32 of 50 (64 percent).
+Astra High matched all ten labels in its existing all-CONSIDER challenge subset.
+Use Astra Medium as the advisory reference for subjective recommendation
+judgment while deterministic runtime gates remain authoritative. This benchmark
+does not enable routing or satisfy formal qualification. Keep all providers
+disabled.
 Three provider-free Windows canaries and the post-copy data baseline
 passed, and Windows is the operational sole writer. Keep the Mac workspace
 read-only. Do not weaken policy, capability, evidence, quota, or transaction
