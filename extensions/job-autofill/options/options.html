@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Job Autofill settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <h1>Job Autofill</h1>
+  <p class="hint">Everything here lives in this browser only. Use Export to drop a copy into the career-ops repo so the backup script picks it up.</p>
+
+  <h2>Saved answers</h2>
+  <div class="toolbar">
+    <input type="search" id="search" placeholder="Search questions or answers…">
+    <label style="white-space:nowrap;font-size:13px">
+      <input type="checkbox" id="showSensitive" style="width:auto"> show EEO answers
+    </label>
+    <span id="count" class="hint" style="margin:0"></span>
+    <button id="cleanup" class="danger" hidden></button>
+  </div>
+  <table id="answers">
+    <thead>
+      <tr><th>Question</th><th>Answer</th><th>Where it came from</th><th></th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <div class="empty" id="answersEmpty" hidden>Nothing learned yet. Fill an application and answers show up here.</div>
+
+  <h2>Profile</h2>
+  <p class="hint">Identity fields. These are filled deterministically and never learned from forms.</p>
+  <div class="grid" id="profileGrid"></div>
+
+  <details>
+    <summary>Demographic / EEO answers</summary>
+    <p class="hint">Stored on this machine only, and never sent anywhere. Collapsed by default so they are not on screen unless you ask for them.</p>
+    <div class="grid" id="demographicGrid"></div>
+  </details>
+
+  <details>
+    <summary>Education and work history</summary>
+    <div class="rows" id="eduRows"></div>
+    <div class="rows" id="workRows" style="margin-top:10px"></div>
+  </details>
+
+  <div style="margin-top:12px"><button id="saveProfile" class="primary">Save profile</button></div>
+
+  <h2>Settings</h2>
+  <div class="grid">
+    <div class="field">
+      <label for="threshold">Fuzzy match threshold (higher = stricter)</label>
+      <input type="number" id="threshold" min="0.5" max="1" step="0.05">
+    </div>
+    <div class="field">
+      <label for="resumeNote">Resume reminder shown when a form has a file upload</label>
+      <input type="text" id="resumeNote">
+    </div>
+    <div class="field">
+      <label for="resumeFile">Resume PDF attached to file uploads</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button id="resumePick" type="button">Choose PDF…</button>
+        <button id="resumeClear" type="button" class="danger" hidden>Remove</button>
+        <span id="resumeState" class="hint" style="margin:0"></span>
+      </div>
+      <input type="file" id="resumeFile" accept="application/pdf" hidden>
+    </div>
+  </div>
+  <label style="display:flex;align-items:flex-start;gap:6px;margin-top:10px;font-size:13px">
+    <input type="checkbox" id="autoFillOnLoad" style="width:auto;margin-top:3px">
+    <span>Fill automatically when an application form opens, without clicking Fill.
+      <span class="hint" style="display:block;margin:2px 0 0">Off by default. It still never overwrites something you typed, and never rewrites a value of ours that you deleted. Applies from the next page load.</span>
+    </span>
+  </label>
+  <div style="margin-top:10px"><button id="saveSettings">Save settings</button></div>
+
+  <h2>Backup</h2>
+  <p class="hint">Export writes answers.json to your Downloads folder. Move it to <code>extensions/job-autofill/data/answers.json</code> in career-ops so <code>backup.mjs</code> archives it.</p>
+  <div class="toolbar">
+    <button id="export">Export JSON</button>
+    <button id="importBtn">Import JSON</button>
+    <label style="white-space:nowrap;font-size:13px">
+      <input type="checkbox" id="replaceAll" style="width:auto"> replace everything
+    </label>
+    <input type="file" id="importFile" accept="application/json" hidden>
+  </div>
+
+  <div id="toast"></div>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

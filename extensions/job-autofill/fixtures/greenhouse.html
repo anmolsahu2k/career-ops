@@ -1,0 +1,417 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Fixture: Greenhouse-style application form</title>
+  <style>
+    body { font: 15px/1.6 -apple-system, sans-serif; max-width: 640px; margin: 30px auto; padding: 0 16px; }
+    .field { margin-bottom: 18px; }
+    label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+    input, select, textarea { width: 100%; padding: 7px; font: inherit; box-sizing: border-box; }
+    fieldset { border: 1px solid #ccc; margin-bottom: 18px; }
+    h2 { font-size: 16px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h1>Fixture: classic Greenhouse form</h1>
+  <p>Local smoke test. Serve on localhost and click the extension's Fill button.</p>
+
+  <form>
+    <div class="field">
+      <label for="first_name">First Name *</label>
+      <input type="text" id="first_name" name="first_name">
+    </div>
+    <div class="field">
+      <label for="last_name">Last Name *</label>
+      <input type="text" id="last_name" name="last_name">
+    </div>
+    <div class="field">
+      <label for="email">Email *</label>
+      <input type="email" id="email" name="email">
+    </div>
+    <div class="field">
+      <label for="phone">Phone</label>
+      <input type="tel" id="phone" name="phone">
+    </div>
+    <div class="field">
+      <label for="resume">Resume/CV</label>
+      <input type="file" id="resume" name="resume">
+    </div>
+    <!-- Greenhouse renders both uploads identically: same accept list, and both
+         labelled "Attach". Only the id says which slot is which. -->
+    <div class="field">
+      <label for="cover_letter">Cover Letter</label>
+      <input type="file" id="cover_letter" name="cover_letter">
+    </div>
+
+    <h2>Links</h2>
+    <div class="field">
+      <label for="q_linkedin">LinkedIn Profile</label>
+      <input type="text" id="q_linkedin">
+    </div>
+    <div class="field">
+      <label for="q_github">GitHub URL</label>
+      <input type="text" id="q_github">
+    </div>
+    <div class="field">
+      <label for="q_website">Website</label>
+      <input type="text" id="q_website">
+    </div>
+
+    <h2>Additional questions</h2>
+    <div class="field">
+      <label for="q_auth">Are you legally authorized to work in the United States? *</label>
+      <select id="q_auth">
+        <option value="">Please select</option>
+        <option>Yes, I am authorized to work in the US</option>
+        <option>No</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="q_sponsor">Will you now or in the future require sponsorship for employment visa status? *</label>
+      <select id="q_sponsor">
+        <option value="">Please select</option>
+        <option>No, I do not require sponsorship</option>
+        <option>Yes, I will require sponsorship in the future</option>
+        <option>Yes, I require sponsorship now</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="q_start">When can you start?</label>
+      <input type="text" id="q_start">
+    </div>
+    <div class="field">
+      <label for="q_heard">How did you hear about this role?</label>
+      <select id="q_heard">
+        <option value="">Please select</option>
+        <option>LinkedIn job search</option>
+        <option>Referral</option>
+        <option>Company website</option>
+      </select>
+    </div>
+
+    <fieldset>
+      <legend>Are you willing to relocate?</legend>
+      <label style="font-weight:400"><input type="radio" name="relocate" value="y" style="width:auto"> Yes</label>
+      <label style="font-weight:400"><input type="radio" name="relocate" value="n" style="width:auto"> No</label>
+    </fieldset>
+
+    <div class="field">
+      <label for="q_why">Why are you interested in this role?</label>
+      <textarea id="q_why" rows="4"></textarea>
+    </div>
+
+    <h2>Never-seeded questions (learning-loop targets)</h2>
+    <p>These should come back orange on the first fill. Type an answer, reload, fill again: they should turn green.</p>
+    <div class="field">
+      <label for="q_notice">What is your notice period?</label>
+      <input type="text" id="q_notice">
+    </div>
+    <!--
+      A profile field that cannot be answered from the options on offer, so it
+      is reported as needing the user. Answering it must NOT create a learned
+      answer (it belongs to the profile), and the panel has to say so instead
+      of leaving the row looking like capture failed. Workday's "Country Phone
+      Code" behaves exactly like this.
+    -->
+    <div class="field">
+      <label for="q_country_code">Country Phone Code</label>
+      <select id="q_country_code">
+        <option value="">Please select</option>
+        <option>+91 (India)</option>
+        <option>+44 (United Kingdom)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="q_gender">Gender</label>
+      <select id="q_gender">
+        <option value="">Please select</option>
+        <option>Male</option>
+        <option>Female</option>
+        <option>Decline to self identify</option>
+      </select>
+    </div>
+
+    <!--
+      Workday-shaped dropdowns: a button, not a form control, with the options
+      in a detached popup. Two things this reproduces, both seen live on a
+      Workday questionnaire step:
+        1. an unanswered widget's whole accessible name is "Select One
+           Required", so every question on the step used to key identically;
+        2. answering one fires no change event on any input, so the learning
+           loop never saw it.
+      The real question is rendered above the widget, exactly as Workday does.
+    -->
+    <!--
+      react-select shaped, as current Greenhouse renders every dropdown: the
+      committed value lives in a rendered label while the input stays empty AND
+      goes to opacity 0. Answering it fires no change event on the input, so
+      this is the shape that made a whole answered questionnaire save nothing.
+    -->
+    <h2>Committed-value dropdown (react-select shaped)</h2>
+    <div class="field">
+      <label for="rs_input">Do you have professional experience in JavaScript?</label>
+      <div class="select__control" id="rs_control">
+        <div class="select__value-container"><div class="select__single-value" hidden></div></div>
+        <input id="rs_input" type="text" role="combobox" aria-autocomplete="list" class="select__input">
+      </div>
+    </div>
+    <script>
+      // Commit like react-select: render the value, blank and hide the input.
+      const rsInput = document.getElementById('rs_input');
+      const rsValue = document.querySelector('#rs_control .select__single-value');
+      const rsMenu = document.createElement('div');
+      rsMenu.setAttribute('role', 'listbox');
+      rsMenu.style.display = 'none';
+      for (const text of ['Yes', 'No']) {
+        const option = document.createElement('div');
+        option.className = 'select__option';
+        option.setAttribute('role', 'option');
+        option.textContent = text;
+        option.addEventListener('mousedown', () => {
+          rsValue.textContent = text;
+          rsValue.hidden = false;
+          rsInput.value = '';
+          rsInput.style.opacity = '0';
+          rsMenu.style.display = 'none';
+        });
+        rsMenu.appendChild(option);
+      }
+      document.body.appendChild(rsMenu);
+      rsInput.addEventListener('mousedown', () => { rsMenu.style.display = 'block'; });
+    </script>
+
+    <!--
+      A styled choice control: the native input sits at opacity 0 under the
+      custom control the user actually sees. Ashby's EEO section is built this
+      way, and treating transparent as hidden skipped gender, race, veteran and
+      disability entirely.
+    -->
+    <!--
+      Multi-value controls. A skills picker and a check-all-that-apply group
+      both hold several answers at once, and storing only the last one ticked
+      loses the rest.
+    -->
+    <h2>Multi-select</h2>
+    <fieldset>
+      <legend>Which languages do you use?</legend>
+      <label><input type="checkbox" name="langs" value="Python"> Python</label>
+      <label><input type="checkbox" name="langs" value="Java"> Java</label>
+      <label><input type="checkbox" name="langs" value="Go"> Go</label>
+      <label><input type="checkbox" name="langs" value="Rust"> Rust</label>
+    </fieldset>
+
+    <div class="field">
+      <label for="skills_input">Areas of Interest</label>
+      <div class="select__control" id="skills_control">
+        <div class="select__value-container" id="skills_chips"></div>
+        <input id="skills_input" type="text" role="combobox" aria-autocomplete="list" class="select__input">
+      </div>
+    </div>
+    <script>
+      // A chips multi-select, shaped like react-select: each choice becomes a
+      // removable chip and the input clears for the next one.
+      const skillsInput = document.getElementById('skills_input');
+      const skillsChips = document.getElementById('skills_chips');
+      const skillsMenu = document.createElement('div');
+      skillsMenu.setAttribute('role', 'listbox');
+      skillsMenu.style.display = 'none';
+      for (const text of ['Machine Learning (ML)', 'Computer Programming', 'Writing', 'Design']) {
+        const option = document.createElement('div');
+        option.className = 'select__option';
+        option.setAttribute('role', 'option');
+        option.textContent = text;
+        option.addEventListener('mousedown', () => {
+          if (![...skillsChips.children].some(c => c.dataset.value === text)) {
+            const chip = document.createElement('span');
+            chip.className = 'select__multi-value';
+            chip.dataset.value = text;
+            const label = document.createElement('span');
+            label.className = 'select__multi-value__label';
+            label.textContent = text;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = '×';
+            chip.append(label, remove);
+            skillsChips.appendChild(chip);
+          }
+          skillsInput.value = '';
+          skillsMenu.style.display = 'none';
+        });
+        skillsMenu.appendChild(option);
+      }
+      document.body.appendChild(skillsMenu);
+      skillsInput.addEventListener('mousedown', () => { skillsMenu.style.display = 'block'; });
+    </script>
+
+    <!--
+      Grouped by the name attribute alone: no fieldset, no ARIA, and the
+      question rendered as a plain sibling of the option list. This is Lever's
+      pronoun block, copied in shape from jobs.lever.co: it made the whole group
+      key as "He/him", its first option, and stored a junk answer under it.
+      The trailing "Custom" box carries no name, so name-based grouping split
+      one question in two.
+    -->
+    <h2>Name-grouped choices (question is a plain sibling)</h2>
+    <li class="application-question" style="list-style:none">
+      <div class="application-label multiple-select">Pronouns</div>
+      <div class="application-field">
+        <ul id="candidatePronounsCheckboxes">
+          <div class="column-wrapper">
+            <div class="table-row">
+              <li class="column"><label><input type="checkbox" name="pronouns" value="He/him"><span class="application-answer-alternative">He/him</span></label></li>
+              <li class="column"><label><input type="checkbox" name="pronouns" value="She/her"><span class="application-answer-alternative">She/her</span></label></li>
+              <li class="column"><label><input type="checkbox" name="pronouns" value="They/them"><span class="application-answer-alternative">They/them</span></label></li>
+            </div>
+          </div>
+          <li><label><input type="checkbox" name="pronouns" value="Use name only" id="useNameOnlyPronounsOption"><span class="application-answer-alternative">Use name only</span></label></li>
+          <li><label><input type="checkbox" value="Custom" id="customPronounsOption"><span class="application-answer-alternative">Custom</span></label></li>
+        </ul>
+      </div>
+    </li>
+
+    <!--
+      A lone consent checkbox, whose own label IS the question, sharing a
+      container with an intro paragraph. Two rules must not reach it: a group's
+      question is never one of its options (there is no group, so rejecting its
+      label would send the walk into the block above), and the container's own
+      text outranks the member's (which handed this box the paragraph).
+    -->
+    <fieldset>
+      <p>By applying for this position, your data will be processed as per the Privacy Policy.</p>
+      <label style="font-weight:400"><input type="checkbox" name="consent" value="consent" style="width:auto">Contoso has my consent to contact me about future job opportunities.</label>
+    </fieldset>
+
+    <!--
+      A checkbox whose own page handler toggles it a SECOND time, so a click
+      lands back where it started while still firing a change. Spotify's
+      consent box on Lever behaves this way, and the fill was reported as
+      failed even though the answer was right. Radios are immune (a second
+      activation leaves one set); checkboxes are not.
+    -->
+    <fieldset>
+      <label id="fighty_label" style="font-weight:400"><input type="checkbox" name="fighty" value="fighty" style="width:auto">Contoso may keep my details on file for two years.</label>
+    </fieldset>
+    <script>
+      // Synchronous, like the real board: a click-driven toggle is undone at
+      // once, so only a direct state change sticks.
+      document.querySelector('input[name=fighty]').addEventListener('click', ev => {
+        ev.currentTarget.checked = false;
+      });
+
+    </script>
+
+    <h2>Styled radios (native input at opacity 0)</h2>
+    <style>
+      .styled-choice input { opacity: 0; width: 24px; height: 24px; position: absolute; }
+      .styled-choice { display: block; padding: 4px 0 4px 30px; position: relative; }
+    </style>
+    <fieldset>
+      <legend>Veteran Status</legend>
+      <label class="styled-choice"><input type="radio" name="vet"
+        value="I identify as one or more of the classifications of a protected veteran"> I identify as one or more of the classifications of a protected veteran</label>
+      <label class="styled-choice"><input type="radio" name="vet"
+        value="I am not a protected veteran"> I am not a protected veteran</label>
+      <label class="styled-choice"><input type="radio" name="vet"
+        value="I don't wish to answer"> I don't wish to answer</label>
+    </fieldset>
+
+    <!--
+      A section that does not exist until an earlier answer reveals it. Lever
+      keeps one EEO survey per country in the page at display:none and unhides
+      the matching one once a location is chosen, so OUR OWN fill is what
+      creates these fields. They arrive after the field scan, so without a
+      watcher the whole block is invisible to the extension: not filled, and
+      not even listed as needing the user.
+    -->
+    <div id="countrySurvey_US" style="display:none">
+      <h2>Revealed after an earlier answer</h2>
+      <div class="field">
+        <label for="late_linkedin">LinkedIn URL</label>
+        <input type="text" id="late_linkedin">
+      </div>
+    </div>
+    <!--
+      A second late section, revealed once the notice-period question is
+      answered by hand. It exists to prove that the extra pass this triggers
+      does NOT wipe what the learning loop already reported: the panel is
+      rebuilt from scratch every pass, so a rescan used to erase every "saved:"
+      line the moment a form revealed anything.
+    -->
+    <div id="lateSection2" style="display:none">
+      <div class="field">
+        <label for="late_github">GitHub URL</label>
+        <input type="text" id="late_github">
+      </div>
+    </div>
+
+    <div id="lateSection3" style="display:none">
+      <div class="field">
+        <label for="late_website">Website</label>
+        <input type="text" id="late_website">
+      </div>
+    </div>
+
+    <!--
+      Revealed by the test itself, to trigger one more unasked-for pass at a
+      moment of the test's choosing. Used to prove that such a pass does NOT
+      write back a value the user deliberately deleted.
+    -->
+    <div id="lateSection4" style="display:none">
+      <div class="field">
+        <label for="late4_linkedin">LinkedIn URL</label>
+        <input type="text" id="late4_linkedin">
+      </div>
+    </div>
+    <script>
+      document.getElementById('email').addEventListener('change', () => {
+        document.getElementById('countrySurvey_US').style.display = 'block';
+      });
+      document.getElementById('q_notice').addEventListener('change', () => {
+        document.getElementById('lateSection2').style.display = 'block';
+      });
+      // Revealed on `input`, so it fires while the user still has the caret in
+      // the box. A pass triggered then would blur them mid-sentence and, since
+      // a pass learns nothing while it runs, discard the answer being typed.
+      document.getElementById('q_why').addEventListener('input', () => {
+        document.getElementById('lateSection3').style.display = 'block';
+      });
+    </script>
+
+    <h2>Widget dropdowns (Workday-shaped)</h2>
+    <div class="field" data-automation-id="questionItem">
+      <div id="wq1_label">Have you ever worked for Contoso?</div>
+      <button type="button" id="wq1" aria-haspopup="listbox"
+              aria-label="Select One Required">Select One</button>
+    </div>
+    <div class="field" data-automation-id="questionItem">
+      <div id="wq2_label">Are you subject to a non-compete agreement?</div>
+      <button type="button" id="wq2" aria-haspopup="listbox"
+              aria-label="Select One Required">Select One</button>
+    </div>
+    <script>
+      // Minimal stand-in for Workday's popup: clicking the trigger shows the
+      // options, clicking an option writes it back onto the trigger.
+      for (const id of ['wq1', 'wq2']) {
+        const trigger = document.getElementById(id);
+        const menu = document.createElement('div');
+        menu.setAttribute('role', 'listbox');
+        menu.style.display = 'none';
+        for (const text of ['Yes', 'No']) {
+          const option = document.createElement('div');
+          option.setAttribute('role', 'option');
+          option.setAttribute('data-automation-id', 'promptOption');
+          option.textContent = text;
+          option.addEventListener('mousedown', () => {
+            trigger.textContent = text;
+            menu.style.display = 'none';
+          });
+          menu.appendChild(option);
+        }
+        document.body.appendChild(menu);
+        trigger.addEventListener('mousedown', () => { menu.style.display = 'block'; });
+      }
+    </script>
+  </form>
+</body>
+</html>
