@@ -23,7 +23,7 @@ Read only the files required by the selected mode:
 | Job URL or JD | `modes/_shared.md`, then `modes/auto-pipeline.md` |
 | `offer` | `modes/_shared.md`, then `modes/offer.md` |
 | `offers` | `modes/_shared.md`, then `modes/offers.md` |
-| `scan` | `modes/scan.md` only; it is standalone and repeats the shared rules it needs |
+| `scan` | `modes/scan.md` only; it is standalone and repeats the shared rules it needs. For discovery-only without evaluation, prefer `npm run scan:all` (`scan-all.mjs`). For triage evaluation of `scan-results` without an agent session, prefer `npm run evaluate` (`career-ops evaluate`). Full manual loop: [docs/SCRIPTS.md](../../../docs/SCRIPTS.md#manual-workflow-no-agent) |
 | `apply` | `modes/_shared.md`, then `modes/apply.md` |
 | `batch` | `modes/_shared.md`, then `modes/batch.md` |
 | `contact` | `modes/_shared.md`, then `modes/contact.md` |

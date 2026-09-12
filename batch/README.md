@@ -1,80 +1,92 @@
 # Batch Processing
 
-Process multiple job offers in parallel via `claude -p` workers. Each worker runs the full evaluation pipeline (A-F report + PDF + tracker line) autonomously.
+The current batch workflow is the provider-free runtime or the Codex `batch`
+mode. The shell wrapper and its prompt are retained only as compatibility
+entrypoints for an explicitly requested historical run.
 
-## Quick Start
+## Current runtime batch
 
-1. **Add offers** to `batch-input.tsv` (tab-separated: `id`, `url`, `source`, `notes`):
+Prepare task and response JSON files, then create a manifest whose paths are
+relative to the manifest file:
 
-   ```tsv
-   id	url	source	notes
-   1	https://jobs.example.com/role-a	LinkedIn	
-   2	https://greenhouse.io/company/role-b	Greenhouse	priority
-   ```
-
-2. **Dry run** to preview what will be processed:
-
-   ```bash
-   ./batch/batch-runner.sh --dry-run
-   ```
-
-3. **Run the batch**:
-
-   ```bash
-   ./batch/batch-runner.sh
-   ```
-
-4. **Results** are automatically merged into `data/applications.md` and verified with `verify-pipeline.mjs` at the end of the run.
-
-## Options
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--parallel N` | `1` | Number of concurrent `claude -p` workers |
-| `--dry-run` | off | Preview pending offers without processing |
-| `--retry-failed` | off | Only retry offers marked as `failed` in state |
-| `--start-from N` | `0` | Skip offers with ID below N |
-| `--max-retries N` | `2` | Max retry attempts per offer before giving up |
-
-## Directory Layout
-
-```
-batch/
-  batch-runner.sh          # Orchestrator script
-  batch-prompt.md          # Prompt template sent to each worker
-  batch-input.tsv          # Input offers (you create this)
-  batch-state.tsv          # Processing state (auto-managed, resumable)
-  logs/                    # Per-offer worker logs ({report_num}-{id}.log)
-  tracker-additions/       # TSV lines produced by workers
-    merged/                # TSVs already merged into applications.md
+```json
+{
+  "schema": "RuntimeBatchManifestV1",
+  "schema_version": 1,
+  "entries": [
+    { "id": "job-1", "task": "prepared-job-1.json", "response": "response-job-1.json" }
+  ]
+}
 ```
 
-## How It Works
+Validate without writing Career-Ops data:
 
-1. **batch-runner.sh** reads `batch-input.tsv` and `batch-state.tsv` to determine which offers need processing.
-2. For each pending offer, it assigns a report number and launches a `claude -p` worker with `batch-prompt.md` as the system prompt (placeholders like `{{URL}}`, `{{REPORT_NUM}}` are resolved).
-3. Each worker evaluates the offer, writes a report to `reports/`, generates a PDF to `output/`, and writes a tracker TSV to `tracker-additions/`.
-4. After all workers finish, batch-runner calls `merge-tracker.mjs` to merge TSVs into `data/applications.md` and runs `verify-pipeline.mjs` to check integrity.
+```powershell
+node bin/career-ops.mjs batch --manifest batch.json
+```
 
-## Tracker Merge
+Commit sequentially and transactionally only with explicit writer
+authorization:
 
-Workers write one TSV per offer to `batch/tracker-additions/`. The merge script (`npm run merge`) handles:
+```powershell
+node bin/career-ops.mjs batch --manifest batch.json `
+  --config config/runtime.local.yml --apply
+```
 
-- Deduplication by company + role fuzzy match and report number
-- Column order conversion (TSV has status before score; applications.md has score before status)
-- In-place updates when a re-evaluation scores higher than the existing entry
-- Moving processed TSVs to `tracker-additions/merged/`
+The runtime validates every response, applies the deterministic PolicyEngine,
+and writes only after the commit gate passes. A failed entry is reported as
+`FAILED`; successful preview entries are `VALIDATED`, and applied entries are
+`COMMITTED`. It never lowers the task's minimum capability or silently falls
+back to an unqualified provider.
 
-Run `npm run merge` manually if you need to merge outside of a batch run.
+## Codex worker workflow
 
-## Resumability
+For URL collection and model-backed evaluation, use
+[`modes/batch.md`](../modes/batch.md). The conductor owns discovery, liveness,
+true-age gates, report-number reservation, merging, and final verification.
+Each worker receives one disjoint job and writes:
 
-`batch-state.tsv` tracks the status of every offer (`pending`, `processing`, `completed`, `failed`). If the batch is interrupted, re-running `batch-runner.sh` picks up where it left off -- completed offers are skipped automatically.
+```text
+ft/reports/<company-slug>/<report>.md
+ft/batch/tracker-additions/<report>.tsv
+```
 
-A PID-based lock file (`batch-runner.pid`) prevents concurrent batch runs. If a previous run crashed, the stale lock is detected and removed automatically.
+The default target is `ft/`. Set `CAREER_OPS_DATA_DIR=.` only for an explicitly
+requested operation on the frozen root internship archive. Workers do not edit
+`applications.md` directly, generate resume PDFs, submit applications, or send
+messages.
 
-## Prerequisites
+After all workers finish:
 
-- `claude` CLI in PATH (Claude Max subscription for default model)
-- Node.js >= 18, Playwright chromium installed (`npm run doctor` to verify)
-- `batch-input.tsv` with at least one offer
+```powershell
+npm run merge -- --verify
+```
+
+## Compatibility shell runner
+
+`batch-runner.sh` delegates to `node bin/career-ops.mjs batch` unless
+`CAREER_OPS_RUNTIME=legacy` is set. The current runtime path requires
+`--manifest`; it does not use the legacy input/state files.
+
+```bash
+./batch/batch-runner.sh --manifest batch.json
+```
+
+The legacy branch uses `batch-input.tsv`, `batch-state.tsv`,
+`batch-prompt.md`, and the root `data/`, `reports/`, and `batch/` paths. It
+requires Bash and a `claude` executable, and is not the active FT pipeline.
+Do not invoke it from Codex; use the runtime CLI or Codex subagents instead.
+
+## Safety and resumability
+
+- Reserve report numbers before parallel workers write reports.
+- Keep worker report and TSV paths disjoint.
+- Run the liveness and true-age gates before evaluation.
+- Merge only after workers finish, then run `verify-pipeline.mjs`.
+- Treat provider output as untrusted until schema, evidence, presentation, and
+  policy validation pass.
+- Resume only from the runtime's digest-bound checkpoints or the legacy state
+  file when explicitly using the legacy branch.
+
+See [`docs/RUNTIME.md`](../docs/RUNTIME.md) for provider routing, transaction,
+recovery, and qualification details.

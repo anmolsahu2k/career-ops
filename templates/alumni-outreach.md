@@ -124,14 +124,14 @@ Companies where this variant applies: **Red Hat** (Hack APAC 1st, $10K), **Symbl
 2. Search for the company name + filter by "Carnegie Mellon University"
 3. Pick the variant based on context (Default / A / B / C / D)
 4. Customize the [bracketed] fields. Keep it ≤ 100 words.
-5. Send.
+5. Review the message and send it yourself only when you choose to.
 
 ## Sending tips
 
 - **Don't attach the resume on LinkedIn DMs**. It triggers spam filters. Offer to send via email if they're interested.
 - **One message, no follow-up barrage**. If silent for 7-10 days, one polite follow-up is fine; after that, move on.
 - **Personalize the opening line**. Reference something specific about them (their team, a recent post, a project) when you can. Default template is the floor, not the ceiling.
-- **Track responses in `data/applications.md`** under the relevant company entry's Notes (e.g., "A2 sent 2026-04-26 to [Name], replied with referral 2026-04-29").
+- **Track responses in `ft/data/applications.md` by default** under the relevant company entry's Notes (e.g., "A2 sent 2026-04-26 to [Name], replied with referral 2026-04-29").
 
 ## Realistic expectations
 

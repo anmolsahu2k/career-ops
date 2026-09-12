@@ -44,6 +44,23 @@ The prepared bundle contains a TaskEnvelope and a provider request whose evidenc
 node bin/career-ops.mjs validate --task task.json --response response.json
 ```
 
+```bash
+node bin/career-ops.mjs evaluate --skip-liveness
+node bin/career-ops.mjs evaluate \
+  --config config/runtime.local.yml \
+  --provider antigravity-gemini-flash-high \
+  --acknowledge-quota \
+  --apply
+```
+
+`evaluate` is the single triage-evaluation command. Without `--apply` it
+plans against `data/scan-results-*.tsv`. With `--apply` it runs liveness, fetches
+JD evidence, then `prepare -> respond -> commit`, and removes committed or
+expired URLs from the handoff. It never writes `reports/pending.md`
+placeholders into the tracker. Prefer `--provider antigravity-gemini-flash-high`
+for Antigravity Gemini 3.8 Flash High, or `--profile career-ops-job-v1` for the
+Codex Luna judgment path.
+
 Preview a commit, then explicitly apply it:
 
 ```bash
@@ -86,6 +103,48 @@ environment secrets.
 Paths are resolved relative to the manifest. Batch validation is the default; add `--apply` for sequential, transaction-protected commits.
 
 Routing order is safety, minimum capability, required capabilities, qualification, risk, audit independence, quota, latency, then cost. It never falls below `TaskEnvelopeV1.minimum_capability_class`. A failed route returns a reasoned `NO_ELIGIBLE_PROVIDER` result.
+
+The configuration-driven `career-ops-job-v1` profile uses Flash Low only to
+rank bulk candidates, Luna Medium for the full A-G judgment, and Sol Medium for
+bounded escalation. Individual jobs skip triage. Inspect the live-gated route
+without invoking a provider with `route --profile career-ops-job-v1 --mode
+individual|bulk`; every stage still passes through the normal qualification,
+observation, risk, and quota gates.
+
+See [MODEL_ROUTING.md](MODEL_ROUTING.md) for the canonical human-readable
+strategy, escalation triggers, model roles, and activation status.
+
+Estimate or execute a non-mutating pipeline shadow with:
+
+```powershell
+node bin/career-ops.mjs route-shadow `
+  --suite <prepared-set.json> `
+  --config <runtime.yml> `
+  --profile career-ops-job-v1 `
+  --max-judgments 50 `
+  --max-escalations 10 `
+  --checkpoint <checkpoint-prefix> `
+  --acknowledge-quota `
+  --out <pipeline-shadow.json>
+```
+
+Use `--plan-only --baseline <previous-ledger.json>` to project usage without
+provider calls. Missing baseline stages remain `UNKNOWN` (`null` tokens), never
+zero. Executed shadows require fresh manual observations for the ChatGPT and
+Antigravity pools. The `PipelineShadowRunV1` ledger contains only usage,
+latency, validation, and routing metadata; it never persists prompts, CV text,
+job descriptions, or `local-index.md` files. Flash rankings can only advance or
+defer work and never finalize a recommendation or write the funnel. Flash gets
+a deterministic, bounded signal digest instead of full A-G presentation text,
+and batches up to ten cases to amortize subscription CLI context overhead.
+
+`--checkpoint <prefix>` writes immutable `<prefix>.triage.json`,
+`<prefix>.judgment.json`, and `<prefix>.escalation.json` files after completed
+stages. Resume an interrupted run with `--resume <latest-checkpoint.json>`;
+completed provider stages are digest-verified and are not invoked again. A
+resumed run must use the exact same suite digest, profile, and judgment and
+escalation limits. Checkpoints contain only the same redacted decision, usage,
+latency, and routing metadata permitted in the final ledger.
 
 Qualification uses at least 50 cases, zero hard-gate and authorization errors, at least 95 percent recommendation agreement, a Wilson 95 percent lower bound of at least 90 percent, at least 99 percent schema success, bounded consequential UNKNOWN regression, shadow, and canary gates.
 
@@ -202,6 +261,113 @@ node bin/career-ops.mjs recover --target /path/to/data-root \
 Recovery never invokes a model. Artifact paths must remain inside the selected root and cannot cross symlinks. Expected and observed hashes prevent recovery from overwriting concurrent edits.
 
 ## Rollout
+
+## Application attempts
+
+The optional application pipeline uses the existing Job Autofill extension in a
+headed, dedicated persistent Chrome profile. It is disabled by default and is
+not scheduled: invoke it only after a user-triggered scan has merged and passed
+verification.
+
+`applications.supported_ats` is an enforced active-rollout allowlist. Attempts
+for a deferred ATS remain queued and visible on the Apply Board, but the runner
+does not open, fill, navigate, or submit them until that ATS is added locally.
+
+The dedicated profile remains the default. LinkedIn and Handshake may use the
+already signed-in main Chrome only after their adapters are certified and an
+explicit `applications.main_profile` configuration points to a loopback Chrome
+DevTools endpoint. The runner must attach through that endpoint; it never
+copies, launches, or reads the live Chrome profile directory. Existing tabs are
+left untouched and a dedicated application tab is created for each attempt.
+The LinkedIn extension adapter is intentionally job-view-only during this
+development stage and is not an active ATS allowlist entry yet.
+
+```powershell
+# Read-only list of live Evaluated / APPLY / >=4.0 rows.
+node bin/career-ops.mjs apply enqueue
+
+# Queue the current eligible backlog (writes only ignored local attempt state).
+node bin/career-ops.mjs apply enqueue --include-current --config config/runtime.local.yml --apply
+
+# Explicitly queue one user-selected Evaluated row outside the normal score /
+# APPLY gate. The one-off override is recorded on the local attempt and still
+# requires the row, report, role, company, and canonical URL to remain unchanged.
+node bin/career-ops.mjs apply override --tracker-number 5237 --config config/runtime.local.yml --apply
+
+# Requeue one locally blocked attempt after an adapter repair or user fix.
+node bin/career-ops.mjs apply retry --tracker-number 5237 --config config/runtime.local.yml --apply
+
+# Requeue an uncertain post-click attempt only after the candidate explicitly
+# confirms that the employer did not create or receive the application.
+node bin/career-ops.mjs apply retry --tracker-number 5237 --confirm-not-submitted --config config/runtime.local.yml --apply
+
+# Headed canary: fills and validates only. It cannot click Submit without both
+# applications.auto_submit: true and this explicit --submit flag.
+node bin/career-ops.mjs apply run --config config/runtime.local.yml --apply
+
+# Run only one exact queued row. This cannot fall through to another attempt.
+node bin/career-ops.mjs apply run --tracker-number 5237 --config config/runtime.local.yml --apply
+
+# Optional, candidate-present authentication handoff. Keeps only the
+# dedicated-profile page open for a bounded period after an ATS asks for a
+# login or one-time code; it never reads email or enters the code.
+node bin/career-ops.mjs apply run --config config/runtime.local.yml --apply --submit --pause-for-auth
+
+# Review local blockers and terminal outcomes.
+node bin/career-ops.mjs apply serve
+```
+
+An enabled post-merge scan workflow may call `career-ops apply after-scan --config
+config/runtime.local.yml --tracker-numbers 5280 --apply` only when
+`auto_after_scan: true`; it queues exactly the rows committed by that scan and
+then processes one at a time.
+
+Attempts live under `ft/.career-ops-runtime/applications/`, keyed by tracker
+number plus canonical URL. `SUBMITTED` and `SUBMISSION_UNKNOWN` are never
+automatically retried. Only an adapter-recognized success transitions the
+nine-column tracker row to `Applied`; incomplete cases stay `Evaluated` and
+are shown in the local board at `127.0.0.1`.
+
+Local prose remains canary-only until it passes a separate application-prose
+qualification benchmark; hardware residency alone never grants it submission
+authority. A qualified local provider may then propose one bounded batch of
+job-specific prose. Hosted fallback remains available only after normal
+qualification and quota routing; every generated answer must cite supplied
+evidence and pass deterministic claim validation. A generated-content
+disclosure is never auto-answered "No" when any generated prose was used.
+
+Greenhouse cover-letter text is separately opt-in through
+`applications.local_prose.cover_letters: true`. When enabled, the runner uses
+Greenhouse's exact `cover_letter-text` control to reveal the manual textarea,
+then requests a body-only, job-specific letter from the qualified local prose
+provider. It preserves paragraph breaks, enforces the 200-word template limit,
+requires both current-job and candidate-profile evidence, and never falls back
+to a hosted provider. File-upload cover-letter slots remain untouched.
+
+Compensation intent is separate from candidate prose. The runner leaves current or
+previous salary, total compensation, bonus, and equity blank. For an expected,
+minimum, range, total-compensation, bonus, or dollar-denominated equity question,
+it may ask the qualified local provider for a job-scoped prospective annual
+preference using the current report and trusted local context. The answer must be
+a bounded dollar number or ascending range, fit the field constraint, and carry
+`local-salary-preference` provenance. Share-count and equity-percentage questions
+remain review-only. If local generation cannot produce that shape, only a
+configured qualified Antigravity fallback is eligible; Codex subscription providers
+are not an implicit fallback. Optional
+marketing, talent-community, job-alert, and future-opportunity consent controls
+are always left unselected.
+
+Run the local-only prose benchmark without invoking a hosted provider:
+
+```powershell
+node bin/career-ops.mjs apply qualify-local-prose --config config/runtime.local.yml --provider ollama-qwen3-4b --out .career-ops-runtime/qualifications/ollama-qwen3-4b-application-prose.json
+```
+
+It uses at least 50 synthetic evidence-grounded answers, validates every
+claim independently, includes prompt-injection cases, and retains only
+digests/metrics. Set `local_prose.qualified: true` and bind the resulting
+ignored artifact path only after it passes.
+No generated prose is promoted into the extension's global answer bank.
 
 Keep `CAREER_OPS_RUNTIME=legacy` entrypoints available while fixtures, shadow comparisons, provider qualification, and one-writer canaries run. Do not move writer ownership to Windows until hardware qualification and a manifest-verified one-way migration pass. The Mac can remain a read-only client and recovery copy.
 

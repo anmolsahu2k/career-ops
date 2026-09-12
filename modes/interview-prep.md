@@ -166,7 +166,7 @@ Save the full report to `interview-prep/{company-slug}-{role-slug}.md` with this
 After delivering the report:
 
 1. Ask the user if they want to draft stories for any gaps found in Step 5
-2. If they have a scheduled interview date, note it: "Your interview is in {X} days. Want me to set a reminder to review this prep?"
+2. If they have a scheduled interview date, note it: "Your interview is in {X} days." Do not create a reminder or schedule; the user can return to this prep manually.
 3. Suggest running `deep` mode if the company research in Step 1 was thin — deep mode covers strategy, culture, and competitive landscape in more depth
 
 ## Rules

@@ -165,7 +165,7 @@ Ask the user if they want to act on any recommendations:
 
 > "Want me to apply any of these recommendations? I can:
 > - Update `portals.yml` to filter out geo-restricted roles
-> - Set a score threshold in `_profile.md` for PDF generation
+> - Set an evaluation/application-priority threshold in `_profile.md` (resume PDFs are user-supplied and are not generated here)
 > - Adjust archetype targeting based on what's converting
 > - Append the STAR+R stories mined in Step 3.5b to `interview-prep/story-bank.md`
 > - Record the scoring-calibration notes from Step 3.5a in `modes/_profile.md`

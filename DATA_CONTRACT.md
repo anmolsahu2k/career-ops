@@ -2,6 +2,14 @@
 
 This document defines which files belong to the **system** (auto-updatable) and which belong to the **user** (never touched by updates).
 
+Unless a path is explicitly prefixed with `ft/` or `data/`, pipeline data paths
+are resolver-relative: `CAREER_OPS_DATA_DIR` defaults to `ft`, so
+`data/applications.md`, `reports/`, `batch/`, and `.career-ops-runtime/` mean
+the corresponding paths under `ft/`. Setting `CAREER_OPS_DATA_DIR=.` selects
+the frozen root internship archive only for an explicitly requested archive
+operation. Shared configuration such as `cv.md`, `portals.yml`, and
+`templates/states.yml` remains at the repository root.
+
 ## User Layer (NEVER auto-updated)
 
 These files contain your personal data, customizations, and work product. Updates will NEVER modify them.
@@ -20,14 +28,17 @@ These files contain your personal data, customizations, and work product. Update
 | `article-digest.md` | Your proof points from portfolio |
 | `interview-prep/story-bank.md` | Your accumulated STAR+R stories |
 | `portals.yml` | Your customized company list |
-| `data/applications.md` | Your application tracker |
-| `data/scan-history.tsv` | Your scan history |
-| `data/scan-results-{date}.tsv` | Transient scanner output (consumed inline by skill workflow; deleted after eval pass — Anmol's workspace, no triage state) |
-| `data/follow-ups.md` | Your follow-up history |
-| `.career-ops-runtime/*` | Local decisions, journals, receipts, quota observations, and failure retention under the selected data root |
+| `STATUS.md` | Your current funnel snapshot and outstanding actions |
+| `INDEX.md` | Your personalized workspace index |
+| `data/applications.md` (default `ft/data/applications.md`) | Your live application tracker; root `data/applications.md` is the frozen internship archive |
+| `data/scan-history.tsv` (default `ft/data/scan-history.tsv`) | Your scan history |
+| `data/scan-results-{date}.tsv` (default `ft/data/scan-results-{date}.tsv`) | Triage handoff for unevaluated discovery (scan + intake). Consumed by the eval pass; never a substitute for tracker rows. Retained only by an explicit scan-only run or a demote-from-tracker backfill |
+| `data/follow-ups.md` (default `ft/data/follow-ups.md`) | Your follow-up history |
+| `batch/*` (default `ft/batch/*`) | Your live scan handoffs, tracker additions, and batch artifacts |
+| `.career-ops-runtime/*` (default `ft/.career-ops-runtime/*`) | Local decisions, journals, receipts, quota observations, application attempts, and failure retention under the selected data root |
 | `writing-samples/*` | Your personal writing samples for style calibration |
-| `reports/*` | Your evaluation reports |
-| `output/*` | Legacy generated artifacts (CV PDF generation is disabled in this workspace) |
+| `reports/*` (default `ft/reports/*`) | Your evaluation reports and apply-time JD archives; root `reports/` is the frozen internship archive |
+| `output/*` (default `ft/output/*`) | Resolver-relative generated/runtime artifacts; resume PDF generation is disabled in this workspace |
 | `jds/*` | Your saved job descriptions |
 
 ## System Layer (safe to auto-update)
@@ -51,14 +62,12 @@ These files contain system logic, scripts, templates, and instructions that impr
 | `modes/training.md` | Training evaluation instructions |
 | `modes/patterns.md` | Pattern analysis instructions |
 | `modes/followup.md` | Follow-up cadence instructions |
-| `modes/de/*` | German language modes |
-| `modes/fr/*` | French language modes |
-| `modes/ja/*` | Japanese language modes |
-| `modes/pt/*` | Portuguese language modes |
-| `modes/ru/*` | Russian language modes |
+| `modes/latex.md` | Legacy resume-export compatibility mode; generation is disabled |
 | `*.mjs` | Utility scripts |
 | `bin/career-ops.mjs` | Provider-neutral runtime command entry point |
 | `lib/runtime/*` | Contracts, policy, routing, adapters, and transactions |
+| `lib/applications/*` | Optional, configuration-gated application-attempt runner and local apply board |
+| `lib/states.mjs`, `lib/status-resolve.mjs` | Shared status contract and status resolution helpers |
 | `schemas/runtime/*` | Versioned runtime interchange schemas |
 | `config/runtime.example.yml` | Disabled-by-default runtime configuration template |
 | `.codex/config.example.toml`, `.mcp.example.json` | Credential-free tool configuration templates |

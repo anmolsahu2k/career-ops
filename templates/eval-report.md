@@ -1,6 +1,7 @@
 # Eval Report Template
 
-Canonical header structure for files under `career-ops/reports/{company-slug}/{NN}-{role-slug}-{date}.md`.
+Canonical header structure for files under the selected report root, default
+`ft/reports/{company-slug}/{NN}-{role-slug}-{date}.md`.
 
 ## Why this template exists
 
@@ -11,7 +12,7 @@ Three workstream needs collide in the report header:
    ^\*\*URL:\*\*\s*(https?://\S+)
    ```
    Any drift on the `**URL:**` line silently breaks the dashboard.
-2. The career-ops contract (see `career-ops/CLAUDE.md` section 3.5 / Pipeline Integrity) requires `**URL:**` and `**Legitimacy:**` to live in the header. Stale `**Apply:**` lines from earlier reports are artifacts and must not be re-introduced.
+2. The provider-neutral contract (see `CAREER_OPS.md`) requires `**URL:**` and `**Legitimacy:**` to live in the header. Stale `**Apply:**` lines from earlier reports are artifacts and must not be re-introduced.
 3. Three forward-planning fields make every applied role carry a level strategy, comp expectations, and a sponsorship signal.
 
 ## Hard rules (do not violate)
@@ -30,8 +31,8 @@ Three workstream needs collide in the report header:
 
 **URL:** {single canonical apply URL}
 
-**Score:** {X.X}/5  **Status:** {canonical status from templates/states.yml}  **Resume:** {SDE|MLE}
-**Legitimacy:** {High Confidence | Medium | Low} ({source, e.g. Greenhouse, active})
+**Score:** {X.X}/5  **Status:** {canonical status from templates/states.yml}  **Resume:** {SDE PDF|MLE PDF|N/A (off-target)}
+**Legitimacy:** {High Confidence | Proceed with Caution | Suspicious} ({source, e.g. Greenhouse, active})
 **Level strategy:** {New-grad-only | New-grad + experienced | Mixed}
 **Comp research:** {salary range, e.g. "$150k-$180k/yr (Levels.fyi)" or "unknown"}
 **Sponsorship flag:** {Y | N | Unknown}
@@ -60,9 +61,9 @@ Three workstream needs collide in the report header:
 |---|---|---|
 | `**URL:**` | exactly one `https://` URL | Dashboard O-key regex parses this; do not add prefix labels, do not add a second URL on the same line. |
 | `**Score:**` | `X.X/5` (e.g. `4.4/5`) | Two spaces separate `Score`, `Status`, `Resume` on one line. |
-| `**Status:**` | canonical state from `templates/states.yml` (Evaluated, Applied, Responded, Interview, Offer, Rejected, Rejected-at-eval, Purged, SKIP) | No bold around the state value, no dates, no extra text. An eval that lands on DO NOT APPLY writes **`Rejected-at-eval`**, never `Discarded` — `Discarded` is reserved for the user's own d-key call. |
-| `**Resume:**` | `SDE` or `MLE` | SDE for SWE/backend/infra/platform roles, MLE for AI/ML/DS/applied-scientist roles. |
-| `**Legitimacy:**` | `High Confidence`, `Medium`, `Low`, optionally with parenthetical source | Source examples: `(Greenhouse, active)`, `(Lever, active)`, `(careers page only, unverified)`. |
+| `**Status:**` | canonical state from `templates/states.yml` (`Triaged`, `Evaluated`, `Applied`, `Responded`, `Interview`, `Offer`, `Rejected`, `Rejected-at-eval`, `Purged`, `Discarded`, `SKIP`) | No bold around the state value, no dates, no extra text. An eval that lands on DO NOT APPLY writes **`Rejected-at-eval`**, never `Discarded`; `Discarded` is reserved for the user's own manual decision. |
+| `**Resume:**` | `SDE PDF`, `MLE PDF`, or `N/A (off-target)` | SDE for SWE/backend/infra/platform roles, MLE for AI/ML/DS/applied-scientist roles. |
+| `**Legitimacy:**` | `High Confidence`, `Proceed with Caution`, or `Suspicious`, optionally with parenthetical source | Source examples: `(Greenhouse, active)`, `(Lever, active)`, `(careers page only, unverified)`. |
 | `**Level strategy:**` | `New-grad-only`, `New-grad + experienced`, `Mixed` | Whether the JD or job family covers other levels. Mixed = posting groups multiple seniorities. |
 | `**Comp research:**` | salary range with source, or `unknown` | Prefer Levels.fyi annual new-grad band, then Glassdoor, then peer-company triangulation. Note source in parens. |
 | `**Sponsorship flag:**` | `Y`, `N`, `Unknown` | Y if JD is sponsorship-friendly OR the company has H-1B filing history. N if explicit "no sponsorship / no visa support" or citizen-only. Unknown otherwise. Optionally tag the driver in Notes: `VISA-SPONSORSHIP`, `CITIZEN-ONLY`, `H1B-HISTORY`. |
@@ -84,7 +85,7 @@ The example below is abbreviated to the header-relevant blocks (A, B, G). Real r
 
 **URL:** https://nuro.ai/careersitem?gh_jid=7351061
 
-**Score:** 4.4/5  **Status:** Evaluated  **Resume:** SDE
+**Score:** 4.4/5  **Status:** Evaluated  **Resume:** SDE PDF
 **Legitimacy:** High Confidence (Greenhouse, active)
 **Level strategy:** New-grad-only
 **Comp research:** $150k-$180k/yr base (Levels.fyi autonomy peer comps; Nuro new-grad band not directly listed, triangulated from Cruise/Zoox/Waymo new-grad pay)
@@ -97,7 +98,7 @@ The example below is abbreviated to the header-relevant blocks (A, B, G). Real r
 | Archetype | New-grad SWE, ML Platform / AI infrastructure |
 | Domain | Nuro autonomy stack (autonomous delivery, robotics platform) |
 | Location | Mountain View, CA (in person) |
-| TL;DR | AI platform / infrastructure engineering at an autonomy company. Multi-agent LLM orchestration (Cloudify) plus Byju's microservices is a direct fit for ML platform infra work. Dec 2026 grad, available January 2027. |
+| TL;DR | AI platform / infrastructure engineering at an autonomy company. Multi-agent LLM orchestration (Cloudify) plus Byju's microservices is a direct fit for ML platform infra work. |
 
 ## Block B, CV Match
 
@@ -122,13 +123,13 @@ Greenhouse, active. Nuro is well-funded (Series D+). **High confidence.**
 After editing any report, run:
 
 ```bash
-cd career-ops && node verify-pipeline.mjs
+node verify-pipeline.mjs
 ```
 
 It must exit 0. The dashboard O-key regex must continue to match the `**URL:**` line. To sanity-check the regex locally:
 
 ```bash
-grep -nP '^\*\*URL:\*\*\s*(https?://\S+)' reports/{company-slug}/{NN}-{role-slug}-{date}.md
+grep -nP '^\*\*URL:\*\*\s*(https?://\S+)' ft/reports/{company-slug}/{NN}-{role-slug}-{date}.md
 ```
 
 A single match with the URL captured means the contract holds.
@@ -143,7 +144,7 @@ A single match with the URL captured means the contract holds.
 
 ## Related references
 
-- `career-ops/CLAUDE.md` -- Pipeline Integrity rules (URL header mandatory, canonical states, etc.).
-- `career-ops/templates/states.yml` -- canonical status enum.
-- `career-ops/verify-pipeline.mjs` -- the linter you must keep green.
-- `career-ops/dashboard/` -- Go TUI consuming the 9-col tracker and the report URL line.
+- `CAREER_OPS.md` -- provider-neutral rules and authorization contract.
+- `templates/states.yml` -- canonical status enum.
+- `verify-pipeline.mjs` -- the linter you must keep green.
+- `dashboard/` -- Go TUI consuming the 9-column tracker and report URL line.

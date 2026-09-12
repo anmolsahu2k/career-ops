@@ -26,7 +26,7 @@ One-time OAuth setup (completed for the legacy environment on 2026-06-05):
 - `gmail-cmu` → `~/.gmail-mcp/cmu-credentials.json`
 - Shared OAuth client at `~/.gmail-mcp/gcp-oauth.keys.json`
 
-If credentials are missing or expired, follow [docs/gmail-mcp-setup.md](docs/gmail-mcp-setup.md). Reconnecting the MCP to Codex is a separate user-authorized step.
+If credentials are missing or expired, follow [docs/gmail-mcp-setup.md](../docs/gmail-mcp-setup.md). Reconnecting the MCP to Codex is a separate user-authorized step.
 
 ## Workflow (user-triggered, no schedules)
 

@@ -107,9 +107,9 @@ Target word count: **180-230**. Anything over 250 = cut.
 
 | Day | Action |
 |---|---|
-| 0 (Tue/Wed AM) | Send. Add tracker row in [data/applications.md](../data/applications.md) with Status `Outreach`. |
+| 0 (Tue/Wed AM) | Send. If the outreach relates to an active job row, record it in Notes in the active tracker (`ft/data/applications.md` by default); do not create an `Outreach` status. |
 | +7 | No reply → either follow-up email (3-line, "wanted to bump this up, happy to share the Highmark notebooks if useful") OR pivot to laddering via a named grad student in the group. |
-| +14 | Still nothing → mark `No-Response` and move on. Don't spam. |
+| +14 | Still nothing → record the no-response in the outreach notes/log and move on. Do not create a non-canonical tracker status. |
 | Reply asking for more | Pivot to scheduling. Bring 3-5 paper-specific questions to the call. Pitch the position at the end, not the open. |
 | Post-call | Within 24h, send a 4-line thank-you note that names a specific thing they said + reaffirms the ask. |
 
