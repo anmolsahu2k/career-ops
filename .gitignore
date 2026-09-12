@@ -79,3 +79,24 @@ career-dashboard
 *.tsv
 
 .playwright-mcp
+
+# Local scratch / session dumps (never commit)
+tmp/
+tmp_*/
+verify.log
+*.log
+jd[0-9].html
+jd_*.txt
+review*.txt
+subagents.json
+tmp_subagents.json
+skillmatch.json
+
+# Personal notes and local artifacts kept on disk only
+aam-snap.md
+cs-advanced.md
+public-work.md
+weekly-job-internship-email/
+ft/output/
+ft/batch/dropped-dupes-*/
+templates/internship-completion-letter*.docx
