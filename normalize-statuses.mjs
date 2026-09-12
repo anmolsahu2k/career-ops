@@ -18,6 +18,11 @@ import { resolvePaths } from './lib/paths.mjs';
 const P = resolvePaths(import.meta.url);
 const APPS_FILE = P.appsFile;
 const DRY_RUN = process.argv.includes('--dry-run');
+const NORMALIZE_SCORES = process.argv.includes('--normalize-scores');
+const scoreNumberFlag = process.argv.indexOf('--numbers');
+const SCORE_NUMBERS = scoreNumberFlag >= 0
+  ? new Set(String(process.argv[scoreNumberFlag + 1] || '').split(',').map(Number).filter(Number.isFinite))
+  : null;
 
 // Ensure required directories exist (fresh setup)
 mkdirSync(P.dataDir, { recursive: true });
@@ -64,7 +69,7 @@ function normalizeStatus(raw) {
   // Already canonical (English, per states.yml) — just fix casing/bold
   const canonical = [
     'Evaluated', 'Applied', 'Responded', 'Interview',
-    'Offer', 'Rejected', 'Discarded', 'SKIP',
+    'Offer', 'Rejected', 'Rejected-at-eval', 'Discarded', 'Purged', 'SKIP',
   ];
   for (const c of canonical) {
     if (lower === c.toLowerCase()) return { status: c };
@@ -106,6 +111,21 @@ for (let i = 0; i < lines.length; i++) {
   const num = parseInt(parts[1]);
   if (isNaN(num)) continue;
 
+  // The tracker contract serializes numeric scores as X.X/5. Keep this
+  // explicitly opt-in and optionally row-scoped so a recovery can correct a
+  // malformed write without sweeping historical tracker data.
+  let scoreChanged = false;
+  if (NORMALIZE_SCORES && (!SCORE_NUMBERS || SCORE_NUMBERS.has(num))) {
+    const rawScore = String(parts[5] || '').replace(/\*\*/g, '').trim();
+    if (/^\d+(?:\.\d+)?$/.test(rawScore)) {
+      const numeric = Number(rawScore);
+      if (numeric >= 0 && numeric <= 5) {
+        parts[5] = `${numeric.toFixed(1)}/5`;
+        scoreChanged = true;
+      }
+    }
+  }
+
   const rawStatus = parts[6];
   const result = normalizeStatus(rawStatus);
 
@@ -114,7 +134,7 @@ for (let i = 0; i < lines.length; i++) {
     continue;
   }
 
-  if (result.status === rawStatus) continue; // Already canonical
+  if (result.status === rawStatus && !scoreChanged) continue; // Already canonical
 
   // Apply change
   const oldStatus = rawStatus;
@@ -140,7 +160,9 @@ for (let i = 0; i < lines.length; i++) {
   lines[i] = newLine;
   changes++;
 
-  console.log(`#${num}: "${oldStatus}" → "${result.status}"`);
+  console.log(scoreChanged
+    ? `#${num}: score normalized${result.status === oldStatus ? '' : `; status "${oldStatus}" → "${result.status}"`}`
+    : `#${num}: "${oldStatus}" → "${result.status}"`);
 }
 
 if (unknowns.length > 0) {

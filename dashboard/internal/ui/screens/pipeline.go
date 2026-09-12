@@ -3,6 +3,7 @@ package screens
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/santifer/career-ops/dashboard/internal/model"
 	"github.com/santifer/career-ops/dashboard/internal/theme"
 )
+
+var reportEvaluationDateRE = regexp.MustCompile(`\d{4}-\d{2}-\d{2}`)
 
 // PipelineClosedMsg is emitted when the pipeline screen is dismissed.
 type PipelineClosedMsg struct{}
@@ -488,8 +491,12 @@ func (m *PipelineModel) applyFilterAndSort() {
 		switch currentFilter {
 		case filterAll:
 			filtered = append(filtered, app)
+			if norm != "purged" {
+				filtered = append(filtered, app)
+			}
 		case filterTop:
 			if app.Score >= 4.0 && norm != "skip" {
+			if app.Score >= 4.0 && norm != "skip" && norm != "purged" {
 				filtered = append(filtered, app)
 			}
 		default:
@@ -690,8 +697,12 @@ func (m PipelineModel) countForFilter(filter string) int {
 		switch filter {
 		case filterAll:
 			count++
+			if norm != "purged" {
+				count++
+			}
 		case filterTop:
 			if app.Score >= 4.0 && norm != "skip" {
+			if app.Score >= 4.0 && norm != "skip" && norm != "purged" {
 				count++
 			}
 		default:
@@ -793,9 +804,10 @@ func (m PipelineModel) renderAppLine(app model.CareerApplication, selected bool)
 	dateW := 10
 	companyW := 16
 	statusW := 12
+	evaluatedDateW := 10
 	compW := 14
 	// Role gets remaining space
-	roleW := m.width - numW - scoreW - dateW - companyW - statusW - compW - 13
+	roleW := m.width - numW - scoreW - dateW - companyW - statusW - evaluatedDateW - compW - 15
 	if roleW < 15 {
 		roleW = 15
 	}
@@ -815,7 +827,7 @@ func (m PipelineModel) renderAppLine(app model.CareerApplication, selected bool)
 	company := truncateRunes(app.Company, companyW)
 	companyStyle := lipgloss.NewStyle().Foreground(m.theme.Text).Width(companyW)
 
-	// Date (fixed width)
+	// Tracker Date (fixed width)
 	dateText := app.Date
 	if dateText == "" {
 		dateText = "—"
@@ -826,11 +838,21 @@ func (m PipelineModel) renderAppLine(app model.CareerApplication, selected bool)
 	role := truncateRunes(app.Role, roleW)
 	roleStyle := lipgloss.NewStyle().Foreground(m.theme.Subtext).Width(roleW)
 
-	// Status with color -- fixed column
+	// Keep a separate evaluation date beside the status. Report filenames carry
+	// the original evaluation date after the tracker Date changes on application.
 	norm := data.NormalizeStatus(app.Status)
 	statusColor := m.statusColorMap()[norm]
 	statusStyle := lipgloss.NewStyle().Foreground(statusColor).Width(statusW)
 	statusText := statusStyle.Render(statusLabel(norm))
+
+	evaluatedDate := reportEvaluationDateRE.FindString(filepath.Base(app.ReportPath))
+	if evaluatedDate == "" {
+		evaluatedDate = app.Date
+	}
+	if evaluatedDate == "" {
+		evaluatedDate = "—"
+	}
+	evaluatedDateStyle := lipgloss.NewStyle().Foreground(m.theme.Yellow).Width(evaluatedDateW)
 
 	// Comp from report cache -- fixed column
 	compText := ""
@@ -840,13 +862,14 @@ func (m PipelineModel) renderAppLine(app model.CareerApplication, selected bool)
 		compText = compStyle.Render(comp)
 	}
 
-	line := fmt.Sprintf(" %s %s %s %s %s %s %s",
+	line := fmt.Sprintf(" %s %s %s %s %s %s %s %s",
 		numStyle.Render(truncateRunes(numText, numW)),
 		score,
 		dateStyle.Render(truncateRunes(dateText, dateW)),
 		companyStyle.Render(company),
 		roleStyle.Render(role),
 		statusText,
+		evaluatedDateStyle.Render(evaluatedDate),
 		compText,
 	)
 

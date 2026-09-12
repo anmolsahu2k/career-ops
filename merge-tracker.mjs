@@ -38,7 +38,7 @@ mkdirSync(ADDITIONS_DIR, { recursive: true });
 // Canonical states. SKIP is intentionally NOT included here — it was the legacy
 // term and got migrated to Discarded in 2026-05-10 cleanup. Anything that scores
 // `SKIP` from a TSV will fall through to the warning-and-default-to-Evaluated path.
-const CANONICAL_STATES = ['Triaged', 'Evaluated', 'Applied', 'Responded', 'Interview', 'Offer', 'Rejected', 'Discarded'];
+const CANONICAL_STATES = ['Triaged', 'Evaluated', 'Applied', 'Responded', 'Interview', 'Offer', 'Rejected', 'Rejected-at-eval', 'Discarded', 'Purged'];
 
 // Brand-alias map: subsidiary slug -> canonical parent slug.
 // Loaded lazily from portals.yml so a single source of truth drives both
@@ -144,6 +144,7 @@ const ROLE_STOPWORDS = new Set([
   // prepositions leaking through length filter
   'with', 'from', 'into', 'over', 'this', 'that',
 ]);
+const ROLE_GENERIC_MATCH_TOKENS = new Set(['software', 'engine', 'developer']);
 
 // Role-abbreviation expansion. Maps short tokens (often filtered by the
 // >3-char rule, or that diverge across aggregators) to their canonical
@@ -247,6 +248,7 @@ function roleFuzzyMatch(a, b) {
   const setB = new Set(wordsB);
   const overlap = wordsA.filter(w => setB.has(w)).length;
   if (overlap === 0) return false;
+  if (!wordsA.some(w => setB.has(w) && !ROLE_GENERIC_MATCH_TOKENS.has(w))) return false;
 
   // Jaccard-style ratio on content tokens. Two roles are "the same" only
   // when the overlap dominates the smaller side — not when they just share
@@ -342,8 +344,10 @@ function parseTsvContent(content, filename) {
     // Heuristic: if col4 looks like a score and col5 looks like a status, they're swapped
     const col4 = parts[4].trim();
     const col5 = parts[5].trim();
-    const col4LooksLikeScore = /^\d+\.?\d*\/5$/.test(col4) || col4 === 'N/A' || col4 === 'DUP';
-    const col5LooksLikeScore = /^\d+\.?\d*\/5$/.test(col5) || col5 === 'N/A' || col5 === 'DUP';
+    // The current mode contract writes ordinary numeric scores, while older
+    // batch files used a /5 suffix. Accept both before choosing the order.
+    const col4LooksLikeScore = /^\d+\.?\d*(?:\/5)?$/.test(col4) || col4 === 'N/A' || col4 === 'DUP';
+    const col5LooksLikeScore = /^\d+\.?\d*(?:\/5)?$/.test(col5) || col5 === 'N/A' || col5 === 'DUP';
     const col4LooksLikeStatus = /^(evaluated|applied|responded|interview|offer|rejected|discarded|skip|evaluada|aplicado|respondido|entrevista|oferta|rechazado|descartado|no aplicar|cerrada|duplicado|repost|condicional|hold|monitor)/i.test(col4);
     const col5LooksLikeStatus = /^(evaluated|applied|responded|interview|offer|rejected|discarded|skip|evaluada|aplicado|respondido|entrevista|oferta|rechazado|descartado|no aplicar|cerrada|duplicado|repost|condicional|hold|monitor)/i.test(col5);
 
@@ -438,6 +442,21 @@ for (const file of tsvFiles) {
   const addition = parseTsvContent(content, file);
   if (!addition) { skipped++; continue; }
 
+  // Hard gate: unevaluated discovery placeholders must stay in scan-results
+  // triage. Never merge reports/pending.md stubs into applications.md.
+  if (/reports\/pending\.md/i.test(addition.report || '') ||
+      /not yet evaluated/i.test(addition.notes || '')) {
+    console.warn(`⚠️  Skipping ${file}: unevaluated placeholder (keep in scan-results triage)`);
+    skipped++;
+    continue;
+  }
+
+  if (/^triaged$/i.test(String(addition.status || '').trim())) {
+    console.warn(`⚠️  Skipping ${file}: Triaged is not a tracker status; evaluate first`);
+    skipped++;
+    continue;
+  }
+
   // Check for duplicate by (in order):
   // 1. Exact report number match
   // 2. Exact entry number match
@@ -481,6 +500,10 @@ for (const file of tsvFiles) {
     // Company + role fuzzy match
     const normCompany = normalizeCompany(addition.company);
     duplicate = existingApps.find(app => {
+      // A Purged row records an expired posting, not a permanent candidate
+      // rejection. A later requisition with the same title needs its own
+      // current liveness and application attempt.
+      if (String(app.status).trim() === 'Purged') return false;
       if (normalizeCompany(app.company) !== normCompany) return false;
       return roleFuzzyMatch(addition.role, app.role);
     });

@@ -17,6 +17,7 @@
 import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { resolvePaths } from './lib/paths.mjs';
+import { isCanonicalStatus, loadStateContract } from './lib/states.mjs';
 const P = resolvePaths(import.meta.url);
 const REPO_ROOT = P.root;       // shared config (portals.yml, templates/states.yml)
 const TARGET_ROOT = P.target;   // report-link resolution base
@@ -29,23 +30,7 @@ const STATES_FILE = P.statesFile;   // shared, always root/templates/states.yml
 mkdirSync(P.dataDir, { recursive: true });
 mkdirSync(REPORTS_DIR, { recursive: true });
 
-// SKIP removed 2026-05-10 — legacy term migrated to Discarded across the tracker.
-// Anything still emitting SKIP is a bug; flag it as an error.
-const CANONICAL_STATUSES = [
-  'triaged', 'evaluated', 'applied', 'responded', 'interview',
-  'offer', 'rejected', 'discarded',
-];
-
-const ALIASES = {
-  'evaluada': 'evaluated', 'condicional': 'evaluated', 'hold': 'evaluated', 'evaluar': 'evaluated', 'verificar': 'evaluated',
-  'aplicado': 'applied', 'enviada': 'applied', 'aplicada': 'applied', 'applied': 'applied', 'sent': 'applied',
-  'respondido': 'responded',
-  'entrevista': 'interview',
-  'oferta': 'offer',
-  'rechazado': 'rejected', 'rechazada': 'rejected',
-  'descartado': 'discarded', 'descartada': 'discarded', 'cerrada': 'discarded', 'cancelada': 'discarded',
-  'no aplicar': 'skip', 'no_aplicar': 'skip', 'monitor': 'skip', 'geo blocker': 'skip',
-};
+const STATE_CONTRACT = loadStateContract(STATES_FILE);
 
 let errors = 0;
 let warnings = 0;
@@ -86,7 +71,7 @@ for (const e of entries) {
   // Strip trailing dates
   const statusOnly = clean.replace(/\s+\d{4}-\d{2}-\d{2}.*$/, '').trim();
 
-  if (!CANONICAL_STATUSES.includes(statusOnly) && !ALIASES[statusOnly]) {
+  if (!isCanonicalStatus(statusOnly, STATE_CONTRACT)) {
     error(`#${e.num}: Non-canonical status "${e.status}"`);
     badStatuses++;
   }
@@ -134,6 +119,25 @@ for (const e of entries) {
   }
 }
 if (brokenReports === 0) ok('All report links valid');
+
+// --- Check 3b: No unevaluated placeholders in the tracker ---
+// Discovery may keep candidates in data/scan-results-*.tsv triage, but
+// applications.md rows must point at a real A-G report, never pending.md.
+let pendingPlaceholders = 0;
+let triagedInTracker = 0;
+for (const e of entries) {
+  if (/reports\/pending\.md/i.test(e.report || '')) {
+    error(`#${e.num}: Report is reports/pending.md (unevaluated; demote to scan-results triage)`);
+    pendingPlaceholders++;
+  }
+  const statusNorm = e.status.replace(/\*\*/g, '').replace(/\s+\d{4}-\d{2}-\d{2}.*$/, '').trim().toLowerCase();
+  if (statusNorm === 'triaged') {
+    error(`#${e.num}: Status Triaged is not allowed in the tracker (evaluate or keep in scan-results)`);
+    triagedInTracker++;
+  }
+}
+if (pendingPlaceholders === 0) ok('No reports/pending.md placeholders in tracker');
+if (triagedInTracker === 0) ok('No Triaged status rows in tracker');
 
 // --- Check 4: Score format ---
 let badScores = 0;
@@ -193,11 +197,12 @@ function walkReports(dir) {
       if (entry.name === '_misc') continue;
       out.push(...walkReports(p));
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
-      // Eval reports only — skip CL / Q files / pending stub
+      // Eval reports only — skip CL / Q / verbatim JD archives / pending stub
       if (entry.name.includes('-cover-letter') ||
           entry.name.includes('-application-questions') ||
           entry.name.includes('-application-answers') ||
           entry.name.includes('-form-answers') ||
+          entry.name.endsWith('-jd.md') ||
           entry.name === 'pending.md') continue;
       if (!/^\d+-/.test(entry.name)) continue;
       out.push(p);
