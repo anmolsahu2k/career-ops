@@ -19,8 +19,8 @@
 4. **Generate the message** with a 3-sentence framework adapted to the contact type:
 
    ### Recruiter
-   - **Sentence 1 (Fit)**: Direct match criteria -- role, relevant experience, availability or location
-   - **Sentence 2 (Proof)**: A fact that answers their screening questions before they ask (e.g., "5 years building ML pipelines, currently in Berlin, available immediately")
+   - **Sentence 1 (Fit)**: Direct match criteria -- role, relevant experience, and location when relevant; do not volunteer availability
+   - **Sentence 2 (Proof)**: A fact that answers their screening questions before they ask (e.g., "5 years building ML pipelines and currently based in Berlin")
    - **Sentence 3 (CTA)**: "Happy to share my CV if this aligns with what you're looking for"
 
    ### Hiring Manager

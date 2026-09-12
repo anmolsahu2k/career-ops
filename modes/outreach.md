@@ -4,7 +4,7 @@ Draft cold-outreach to founders / hiring managers at companies **already in the 
 
 ## Two lead sources (both feed the same drafter)
 
-1. **Pipeline leads** (`outreach-leads.mjs` → `data/outreach-leads.json`) — one lead per company already in [data/applications.md](../data/applications.md) that cleared the evaluation-score floor, excluding terminal statuses (Rejected / Rejected-at-eval / Purged / Discarded / SKIP / Offer). A reinforcement play on companies Anmol is already evaluating or applied to.
+1. **Pipeline leads** (`outreach-leads.mjs` → `data/outreach-leads.json`) — one lead per company already in [ft/data/applications.md](../ft/data/applications.md) by default that cleared the evaluation-score floor, excluding terminal statuses (Rejected / Rejected-at-eval / Purged / Discarded / SKIP / Offer). A reinforcement play on companies Anmol is already evaluating or applied to.
 2. **Hiring-post leads** (`outreach-post-lead.mjs` → `data/outreach-post-leads.json`) — a person who publicly posted "we're hiring". **These are the warmest leads available**: the poster is a named human explicitly inviting contact, so the drafter opens by referencing their post instead of pitching cold. Post leads are drafted first.
 
 **They live in separate files on purpose.** `outreach-leads.mjs` regenerates `outreach-leads.json` from the tracker on every run; anything captured by hand there would be wiped. `outreach-draft.mjs` reads both files and concatenates them.
