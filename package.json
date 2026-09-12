@@ -19,6 +19,8 @@
     "liveness:batch": "node liveness-parallel.mjs --from-batch",
     "scan": "node scan.mjs",
     "scan:spa": "node scan-spa.mjs",
+    "scan:all": "node scan-all.mjs",
+    "evaluate": "node bin/career-ops.mjs evaluate",
     "gemini:eval": "node gemini-eval.mjs",
     "runtime:test": "node --test tests/runtime-*.test.mjs",
     "runtime:doctor": "node bin/career-ops.mjs doctor --config config/runtime.example.yml",

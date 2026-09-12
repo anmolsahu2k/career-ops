@@ -10,6 +10,57 @@ reserves:
   emergency_ratio: 0.05
   adaptive: true
 
+# Copy this block to ignored config/runtime.local.yml and explicitly opt in.
+# The checked-in default cannot navigate or submit any job application.
+applications:
+  enabled: false
+  auto_after_scan: false
+  auto_submit: false
+  # Calendar dates written to the tracker use this IANA time zone.
+  time_zone: America/New_York
+  chrome_profile_dir: ''
+  chrome_channel: chrome
+  # LinkedIn and Handshake may later attach to the already signed-in main
+  # Chrome only through an explicit loopback DevTools endpoint. It never
+  # copies, opens, or modifies the live profile directory directly.
+  main_profile:
+    enabled: false
+    cdp_url: 'http://127.0.0.1:9222'
+    ats: [linkedin, handshake]
+  resumes:
+    sde: ''
+    mle: ''
+  supported_ats: [workday, greenhouse, ashby, lever, successfactors]
+  max_steps: 8
+  hosted_calls_per_application: 2
+  # Local prose/salary generation is always tried first. If it is unavailable
+  # or fails validation, only a qualified Antigravity provider may be used.
+  # An empty list disables hosted fallback rather than spending Codex quota.
+  hosted_fallback_providers: [antigravity-gemini-pro-review, antigravity-claude-opus-review, antigravity-claude-audit]
+  answer_evidence_files: []
+  # Optional loopback-only prose canary. It may fill a form for review but can
+  # never submit an application; keep disabled in the checked-in example.
+  local_prose:
+    enabled: false
+    canary_only: true
+    # Explicit user opt-in. On Greenhouse, reveal the cover-letter textarea
+    # and generate body-only prose locally. Never falls back to a hosted model.
+    cover_letters: false
+    # Set true only after the application-prose qualification benchmark passes.
+    qualified: false
+    # Ignored artifact written by `career-ops apply qualify-local-prose`.
+    qualification_artifact: ''
+    provider: ollama-qwen3-4b
+  gmail_otp:
+    enabled: false
+    python_command: python
+    timeout_seconds: 90
+    sender_domains:
+      greenhouse: [greenhouse.io, greenhouse-mail.io]
+      ashby: [ashbyhq.com]
+      lever: [lever.co]
+  artifact_retention_days: 14
+
 resource_pools:
   chatgpt-plus:
     schema: ResourcePoolV1
@@ -47,6 +98,26 @@ resource_pools:
     minimum_reserve_ratio: 0
     emergency_reserve_ratio: 0
 
+routing_profiles:
+  career-ops-job-v1:
+    triage:
+      provider: antigravity-gemini-flash-low
+      batch_size: 10
+      authority: RANK_ONLY
+    judgment:
+      provider: codex-luna
+      authority: ADVISORY_FULL_A_G
+    escalation:
+      provider: codex-sol
+      authority: ADVISORY_REVIEW
+      max_share: 0.20
+      apply_score_minimum: 4.0
+      boundary_minimum: 3.8
+      boundary_maximum: 4.2
+      confidence_minimum: 0.85
+      contradiction_reason_codes: [EVIDENCE_CONFLICT, SENIORITY_CONFLICT, COMPENSATION_CONFLICT, ROLE_FIT_CONFLICT]
+      missing_evidence_reason_codes: [REQUIRED_EVIDENCE_INCOMPLETE, SCORE_MISSING, LIVENESS_UNCERTAIN, CONSEQUENTIAL_GATE_UNKNOWN]
+
 # Providers start disabled and unqualified. `doctor`, the qualification harness,
 # shadow, and canary stages must populate fresh observations and qualifications.
 providers:
@@ -77,6 +148,7 @@ providers:
     usage_mode: codex_total
     isolated_workspace: true
     json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    routing_json_schema_file: schemas/runtime/routing-provider-response.v1.schema.json
     shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
     json_schema_flag: --output-schema
     json_schema_mode: path
@@ -85,9 +157,29 @@ providers:
     model_snapshot: gpt-5.6-luna
     execution_surface: codex-cli
     resource_pool: chatgpt-plus
-    capability_class: STANDARD
+    capability_class: CONSEQUENTIAL
     capabilities: [structured_output, evidence_citations]
-    risk_ceiling: MEDIUM
+    risk_ceiling: CONSEQUENTIAL
+  codex-sol:
+    type: codex_cli
+    enabled: false
+    command: [codex, exec, --model, gpt-5.6-sol, --config, 'model_reasoning_effort="medium"', --sandbox, read-only, --ephemeral, --ignore-user-config, --ignore-rules, --skip-git-repo-check, '-']
+    input_mode: stdin_text
+    usage_mode: codex_total
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    routing_json_schema_file: schemas/runtime/routing-provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    json_schema_flag: --output-schema
+    json_schema_mode: path
+    model_vendor: openai
+    model_family: gpt-5.6
+    model_snapshot: gpt-5.6-sol
+    execution_surface: codex-cli
+    resource_pool: chatgpt-plus
+    capability_class: CONSEQUENTIAL
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: CONSEQUENTIAL
   codex-astra-audit:
     type: codex_cli
     enabled: false
@@ -198,6 +290,24 @@ providers:
     capability_class: STANDARD
     capabilities: [structured_output, evidence_citations]
     risk_ceiling: HIGH
+  antigravity-gemini-flash-high:
+    type: antigravity_cli
+    enabled: false
+    command: [agy, --model, gemini-3.8-flash-high, --effort, high, --sandbox, --disable-slash-commands, --output-format, json, --print-timeout, 2m]
+    input_mode: stdin_text
+    output_mode: response_json_envelope
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    model_vendor: google
+    model_family: gemini-3.8-flash
+    model_snapshot: gemini-3.8-flash-high
+    execution_surface: antigravity-cli
+    resource_pool: google-gemini
+    # Explicit evaluate/opt-in path: consequential A-G judgment via Antigravity.
+    capability_class: CONSEQUENTIAL
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: CONSEQUENTIAL
   antigravity-gemini-flash-low:
     type: antigravity_cli
     enabled: false
@@ -207,6 +317,7 @@ providers:
     isolated_workspace: true
     json_schema_file: schemas/runtime/provider-response.v1.schema.json
     shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    triage_json_schema_file: schemas/runtime/triage-batch-response.v1.schema.json
     model_vendor: google
     model_family: gemini-3.8-flash
     model_snapshot: gemini-3.8-flash-low

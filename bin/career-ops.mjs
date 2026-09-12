@@ -14,12 +14,26 @@ import { buildProviderRequest, prepareTask } from '../lib/runtime/prepare.mjs';
 import { createProvider } from '../lib/runtime/providers/index.mjs';
 import { aggregateQualificationResults, composeQualificationEvidence, qualifyModel } from '../lib/runtime/qualification.mjs';
 import { cleanupRetention } from '../lib/runtime/retention.mjs';
-import { routeTask } from '../lib/runtime/router.mjs';
+import { routeProfileTask, routeTask } from '../lib/runtime/router.mjs';
+import {
+  addRoutingSignals,
+  assertFreshManualQuotas,
+  buildRouteShadowPlan,
+  resolveRoutingProfile,
+  runRouteShadow,
+  runTriageRanking,
+} from '../lib/runtime/route-shadow.mjs';
 import { sanitizePresentation } from '../lib/runtime/sanitizer.mjs';
 import { evaluateShadowPreflight, runShadowQualification } from '../lib/runtime/shadow.mjs';
 import { commitEvaluation, persistencePaths, recoverTransactions } from '../lib/runtime/transaction.mjs';
 import { canonicalJson, record } from '../lib/runtime/util.mjs';
 import { assertWriterHost } from '../lib/runtime/writer-authorization.mjs';
+import { enqueueEligible, enqueuedAttemptKeys, enqueueSelectionOverride, exactAttemptKeys, retryApplication, runApplications, stageMfaCode } from '../lib/applications/runner.mjs';
+import { serveApplyBoard } from '../lib/applications/board.mjs';
+import { eligibleRows } from '../lib/applications/eligibility.mjs';
+import { acknowledgeManualSubmission } from '../lib/applications/acknowledge.mjs';
+import { runLocalApplicationProseQualification } from '../lib/applications/local-prose-qualification.mjs';
+import { evaluateScanResults } from '../lib/runtime/evaluate-scan.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -84,6 +98,15 @@ function output(value, path) {
   renameSync(temporary, resolved);
 }
 
+function checkpointPrefix(value) {
+  const resolved = resolve(value);
+  return resolved.replace(/\.(triage|judgment|escalation)\.json$/i, '').replace(/\.json$/i, '');
+}
+
+function checkpointPath(prefix, stage) {
+  return `${checkpointPrefix(prefix)}.${stage}.json`;
+}
+
 function authorizeMutation(flags, config = null) {
   if (!flags.config) {
     const error = new Error('Runtime mutation requires --config <runtime.yml> for writer authorization');
@@ -93,6 +116,31 @@ function authorizeMutation(flags, config = null) {
   const selectedConfig = config || loadRuntimeConfig(flags.config);
   assertWriterHost(selectedConfig);
   return selectedConfig;
+}
+
+/**
+ * A committed evaluation is the only normal path that may create application
+ * work automatically. This keeps discovery-only scans inert while ensuring a
+ * user-enabled post-scan rollout sees exactly the rows just committed, not an
+ * arbitrary tracker backlog. `runApplications` still re-checks eligibility,
+ * ATS allowlist, liveness, and the at-most-once attempt state before opening a
+ * browser.
+ */
+async function autoApplyCommittedRows(target, config, trackerNumbers) {
+  const policy = config?.applications;
+  if (policy?.enabled !== true || policy.auto_after_scan !== true) return null;
+  const numbers = [...new Set((trackerNumbers || []).map(Number).filter(Number.isFinite))];
+  if (!numbers.length) return null;
+  const queued = enqueueEligible(target, { trackerNumbers: numbers, includeCurrent: true });
+  const run = await runApplications(target, config, {
+    // This is intentionally configuration-gated rather than inherited from a
+    // generic commit flag. The user enables application submission locally;
+    // checked-in configuration always leaves it off.
+    submit: policy.auto_submit === true,
+    max: 1,
+    attemptKeys: enqueuedAttemptKeys(queued),
+  });
+  return record('CommittedApplicationRunV1', { tracker_numbers: numbers, queued, run });
 }
 
 function validatedFromFiles(taskPath, responsePath) {
@@ -113,10 +161,139 @@ async function main() {
   const { positional, flags } = argsOf(process.argv.slice(2));
   const [command, subcommand] = positional;
   if (!command || command === 'help') {
-    process.stdout.write('Usage: career-ops <baseline|prepare|respond|validate|commit|batch|shadow|hardware-qualify|canary-certify|recover|route|qualify|qualify-bundle|doctor|quota|cleanup> [options]\n');
+    process.stdout.write('Usage: career-ops <apply|baseline|prepare|respond|validate|commit|batch|evaluate|shadow|route-shadow|hardware-qualify|canary-certify|recover|route|qualify|qualify-bundle|doctor|quota|cleanup> [options]\n');
     return;
   }
   const target = targetFrom(flags);
+  if (command === 'apply') {
+    if (subcommand === 'qualify-local-prose') {
+      if (!flags.config || !flags.provider) throw new Error('apply qualify-local-prose requires --config and --provider');
+      const config = loadRuntimeConfig(flags.config);
+      const providerConfig = config.providers?.[flags.provider];
+      if (!providerConfig) throw new Error(`Unknown provider: ${flags.provider}`);
+      const provider = createProvider(flags.provider, { ...providerConfig, enabled: true,
+        json_schema_file: resolve(repoRoot, 'schemas/runtime/application-answer-response.v1.schema.json') }, config);
+      try {
+        const qualification = await runLocalApplicationProseQualification({ provider, providerId: flags.provider, providerConfig,
+          caseCount: flags.cases === undefined ? 50 : Number(flags.cases),
+          onProgress(progress) { process.stderr.write(`${JSON.stringify({ event: 'application_prose_qualification_progress', ...progress })}\n`); },
+        });
+        output(qualification, flags.out);
+        if (!qualification.qualified) process.exitCode = 2;
+      } finally { provider.close?.(); }
+      return;
+    }
+    if (subcommand === 'enqueue') {
+      if (!flags.apply) {
+        const eligible = eligibleRows(target);
+        output(record('ApplicationEnqueuePreviewV1', {
+          eligible_count: eligible.filter(item => item.eligible).length,
+          eligible: eligible.filter(item => item.eligible).map(item => ({ tracker_number: item.row.num, canonical_url: item.canonical_url })),
+          blocked: eligible.filter(item => !item.eligible).map(item => ({ tracker_number: item.row.num, blocker: item.blocker })),
+        }));
+        return;
+      }
+      authorizeMutation(flags);
+      output(record('ApplicationEnqueueResultV1', enqueueEligible(target, { includeCurrent: flags['include-current'] === true })));
+      return;
+    }
+    if (subcommand === 'run') {
+      if (!flags.config) throw new Error('apply run requires --config');
+      if (!flags.apply) throw new Error('apply run changes local attempt state and requires --apply');
+      const config = mergeRuntimeState(authorizeMutation(flags), readState(target));
+      const selectedTrackerNumber = flags['tracker-number'] === undefined ? null : Number(flags['tracker-number']);
+      if (selectedTrackerNumber !== null && (!Number.isInteger(selectedTrackerNumber) || selectedTrackerNumber <= 0)) {
+        throw new Error('apply run --tracker-number requires a positive integer');
+      }
+      const selected = selectedTrackerNumber === null ? null
+        : enqueueEligible(target, { trackerNumbers: [selectedTrackerNumber], includeCurrent: true });
+      output(record('ApplicationRunResultV1', await runApplications(target, config, {
+        submit: flags.submit === true,
+        max: flags.max || 1,
+        pauseForAuthentication: flags['pause-for-auth'] === true,
+        attemptKeys: selected ? exactAttemptKeys(target, selectedTrackerNumber, selected) : null,
+      })));
+      return;
+    }
+    if (subcommand === 'mfa-code') {
+      if (!flags.apply || !flags.config || !flags['tracker-number'] || typeof flags.code !== 'string') {
+        throw new Error('apply mfa-code requires --tracker-number, --code, --config, and --apply');
+      }
+      authorizeMutation(flags);
+      output(record('ApplicationMfaCodeHandoffV1', stageMfaCode(target, Number(flags['tracker-number']), flags.code)));
+      return;
+    }
+    if (subcommand === 'override') {
+      if (!flags.apply || !flags.config || !flags['tracker-number']) {
+        throw new Error('apply override requires --tracker-number, --config, and --apply');
+      }
+      authorizeMutation(flags);
+      output(record('ApplicationSelectionOverrideV1', enqueueSelectionOverride(target, Number(flags['tracker-number']))));
+      return;
+    }
+    if (subcommand === 'retry') {
+      if (!flags.apply || !flags.config || !flags['tracker-number']) {
+        throw new Error('apply retry requires --tracker-number, --config, and --apply');
+      }
+      authorizeMutation(flags);
+      output(record('ApplicationRetryResultV1', retryApplication(target, Number(flags['tracker-number']), {
+        confirmNotSubmitted: flags['confirm-not-submitted'] === true,
+      })));
+      return;
+    }
+    if (subcommand === 'after-scan') {
+      if (!flags.config || !flags.apply) throw new Error('apply after-scan requires --config and --apply');
+      if (!flags['tracker-numbers']) throw new Error('apply after-scan requires --tracker-numbers <n,n,...>');
+      const config = mergeRuntimeState(authorizeMutation(flags), readState(target));
+      if (config.applications?.auto_after_scan !== true) throw new Error('applications.auto_after_scan must be true for apply after-scan');
+      const trackerNumbers = String(flags['tracker-numbers']).split(',').map(Number).filter(Number.isFinite);
+      const queued = enqueueEligible(target, { trackerNumbers, includeCurrent: true });
+      output(record('PostScanApplicationResultV1', {
+        queued,
+        run: await runApplications(target, config, {
+          submit: flags.submit === true,
+          max: flags.max || 1,
+          attemptKeys: enqueuedAttemptKeys(queued),
+        }),
+      }));
+      return;
+    }
+    if (subcommand === 'serve') {
+      // A board opened without local configuration is intentionally read-only.
+      // Enabling action buttons requires writer authorization, and Resume now
+      // launches only the exact requeued attempt.
+      if (!flags.config || !flags.apply) {
+        serveApplyBoard(target, { port: Number(flags.port || 8788) });
+        return;
+      }
+      const config = mergeRuntimeState(authorizeMutation(flags), readState(target));
+      if (config.applications?.enabled !== true) throw new Error('applications.enabled must be true for an actionable apply board');
+      let replay = Promise.resolve();
+      serveApplyBoard(target, {
+        port: Number(flags.port || 8788), allowActions: true,
+        onRetry: key => {
+          // Serialize UI clicks and keep a replay bound to its own idempotency
+          // key, so another queued row cannot be opened accidentally.
+          replay = replay.then(() => runApplications(target, config, {
+            submit: flags.submit === true, max: 1, attemptKeys: [key],
+          }));
+          return replay;
+        },
+      });
+      return;
+    }
+    if (subcommand === 'acknowledge') {
+      if (!flags.apply || !flags.config || !flags['tracker-number']) {
+        throw new Error('apply acknowledge requires --tracker-number, --config, and --apply');
+      }
+      const config = authorizeMutation(flags);
+      output(record('ApplicationManualAcknowledgementV1', await acknowledgeManualSubmission(target, Number(flags['tracker-number']), {
+        timeZone: config.applications?.time_zone,
+      })));
+      return;
+    }
+    throw new Error('Usage: career-ops apply <enqueue|run|override|retry|after-scan|serve|acknowledge>');
+  }
   if (command === 'baseline') {
     const baseline = captureBaseline({ repoRoot, target });
     output(flags.before ? compareBaselines(readJson(flags.before), baseline) : baseline, flags.out);
@@ -149,9 +326,10 @@ async function main() {
       output(record('CommitPreviewV1', { apply_required: true, decision: value.decision }));
       return;
     }
-    authorizeMutation(flags);
+    const config = mergeRuntimeState(authorizeMutation(flags), readState(target));
     const receipt = await commitEvaluation({ target, ...value });
-    output(receipt, flags.out);
+    const application = await autoApplyCommittedRows(target, config, [receipt.report_identity?.report_number]);
+    output(application ? record('CommitAndApplicationResultV1', { receipt, application }) : receipt, flags.out);
     return;
   }
   if (command === 'batch') {
@@ -161,7 +339,7 @@ async function main() {
     if (manifest.schema !== 'RuntimeBatchManifestV1' || manifest.schema_version !== 1 || !Array.isArray(manifest.entries)) {
       throw new Error('batch manifest must be RuntimeBatchManifestV1 with an entries array');
     }
-    if (flags.apply) authorizeMutation(flags);
+    const config = flags.apply ? mergeRuntimeState(authorizeMutation(flags), readState(target)) : null;
     const results = [];
     for (let index = 0; index < manifest.entries.length; index++) {
       const entry = manifest.entries[index];
@@ -184,14 +362,46 @@ async function main() {
       }
     }
     const failed = results.filter(item => item.status === 'FAILED').length;
+    const application = flags.apply
+      ? await autoApplyCommittedRows(target, config, results.filter(item => item.status === 'COMMITTED')
+        .map(item => item.receipt?.report_identity?.report_number))
+      : null;
     output(record(flags.apply ? 'RuntimeBatchResultV1' : 'RuntimeBatchPreviewV1', {
       apply: Boolean(flags.apply),
       total: results.length,
       succeeded: results.length - failed,
       failed,
       results,
+      ...(application ? { application } : {}),
     }), flags.out);
     if (failed) process.exitCode = 1;
+    return;
+  }
+  if (command === 'evaluate') {
+    const files = flags.file ? [resolve(flags.file)] : null;
+    const config = flags.config
+      ? (flags.apply
+        ? mergeRuntimeState(authorizeMutation(flags), readState(target))
+        : mergeRuntimeState(loadRuntimeConfig(flags.config), readState(target)))
+      : null;
+    if (flags.apply && !flags.config) throw new Error('evaluate --apply requires --config');
+    const result = await evaluateScanResults({
+      target,
+      config,
+      files,
+      max: flags.max === undefined ? Infinity : Number(flags.max),
+      apply: flags.apply === true,
+      skipLiveness: flags['skip-liveness'] === true,
+      provider: flags.provider || null,
+      profile: flags.profile || null,
+      concurrency: flags.concurrency === undefined ? 10 : Number(flags.concurrency),
+      acknowledgeQuota: flags['acknowledge-quota'] === true,
+      onProgress(progress) {
+        process.stderr.write(`${JSON.stringify({ event: 'evaluate_progress', ...progress })}\n`);
+      },
+    });
+    output(result, flags.out);
+    if (result.failed) process.exitCode = 1;
     return;
   }
   if (command === 'shadow') {
@@ -200,7 +410,9 @@ async function main() {
     const config = loadRuntimeConfig(flags.config);
     const providerConfig = config.providers?.[flags.provider];
     if (!providerConfig) throw new Error(`Unknown provider: ${flags.provider}`);
-    if (providerConfig.type?.endsWith('_api') || providerConfig.type === 'openai_compatible') {
+    const localOpenAiProvider = providerConfig.type === 'openai_compatible'
+      && providerConfig.local_only === true;
+    if (providerConfig.type?.endsWith('_api') || (providerConfig.type === 'openai_compatible' && !localOpenAiProvider)) {
       throw new Error('shadow CLI does not enable billed API providers');
     }
     const definition = readJson(flags.suite);
@@ -227,7 +439,9 @@ async function main() {
     if (providerRuns < limit && !effectiveProviderConfig.json_schema_file) {
       throw new Error('Batched shadow runs require shadow_json_schema_file');
     }
-    const provider = createProvider(flags.provider, effectiveProviderConfig, config);
+    const provider = createProvider(flags.provider, localOpenAiProvider
+      ? { ...effectiveProviderConfig, enabled: true }
+      : effectiveProviderConfig, config);
     let result;
     try {
       result = await runShadowQualification({
@@ -256,6 +470,110 @@ async function main() {
       if (!preflightGate.passed) process.exitCode = 2;
       return;
     }
+    output(result, flags.out);
+    return;
+  }
+  if (command === 'route-shadow') {
+    if (!flags.suite || !flags.config || !flags.profile) {
+      throw new Error('route-shadow requires --suite, --config, and --profile');
+    }
+    const definition = readJson(flags.suite);
+    const configured = loadRuntimeConfig(flags.config);
+    const profile = resolveRoutingProfile(configured, flags.profile);
+    const maxJudgments = flags['max-judgments'] === undefined ? 50 : Number(flags['max-judgments']);
+    const maxEscalations = flags['max-escalations'] === undefined ? 10 : Number(flags['max-escalations']);
+    if (!Number.isInteger(maxJudgments) || maxJudgments < 1 || maxJudgments > 50) {
+      throw new Error('--max-judgments must be 1-50');
+    }
+    if (!Number.isInteger(maxEscalations) || maxEscalations < 0 || maxEscalations > 50) {
+      throw new Error('--max-escalations must be 0-50');
+    }
+    const baseline = flags.baseline ? readJson(flags.baseline) : null;
+    if (flags['plan-only']) {
+      if (flags.resume || flags.checkpoint) throw new Error('--resume and --checkpoint are only valid for executed route shadows');
+      output(buildRouteShadowPlan({
+        definition,
+        profileId: flags.profile,
+        profile,
+        maxJudgments,
+        maxEscalations,
+        baseline,
+      }), flags.out);
+      return;
+    }
+    if (!flags['acknowledge-quota']) {
+      throw new Error('route-shadow invokes providers and requires --acknowledge-quota');
+    }
+    const config = mergeRuntimeState(configured, readState(target));
+    assertFreshManualQuotas(config, profile);
+    if (flags.resume === true || flags.checkpoint === true) {
+      throw new Error('--resume and --checkpoint require a file path');
+    }
+    const resume = flags.resume ? readJson(flags.resume) : null;
+    const selectedCheckpointPrefix = flags.checkpoint || flags.resume || null;
+    const result = await runRouteShadow({
+      definition,
+      profileId: flags.profile,
+      profile,
+      maxJudgments,
+      maxEscalations,
+      baseline,
+      resume,
+      onCheckpoint: selectedCheckpointPrefix ? async checkpoint => {
+        const path = checkpointPath(selectedCheckpointPrefix, checkpoint.completed_stage);
+        output(checkpoint, path);
+        process.stderr.write(`${JSON.stringify({
+          event: 'route_shadow_checkpoint',
+          stage: checkpoint.completed_stage,
+          path,
+        })}\n`);
+      } : null,
+      async runStage({ stage, providerId, caseIds, providerRuns }) {
+        const providerConfig = config.providers[providerId];
+        if (providerConfig.type?.endsWith('_api') || providerConfig.type === 'openai_compatible') {
+          throw new Error(`route-shadow does not enable API provider ${providerId}`);
+        }
+        const stageSchema = stage === 'triage'
+          ? providerConfig.triage_json_schema_file
+          : providerConfig.routing_json_schema_file;
+        const effective = {
+          ...providerConfig,
+          ...(stage === 'triage' ? { input_mode: 'stdin_json' } : {}),
+          json_schema_file: stageSchema,
+        };
+        if (!effective.json_schema_file) {
+          throw new Error(`${stage} stage requires its configured JSON schema for ${providerId}`);
+        }
+        const provider = createProvider(providerId, effective, config);
+        try {
+          if (stage === 'triage') {
+            return await runTriageRanking({
+              definition,
+              provider,
+              providerId,
+              caseIds,
+              batchSize: profile.triage.batch_size,
+              onProgress(progress) {
+                process.stderr.write(`${JSON.stringify({ event: 'route_shadow_progress', stage, ...progress })}\n`);
+              },
+            });
+          }
+          return await runShadowQualification({
+            definition,
+            provider,
+            providerId,
+            caseIds,
+            providerRuns,
+            taskTransform: addRoutingSignals,
+            onProgress(progress) {
+              process.stderr.write(`${JSON.stringify({ event: 'route_shadow_progress', stage, ...progress })}\n`);
+            },
+          });
+        } finally {
+          provider.close?.();
+        }
+      },
+    });
     output(result, flags.out);
     return;
   }
@@ -347,7 +665,9 @@ async function main() {
     if (!flags.task || !flags.config) throw new Error('route requires --task and --config');
     const task = taskFrom(readJson(flags.task));
     const config = mergeRuntimeState(loadRuntimeConfig(flags.config), readState(target));
-    output(routeTask(task, config), flags.out);
+    output(flags.profile
+      ? routeProfileTask(task, config, flags.profile, { mode: flags.mode || 'individual' })
+      : routeTask(task, config), flags.out);
     return;
   }
   if (command === 'qualify') {

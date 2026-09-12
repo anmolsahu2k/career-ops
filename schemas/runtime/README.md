@@ -4,12 +4,40 @@
 
 `provider-response.v1.schema.json` is the constrained model-facing response shape used by CLI providers that support schema-enforced output.
 
+`application-answer-response.v1.schema.json` and
+`application-salary-response.v1.schema.json` constrain optional, evidence-bound
+application prose and prospective salary preferences. They do not authorize a
+submission. `application-attempt.v1.schema.json` records the deterministic
+state of a gated application attempt, including its tracker number, canonical
+URL, terminal outcome, and receipt references.
+
+`routing-provider-response.v1.schema.json` extends the full A-G judgment shape
+with explicit merits, seniority, compensation, and role-fit contradiction
+signals for bounded escalation without breaking the original response contract.
+
 `local-hardware-qualification.v1.schema.json` records a loopback-only local
 model's deterministic extraction transport, exact-match, latency, and GPU
 residency checks. It never authorizes routing or raises the provider above the
 `EXTRACTION` capability class.
 
 `qualification-batch-response.v1.schema.json` constrains two-to-three-case shadow batches so provider startup context is amortized without combining their scoring records.
+
+`triage-batch-response.v1.schema.json` is the compact, rank-only Flash output
+contract. Its provisional recommendation may detect disagreement but has no
+finalization or write authority.
+
+`pipeline-shadow-run.v1.schema.json` records non-mutating, token-aware triage,
+judgment, and bounded-escalation diagnostics. It stores usage and routing
+metadata only; prompts and evidence content are deliberately excluded.
+
+`pipeline-shadow-checkpoint.v1.schema.json` records digest-bound, immutable
+stage checkpoints for a pipeline shadow. Resume accepts only a deterministic
+completed-stage prefix bound to the same suite, profile, and execution limits.
+
+`historical-evidence-cache.v1.schema.json` and
+`historical-label-audit.v1.schema.json` bind refreshed posting evidence and
+human review records to their exact historical recommendation set. They cannot
+turn model-generated labels into hard-gate truth.
 
 `historical-recommendation-set.v1.schema.json` records human-approved recommendation labels. `prepared-qualification-set.v1.schema.json` binds those labels to redacted, outcome-free provider inputs. Historical recommendation-only sets are deliberately non-promotable until a separate deterministic hard-gate suite is combined with them.
 

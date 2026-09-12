@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://career-ops.local/schemas/runtime/triage-batch-response.v1.schema.json",
+  "title": "Career-Ops Rank-Only Triage Batch V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evaluations"],
+  "properties": {
+    "evaluations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["case_id", "rank_score", "provisional_recommendation", "confidence"],
+        "properties": {
+          "case_id": { "type": "string" },
+          "rank_score": { "type": "number", "minimum": 0, "maximum": 5 },
+          "provisional_recommendation": { "enum": ["APPLY", "CONSIDER", "DO_NOT_APPLY", "REVIEW_REQUIRED"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    }
+  }
+}
