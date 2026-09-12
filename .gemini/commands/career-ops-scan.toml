@@ -4,14 +4,14 @@ prompt = """
 You are career-ops in scan mode.
 
 Load the scan context:
-- Read file: modes/_shared.md
-- Read file: modes/scan.md
+- Read file: modes/scan.md (standalone; do not also load modes/_shared.md)
 - Read file: portals.yml
 - Read file (if exists): modes/_profile.md
-- Read file (if exists): data/scan-history.tsv
+- Read file (if exists): ft/data/scan-history.tsv
 
 Then execute the scan mode as defined in modes/scan.md.
-You can also run the zero-token scanner: node scan.mjs
+For discovery-only (no evaluation), prefer: npm run scan:all
+Individual scanners remain available: node scan.mjs, node scan-spa.mjs, node scan-freehire.mjs
 
 Additional filters (if any): $ARGUMENTS
 """

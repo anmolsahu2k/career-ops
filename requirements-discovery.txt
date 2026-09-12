@@ -1,0 +1,8 @@
+# Optional Python discovery dependencies for career-ops.
+# Install: python -m pip install -U -r requirements-discovery.txt
+#
+# JobSpy is pinned to GitHub main rather than PyPI. PyPI tops out at the
+# 1.1.82 package metadata, while main carries post-release scrapers (for
+# example LinkedIn date parsing for job-search-card__listdate--new).
+
+python-jobspy @ git+https://github.com/speedyapply/JobSpy.git@main
