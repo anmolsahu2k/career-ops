@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://career-ops.local/schemas/runtime/pipeline-shadow-checkpoint.v1.schema.json",
+  "title": "PipelineShadowCheckpointV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "profile_id",
+    "qualification_set_digest",
+    "max_judgments",
+    "max_escalations",
+    "completed_stage",
+    "completed_stages",
+    "runs",
+    "checkpoint_digest"
+  ],
+  "properties": {
+    "schema": { "const": "PipelineShadowCheckpointV1" },
+    "schema_version": { "const": 1 },
+    "profile_id": { "type": "string", "minLength": 1 },
+    "qualification_set_digest": { "type": "string", "minLength": 1 },
+    "max_judgments": { "type": "integer", "minimum": 1, "maximum": 50 },
+    "max_escalations": { "type": "integer", "minimum": 0, "maximum": 50 },
+    "completed_stage": { "enum": ["triage", "judgment", "escalation"] },
+    "completed_stages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": { "enum": ["triage", "judgment", "escalation"] }
+    },
+    "runs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "triage": { "$ref": "#/$defs/stageRun" },
+        "judgment": { "$ref": "#/$defs/stageRun" },
+        "escalation": { "$ref": "#/$defs/stageRun" }
+      }
+    },
+    "checkpoint_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "$defs": {
+    "stageRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider_id", "model_snapshot", "provider_run_count", "provider_call_count", "provider_requests", "results"],
+      "properties": {
+        "provider_id": { "type": "string" },
+        "model_snapshot": { "type": "string" },
+        "provider_run_count": { "type": "integer", "minimum": 0 },
+        "provider_call_count": { "type": "integer", "minimum": 0 },
+        "provider_requests": { "type": "array", "items": { "type": "object" } },
+        "results": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+}

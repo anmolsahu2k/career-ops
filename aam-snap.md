@@ -1,0 +1,817 @@
+- generic [active] [ref=f24e1]:
+  - generic [ref=f24e2]:
+    - banner [ref=f24e3]:
+      - navigation [ref=f24e4]:
+        - link [ref=f24e5] [cursor=pointer]:
+          - /url: /
+        - link "Skip to content" [ref=f24e8] [cursor=pointer]:
+          - /url: "#content"
+        - list [ref=f24e10]:
+          - listitem [ref=f24e11]:
+            - link "Topics" [ref=f24e12] [cursor=pointer]:
+              - /url: https://www.askamanager.org/topics-2
+          - listitem [ref=f24e13]:
+            - link "Archives" [ref=f24e14] [cursor=pointer]:
+              - /url: https://www.askamanager.org/archives
+          - listitem [ref=f24e15]:
+            - link "Ask a Question" [ref=f24e16] [cursor=pointer]:
+              - /url: https://www.askamanager.org/ask-a-question
+          - listitem [ref=f24e17]:
+            - link "Books" [ref=f24e18] [cursor=pointer]:
+              - /url: https://www.askamanager.org/books
+          - listitem [ref=f24e19]:
+            - link "Podcast" [ref=f24e20] [cursor=pointer]:
+              - /url: https://www.askamanager.org/category/podcast
+          - listitem [ref=f24e21]:
+            - link "About" [ref=f24e22] [cursor=pointer]:
+              - /url: https://www.askamanager.org/about
+            - list [ref=f24e23]:
+              - listitem [ref=f24e24]:
+                - link "About" [ref=f24e25] [cursor=pointer]:
+                  - /url: https://www.askamanager.org/about
+              - listitem [ref=f24e26]:
+                - link "What Readers Say" [ref=f24e27] [cursor=pointer]:
+                  - /url: https://www.askamanager.org/what-people-say
+              - listitem [ref=f24e28]:
+                - link "Privacy Policy and Affiliate Disclosures" [ref=f24e29] [cursor=pointer]:
+                  - /url: https://www.askamanager.org/privacy-policy
+          - listitem [ref=f24e30]:
+            - link "Connect" [ref=f24e31] [cursor=pointer]:
+              - /url: https://www.askamanager.org/follow
+          - listitem [ref=f24e32]:
+            - link "Surprise Me!" [ref=f24e33] [cursor=pointer]:
+              - /url: https://www.askamanager.org/?redirect_to=random&cat=-56,-65
+        - generic [ref=f24e34]:
+          - link [ref=f24e36] [cursor=pointer]:
+            - /url: https://www.twitter.com/askamanager
+            - img "twitter" [ref=f24e37]
+          - link [ref=f24e39] [cursor=pointer]:
+            - /url: https://www.facebook.com/askamanager
+            - img "facebook" [ref=f24e40]
+          - link [ref=f24e42] [cursor=pointer]:
+            - /url: https://www.askamanager.org/feed
+            - img "rss" [ref=f24e43]
+          - link [ref=f24e45] [cursor=pointer]:
+            - /url: https://bsky.app/profile/askamanager.org
+            - img "rss" [ref=f24e46]
+    - generic [ref=f24e47]:
+      - main [ref=f24e49]:
+        - article [ref=f24e50]:
+          - generic [ref=f24e51]:
+            - heading "when is it too late to apply to a job opening that’s been posted for a while?" [level=2] [ref=f24e52]
+            - generic [ref=f24e53]: by Alison Green on March 7, 2013
+          - generic [ref=f24e55]:
+            - paragraph [ref=f24e56]: "A reader writes:"
+            - paragraph [ref=f24e57]:
+              - emphasis [ref=f24e58]: How long is the “window” open for a job advertisement? I just started my job search, so when I see a position that the company lists on their website as “open,” but it’s been “open” since January, I’m not sure I should apply to it because it’s been such a long time.
+            - paragraph [ref=f24e59]:
+              - emphasis [ref=f24e60]: What do you think? As I search for jobs, what is a good time frame to keep in mind? Just apply to jobs advertised for two weeks? Three weeks? A month?
+            - paragraph [ref=f24e61]:
+              - emphasis [ref=f24e62]: I just want to make sure I’m not wasting my time!
+            - paragraph [ref=f24e63]: It really depends, and it’s very hard to know from the outside.
+            - paragraph [ref=f24e64]: Sure, it’s possible that they’ve already filled the position and have just neglected to take the ad down. But it’s just as possible that they’re still actively hiring, and you have as much of a chance today as you did the day the ad went up. It’s also possible that it’s somewhere in between, i.e., that they’re in the later portion of the hiring process and are interviewing finalist candidates, but would consider new candidates if they were extremely strong. It’s not something you can tell from the outside.
+            - generic [ref=f24e645]: ···
+            - paragraph [ref=f24e65]: Hiring takes a long time. Some companies don’t even begin reviewing resumes until a month after an ad goes up, or they intend to do it earlier but then the process stalls — someone goes on vacation or is out sick, or a budget question comes up that needs to be resolved before hiring work can move forward, or something higher priority comes up that needs to be worked on before attention can be turned back to hiring, or they thought they had a candidate to hire but it fell through and now they’re starting from scratch, or all kinds of other things.
+            - paragraph [ref=f24e66]: It takes even longer if it’s a hard-to-fill role.
+            - paragraph [ref=f24e67]: You can’t know from the outside what’s going on. You can certainly call and ask if the position is still open if you’re really concerned, but in general, you’re better off assuming that something is still open than assuming that it’s not.
+            - paragraph [ref=f24e68]: If you’re concerned about wasting your time … well, you can’t really avoid that possibility in most job searches. You can never know if your application is going to be looked at or not, or whether the role closed five minutes before you applied, or whether it’s a post intended for someone internal and they’re just going through the motions in posting it publicly. You’re better off making your peace with that and not worrying about it too much.
+            - generic [ref=f24e69]:
+              - heading "You may also like:" [level=5] [ref=f24e70]
+              - list [ref=f24e71]:
+                - listitem [ref=f24e72]:
+                  - link "is it more effective to introduce myself to a company with a cold email rather than apply for a specific opening?" [ref=f24e73] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2018/03/is-it-more-effective-to-introduce-myself-to-a-company-with-a-cold-email-rather-than-apply-for-a-specific-opening.html
+                - listitem [ref=f24e74]:
+                  - link "does it really matter if you apply within the first hour of a job being posted?" [ref=f24e75] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2025/08/does-it-really-matter-if-you-apply-within-the-first-hour-of-a-job-being-posted.html
+                - listitem [ref=f24e76]:
+                  - link "did I push an employer too hard to give me info on a job opening?" [ref=f24e77] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2015/01/did-i-push-an-employer-too-hard-to-give-me-info-on-a-job-opening.html
+          - generic [ref=f24e79]:
+            - text: Posted in
+            - link "job searching" [ref=f24e81] [cursor=pointer]:
+              - /url: https://www.askamanager.org/category/job-searching
+        - navigation [ref=f24e82]:
+          - heading "Post navigation" [level=3] [ref=f24e83]
+          - link "← you don’t need to wear a bra to answer the office phone" [ref=f24e85] [cursor=pointer]:
+            - /url: https://www.askamanager.org/2013/03/you-dont-need-a-bra.html
+          - link "fast answer Friday — 7 short answers to 7 short questions →" [ref=f24e87] [cursor=pointer]:
+            - /url: https://www.askamanager.org/2013/03/fast-answer-friday-7-short-answers-to-7-short-questions-25.html
+        - generic [ref=f24e88]:
+          - 'heading "{ 26 comments… read them below }" [level=2] [ref=f24e89]'
+          - list [ref=f24e90]:
+            - listitem [ref=f24e91]:
+              - article [ref=f24e92]:
+                - generic [ref=f24e93]:
+                  - generic [ref=f24e94]:
+                    - link "Jubilance" [ref=f24e96] [cursor=pointer]:
+                      - /url: http://www.blackgirlunlost.com
+                    - text: "*"
+                    - link [ref=f24e99] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e100] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167387
+                    - time [ref=f24e101]: March 7, 2013 at 4:03 pm
+                - paragraph [ref=f24e103]: For my first 2 “real” jobs, the postings were open for months & they were unable to find a good fit for the role until I came along :-) It’s possible that the postings are open because the hiring manager isn’t finding applicants with the crucial skills needed for the role. Either way, what do you have to lose by applying? You never know.
+              - list [ref=f24e104]:
+                - listitem [ref=f24e105]:
+                  - article [ref=f24e106]:
+                    - generic [ref=f24e107]:
+                      - generic [ref=f24e108]:
+                        - text: College Career Counselor*
+                        - link [ref=f24e111] [cursor=pointer]:
+                          - /url: "#"
+                      - link [ref=f24e112] [cursor=pointer]:
+                        - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167421
+                        - time [ref=f24e113]: March 7, 2013 at 5:01 pm
+                    - paragraph [ref=f24e115]: Hey, if it’s up there, it’s fair game unless there’s a past deadline mentioned in the announcement. But Alison’s right–you don’t really know where they are in their process. I’ve been the early applicant and the late (successful!) applicant. Some industries/fields are more likely to grant leeway on the application (academia is often one) than others, so consider your field.
+                  - list [ref=f24e116]:
+                    - listitem [ref=f24e117]:
+                      - article [ref=f24e118]:
+                        - generic [ref=f24e119]:
+                          - generic [ref=f24e120]:
+                            - text: danr*
+                            - link [ref=f24e123] [cursor=pointer]:
+                              - /url: "#"
+                          - link [ref=f24e124] [cursor=pointer]:
+                            - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167458
+                            - time [ref=f24e125]: March 7, 2013 at 6:00 pm
+                        - paragraph [ref=f24e127]: If the ad is still on the website, it’s still fair game. Apply even if the deadline is past. The ad may still be active, but the date wasn’t changed. The worst that can happen is that you’ll get a response that the ad isn’t active. Or, you may get an interview.
+              - generic [ref=f24e649]: ···
+            - listitem [ref=f24e128]:
+              - article [ref=f24e129]:
+                - generic [ref=f24e130]:
+                  - generic [ref=f24e131]:
+                    - text: E.R*
+                    - link [ref=f24e134] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e135] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167397
+                    - time [ref=f24e136]: March 7, 2013 at 4:21 pm
+                - paragraph [ref=f24e138]: I think the ad was old for my current job. I remember writing something to the effect of “if you’re still looking for a…” because I was worried they may have unintentially left the ad up. They had been interviewing for a while and I came in the last lap and was offered the job the next day. So, if its something you’re interested in , apply!
+            - listitem [ref=f24e139]:
+              - article [ref=f24e140]:
+                - generic [ref=f24e141]:
+                  - generic [ref=f24e142]:
+                    - text: Allison*
+                    - link [ref=f24e145] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e146] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167398
+                    - time [ref=f24e147]: March 7, 2013 at 4:24 pm
+                - paragraph [ref=f24e149]: Jobs sometimes take months to fill, but if it’s been up for a while, chances are the hiring manager is very picky and wants someone with the exact skills and background listed in the ad. Or they haven’t been getting a lot of applicants period, for some reason. So if you really feel like you’re a good fit – and be honest with yourself here – then definitely go for it!
+              - generic [ref=f24e653]: ···
+            - listitem [ref=f24e150]:
+              - article [ref=f24e151]:
+                - generic [ref=f24e152]:
+                  - generic [ref=f24e153]:
+                    - text: Wilton Businessman*
+                    - link [ref=f24e156] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e157] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167410
+                    - time [ref=f24e158]: March 7, 2013 at 4:47 pm
+                - paragraph [ref=f24e160]: If the job is still being advertised, it’s probably still open. Job searching is a numbers game, you get way more rejections than offers.
+            - listitem [ref=f24e161]:
+              - article [ref=f24e162]:
+                - generic [ref=f24e163]:
+                  - generic [ref=f24e164]:
+                    - text: maisie*
+                    - link [ref=f24e167] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e168] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167416
+                    - time [ref=f24e169]: March 7, 2013 at 4:53 pm
+                - paragraph [ref=f24e171]: This is almost as frustrating as jobsites that show how many applicants a position has! When I see “100+ applications” and the job has been posted for a month, I don’t even bother applying. Argh.
+              - list [ref=f24e172]:
+                - listitem [ref=f24e173]:
+                  - article [ref=f24e174]:
+                    - generic [ref=f24e175]:
+                      - generic [ref=f24e176]:
+                        - link "Ask a Manager" [ref=f24e178] [cursor=pointer]:
+                          - /url: http://askamanager.org
+                        - text: "*"
+                        - link [ref=f24e181] [cursor=pointer]:
+                          - /url: "#"
+                      - link [ref=f24e182] [cursor=pointer]:
+                        - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167419
+                        - time [ref=f24e183]: March 7, 2013 at 4:56 pm
+                    - paragraph [ref=f24e185]: You still should! Because out of 100 applications, 75 are usually instant discards. So really only 25 people applied, and some of them won’t make the first cut either.
+                  - list [ref=f24e186]:
+                    - listitem [ref=f24e187]:
+                      - article [ref=f24e188]:
+                        - generic [ref=f24e189]:
+                          - generic [ref=f24e190]:
+                            - text: maisie*
+                            - link [ref=f24e193] [cursor=pointer]:
+                              - /url: "#"
+                          - link [ref=f24e194] [cursor=pointer]:
+                            - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167452
+                            - time [ref=f24e195]: March 7, 2013 at 5:51 pm
+                        - generic [ref=f24e196]:
+                          - paragraph [ref=f24e197]: I’m glad you said this because I did feel like it might be dumb, but I’ve been job searching for 6-7 weeks and feeling frustrated.
+                          - paragraph [ref=f24e198]: I’ve always thought with these “100+” that they probably just take the first 50 (or whatever) and get rid of the rest. I guess it varies by employer/recruiter, but especially when these are nameless/faceless ads on job websites, it can be hard to see the worth in applying. Thanks for the encouragement!
+                      - list [ref=f24e199]:
+                        - listitem [ref=f24e200]:
+                          - article [ref=f24e201]:
+                            - generic [ref=f24e202]:
+                              - generic [ref=f24e203]:
+                                - link "Ask a Manager" [ref=f24e205] [cursor=pointer]:
+                                  - /url: http://askamanager.org
+                                - text: "*"
+                                - link [ref=f24e208] [cursor=pointer]:
+                                  - /url: "#"
+                              - link [ref=f24e209] [cursor=pointer]:
+                                - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167454
+                                - time [ref=f24e210]: March 7, 2013 at 5:53 pm
+                            - generic [ref=f24e211]:
+                              - paragraph [ref=f24e212]:
+                                - text: "If you haven’t already, try the advice in here:"
+                                - link "https://www.askamanager.org/2012/12/if-youre-not-getting-interviews-read-this.html" [ref=f24e213] [cursor=pointer]:
+                                  - /url: https://www.askamanager.org/2012/12/if-youre-not-getting-interviews-read-this.html
+                              - paragraph [ref=f24e214]: But also, 6-7 weeks isn’t a long time in this market, so don’t be discouraged!
+                          - list [ref=f24e215]:
+                            - listitem [ref=f24e216]:
+                              - article [ref=f24e217]:
+                                - generic [ref=f24e218]:
+                                  - generic [ref=f24e219]:
+                                    - text: Tara*
+                                    - link [ref=f24e222] [cursor=pointer]:
+                                      - /url: "#"
+                                  - link [ref=f24e223] [cursor=pointer]:
+                                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167538
+                                    - time [ref=f24e224]: March 7, 2013 at 9:07 pm
+                                - paragraph [ref=f24e226]: Alison, you say 6-7 weeks is not a long time in this market. What’s the average time a job searcher spends hunting, considering they follow your advice?
+                              - list [ref=f24e227]:
+                                - listitem [ref=f24e228]:
+                                  - article [ref=f24e229]:
+                                    - generic [ref=f24e230]:
+                                      - generic [ref=f24e231]:
+                                        - link "Ask a Manager" [ref=f24e233] [cursor=pointer]:
+                                          - /url: http://askamanager.org
+                                        - text: "*"
+                                        - link [ref=f24e236] [cursor=pointer]:
+                                          - /url: "#"
+                                      - link [ref=f24e237] [cursor=pointer]:
+                                        - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167567
+                                        - time [ref=f24e238]: March 7, 2013 at 11:51 pm
+                                    - paragraph [ref=f24e240]: I’d love to know an average, but I don’t think they exist — in part because it’s different depending on your field, your geographic area, your network, and your level of experience. There’s some pretty wide variation.
+                                  - list [ref=f24e241]:
+                                    - listitem [ref=f24e242]:
+                                      - article [ref=f24e243]:
+                                        - generic [ref=f24e244]:
+                                          - generic [ref=f24e245]:
+                                            - text: Anonymous*
+                                            - link [ref=f24e248] [cursor=pointer]:
+                                              - /url: "#"
+                                          - link [ref=f24e249] [cursor=pointer]:
+                                            - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167642
+                                            - time [ref=f24e250]: March 8, 2013 at 9:04 am
+                                        - generic [ref=f24e251]:
+                                          - paragraph [ref=f24e252]: I have a friend and former colleague who says that a decent rule of thumb on the length of time to secure a job is 1 month for every 10k in salary.
+                                          - paragraph [ref=f24e253]: In other words, if you’re looking for a job that pays 10k, you might spend about a month. 50k salary is approximately five months. I have to say, that ratio was pretty much dead-on for my most recent job hunt..
+              - generic [ref=f24e657]: ···
+            - listitem [ref=f24e254]:
+              - article [ref=f24e255]:
+                - generic [ref=f24e256]:
+                  - generic [ref=f24e257]:
+                    - text: nyxalinth*
+                    - link [ref=f24e260] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e261] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167437
+                    - time [ref=f24e262]: March 7, 2013 at 5:37 pm
+                - generic [ref=f24e263]:
+                  - paragraph [ref=f24e264]: It doesn’t hurt to try. Worst that will happen is they’ll ignore your resume. I always send mine off, even if it closes. Who knows if the person they hired might not work out? Worst that will happen is that due to timing I’m not included in their possible options.
+                  - paragraph [ref=f24e265]: In a similar vein, I sent my resume off to a call center on the 25th of last months…and forgot all about them. Today, almost two weeks later, they called me to interview with them tomorrow :) So hiring can indeed take a long time, and some of the bigger, better (YMMV on this) can take ages between stages, much less replying to your resume.
+            - listitem [ref=f24e266]:
+              - article [ref=f24e267]:
+                - generic [ref=f24e268]:
+                  - generic [ref=f24e269]:
+                    - text: Zee*
+                    - link [ref=f24e272] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e273] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167445
+                    - time [ref=f24e274]: March 7, 2013 at 5:46 pm
+                - paragraph [ref=f24e276]: I applied for a position once from a company’s website. There wasn’t any deadline listed, and therefore, I thought it was fair game. Therefore, I applied, and a couple of days later, I received an email saying thank you for your interest but the position has been filled. I kept an eye on the posting; it remained there a couple of weeks afterwards.
+              - list [ref=f24e277]:
+                - listitem [ref=f24e278]:
+                  - article [ref=f24e279]:
+                    - generic [ref=f24e280]:
+                      - generic [ref=f24e281]:
+                        - text: Noah*
+                        - link [ref=f24e284] [cursor=pointer]:
+                          - /url: "#"
+                      - link [ref=f24e285] [cursor=pointer]:
+                        - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167524
+                        - time [ref=f24e286]: March 7, 2013 at 8:35 pm
+                    - paragraph [ref=f24e288]: I dont know where you applied, but where I work our website and applicant tracking system are not connected. So, we have to wait until marketing is notified by HR to update the website. At that point I assume marketing sticks it at the bottom of their priority list and it takes a bit for it to be removed.
+                  - list [ref=f24e289]:
+                    - listitem [ref=f24e290]:
+                      - article [ref=f24e291]:
+                        - generic [ref=f24e292]:
+                          - generic [ref=f24e293]:
+                            - text: Frances*
+                            - link [ref=f24e296] [cursor=pointer]:
+                              - /url: "#"
+                          - link [ref=f24e297] [cursor=pointer]:
+                            - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167577
+                            - time [ref=f24e298]: March 8, 2013 at 12:33 am
+                        - paragraph [ref=f24e300]: Yes, our central HR controls our application system, and they are notoriously slow, particularly if they don’t think a request is urgent. We’ve even had instances where we’ve been told the posting was taken down only to find out from a would be applicant several weeks later that it was still visible. So if the employer is particularly large, that might be part of the issue.
+              - generic [ref=f24e661]: ···
+            - listitem [ref=f24e301]:
+              - article [ref=f24e302]:
+                - generic [ref=f24e303]:
+                  - generic [ref=f24e304]:
+                    - text: Jeff*
+                    - link [ref=f24e307] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e308] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167449
+                    - time [ref=f24e309]: March 7, 2013 at 5:47 pm
+                - generic [ref=f24e310]:
+                  - paragraph [ref=f24e311]: I applied to a social networking site that will remain nameless and received a call to interview… 2 1/2 months later. From an employer standpoint, I wish we could include disclaimers on all job postings to educate/ease applicant nerves.
+                  - paragraph [ref=f24e312]: "Disclaimer: The time frame for when the applicant would like to receive a response versus the time frame for the hiring manager to review and take action on this job may vary. Snacks are available for purchase in the lobby."
+              - list [ref=f24e313]:
+                - listitem [ref=f24e314]:
+                  - article [ref=f24e315]:
+                    - generic [ref=f24e316]:
+                      - generic [ref=f24e317]:
+                        - text: danr*
+                        - link [ref=f24e320] [cursor=pointer]:
+                          - /url: "#"
+                      - link [ref=f24e321] [cursor=pointer]:
+                        - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167464
+                        - time [ref=f24e322]: March 7, 2013 at 6:04 pm
+                    - paragraph [ref=f24e324]: I’d love to see this… But, no peanut snacks please.
+              - generic [ref=f24e665]: ···
+            - listitem [ref=f24e325]:
+              - article [ref=f24e326]:
+                - generic [ref=f24e327]:
+                  - generic [ref=f24e328]:
+                    - text: Rob Bird*
+                    - link [ref=f24e331] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e332] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167451
+                    - time [ref=f24e333]: March 7, 2013 at 5:51 pm
+                - generic [ref=f24e334]:
+                  - paragraph [ref=f24e335]: When it closes. You just never know what’s going on until you apply.
+                  - paragraph [ref=f24e336]: You could call them to be sure that it’s still open, but aside from that I would apply.
+            - listitem [ref=f24e337]:
+              - article [ref=f24e338]:
+                - generic [ref=f24e339]:
+                  - generic [ref=f24e340]:
+                    - text: Stephanie*
+                    - link [ref=f24e343] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e344] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167521
+                    - time [ref=f24e345]: March 7, 2013 at 8:29 pm
+                - paragraph [ref=f24e347]: This is helpful information. Thanks Alison. I guess I especially struggle with sites like Indeed and other industry-specific aggregators. They leave these jobs up beyond when the original site has pulled them down. Frustrating!
+            - listitem [ref=f24e348]:
+              - article [ref=f24e349]:
+                - generic [ref=f24e350]:
+                  - generic [ref=f24e351]:
+                    - text: Noah*
+                    - link [ref=f24e354] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e355] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167527
+                    - time [ref=f24e356]: March 7, 2013 at 8:38 pm
+                - paragraph [ref=f24e358]: I’ve been interviewing applicants for the same position for three months. At the moment we are able to cover without overtime, but I want an extra person so we can cover vacations or if someone leaves without too much stress. This has allowed me to be more selective.
+              - generic [ref=f24e669]: ···
+            - listitem [ref=f24e359]:
+              - article [ref=f24e360]:
+                - generic [ref=f24e361]:
+                  - generic [ref=f24e362]:
+                    - text: Sydney Bristow*
+                    - link [ref=f24e365] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e366] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167560
+                    - time [ref=f24e367]: March 7, 2013 at 11:29 pm
+                - paragraph [ref=f24e369]: Thank you for this! I’ve been psyching myself out of applying for postings that were more than a week old or something like a LinkedIn posting that already had over 100 applications. I’m not sure why those were the limits I had in my head, but it is helpful to know that many times it takes way longer and that it could be worth it to apply anyway. Worst case, I suppose it gives me additional experience editing my cover letter and resume so its in even better form for the job I eventually find.
+            - listitem [ref=f24e370]:
+              - article [ref=f24e371]:
+                - generic [ref=f24e372]:
+                  - generic [ref=f24e373]:
+                    - text: Jen in RO*
+                    - link [ref=f24e376] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e377] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167578
+                    - time [ref=f24e378]: March 8, 2013 at 12:38 am
+                - generic [ref=f24e379]:
+                  - paragraph [ref=f24e380]: "Background: several people have left from my team since Sept. 2010 and since then we’ve been trying to replace at least one of them. I don’t have exact numbers, but I think over 100 candidates applied to our job posting. The vast majority were rejected at the resume stage, 20-30 got to the written test part and we interviewed less than 10 (the others failed the test). Out of those 10, 2 or 3 made it to the final interview with my manager."
+                  - paragraph [ref=f24e381]: In the meantime, there has been a long hiring freeze and then a long process of getting the position reapproved. We do have a candidate we’d like to hire – if we do, it would be almost a year after her first interview! This might be an extreme situation and it’s frustrating as hell for us too, but it does happen. Corporate hiring policies screw everyone over, not just the candidates.
+              - generic [ref=f24e673]: ···
+            - listitem [ref=f24e382]:
+              - article [ref=f24e383]:
+                - generic [ref=f24e384]:
+                  - generic [ref=f24e385]:
+                    - text: Editor*
+                    - link [ref=f24e388] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e389] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167783
+                    - time [ref=f24e390]: March 8, 2013 at 11:32 am
+                - generic [ref=f24e391]:
+                  - paragraph [ref=f24e392]: If the job posting is way too old, it may not be on the corporate site, even if it is listed elsewhere. So you could apply to anything on the corporate site, but don’t get excited by an ad somewhere else until you can get to the original ad.
+                  - paragraph [ref=f24e393]: I just unsubscribed to a job alert I was getting from a newspaper classified section. The emails in the last month come in, I click on the link and it sends me to Beyond, then I look at the corporate site and the ad is gone, or at some earlier point I get a “Sorry, it looks like the job you’re applying for isn’t here any more.” Yeah, your software sucks and your setup is click bait.
+                  - paragraph [ref=f24e394]: I once had to trace a job listing through an aggregation website (Indeed) to a newspaper site to another aggregator (I think it was Yahoo) to a professional association website to a Linked In tie-in to the original ad. I prefer an ad with a direct connection to the hiring site instead of all this coy stuff that takes multiple websites to get to.
+              - generic [ref=f24e677]: ···
+            - listitem [ref=f24e395]:
+              - article [ref=f24e396]:
+                - generic [ref=f24e397]:
+                  - generic [ref=f24e398]:
+                    - text: Elizabeth West*
+                    - link [ref=f24e401] [cursor=pointer]:
+                      - /url: "#"
+                  - link [ref=f24e402] [cursor=pointer]:
+                    - /url: https://www.askamanager.org/2013/03/when-is-it-too-late-to-apply-to-a-job-opening-thats-been-posted-for-a-while.html#comment-167861
+                    - time [ref=f24e403]: March 8, 2013 at 1:25 pm
+                - paragraph [ref=f24e405]: I got an interview once this way–I didn’t get the job, but the hiring manager and I had a nice talk. It’s possible to get face time with them late in their process, and even if they don’t hire you, they might remember you next time something comes up. It’s worth a shot. :)
+          - paragraph [ref=f24e406]: Comments are closed.
+        - navigation [ref=f24e407]:
+          - heading "Post navigation" [level=3] [ref=f24e408]
+          - link "← you don’t need to wear a bra to answer the office phone" [ref=f24e410] [cursor=pointer]:
+            - /url: https://www.askamanager.org/2013/03/you-dont-need-a-bra.html
+          - link "fast answer Friday — 7 short answers to 7 short questions →" [ref=f24e412] [cursor=pointer]:
+            - /url: https://www.askamanager.org/2013/03/fast-answer-friday-7-short-answers-to-7-short-questions-25.html
+      - complementary [ref=f24e413]:
+        - complementary [ref=f24e414]:
+          - heading "Search" [level=3] [ref=f24e415]
+          - search [ref=f24e416]:
+            - generic [ref=f24e417]:
+              - generic [ref=f24e418]: "Search for:"
+              - searchbox "Search for:" [ref=f24e419]
+            - button "Search" [ref=f24e420] [cursor=pointer]
+        - complementary [ref=f24e421]:
+          - heading "Recent Posts" [level=3] [ref=f24e422]
+          - list [ref=f24e423]:
+            - listitem [ref=f24e424]:
+              - link "my mom’s job relies on her too much, coworker sends me AI slop, and more" [ref=f24e425] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/my-moms-job-relies-on-her-too-much-coworker-sends-me-ai-slop-and-more.html
+            - listitem [ref=f24e426]:
+              - link "if a job says it’s hybrid, can I ask how firm that requirement is?" [ref=f24e427] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/if-a-job-says-its-hybrid-can-i-ask-how-firm-that-requirement-is.html
+            - listitem [ref=f24e428]:
+              - link "how can I be more patient with a frustrating employee?" [ref=f24e429] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/how-can-i-be-more-patient-with-a-frustrating-employee.html
+            - listitem [ref=f24e430]:
+              - link "I overreacted to some feedback about my personality" [ref=f24e431] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/i-overreacted-to-some-feedback-about-my-personality.html
+            - listitem [ref=f24e432]:
+              - link "asked for feminine hygiene supplies in front of a male coworker, getting out of lunch with a colleague, and more" [ref=f24e433] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/asked-for-feminine-hygiene-supplies-in-front-of-a-male-coworker-getting-out-of-lunch-with-a-colleague-and-more.html
+            - listitem [ref=f24e434]:
+              - link "weekend open thread – July 18-19, 2026" [ref=f24e435] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/weekend-open-thread-july-18-19-2026.html
+            - listitem [ref=f24e436]:
+              - link "open thread – July 17, 2026" [ref=f24e437] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/open-thread-july-17-2026.html
+            - listitem [ref=f24e438]:
+              - link "coworker is making me uncomfortable, internet age-verification requirements at work, and more" [ref=f24e439] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/coworker-is-making-me-uncomfortable-internet-age-verification-requirements-at-work-and-more.html
+            - listitem [ref=f24e440]:
+              - link "how soon can you tell if someone isn’t cut out for the job?" [ref=f24e441] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/how-soon-can-you-tell-if-someone-isnt-cut-out-for-the-job.html
+            - listitem [ref=f24e442]:
+              - link "new tags!" [ref=f24e443] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/new-tags.html
+            - listitem [ref=f24e444]:
+              - link "times you should have stopped reading something … but didn’t" [ref=f24e445] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/times-you-should-have-stopped-reading-something-but-didnt.html
+            - listitem [ref=f24e446]:
+              - link "toxic employee can’t be managed, boss thinks my timecards are too consistent, and more" [ref=f24e447] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/toxic-employee-cant-be-managed-boss-thinks-my-timecards-are-too-consistent-and-more.html
+            - listitem [ref=f24e448]:
+              - link "my boss thinks I’m overly delicate about my health" [ref=f24e449] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/my-boss-thinks-im-overly-delicate-about-my-health.html
+            - listitem [ref=f24e450]:
+              - 'link "updates: the fist-bumping boss, the internship mishap, and more" [ref=f24e451] [cursor=pointer]':
+                - /url: https://www.askamanager.org/2026/07/updates-the-fist-bumping-boss-the-internship-mishap-and-more.html
+            - listitem [ref=f24e452]:
+              - link "as a manager, how can I stop saying “we” when I mean “you”?" [ref=f24e453] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/as-a-manager-how-can-i-stop-saying-we-when-i-mean-you.html
+            - listitem [ref=f24e454]:
+              - link "including my cats in my business messaging, talking to an employee’s mother while they’re on medical leave, and more" [ref=f24e455] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/including-my-cats-in-my-business-messaging-talking-to-an-employees-mother-while-theyre-on-medical-leave-and-more.html
+            - listitem [ref=f24e456]:
+              - link "working remotely didn’t prove everyone can work remotely all the time" [ref=f24e457] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/working-remotely-didnt-prove-everyone-can-work-remotely-all-the-time.html
+            - listitem [ref=f24e458]:
+              - link "how do I warn a hothead I’m on the verge of firing him?" [ref=f24e459] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/how-do-i-warn-a-hothead-im-on-the-verge-of-firing-him.html
+            - listitem [ref=f24e460]:
+              - link "the coworker training me for my new job is incredibly negative (and not really training me)" [ref=f24e461] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/the-coworker-training-me-for-my-new-job-is-incredibly-negative-and-not-really-training-me.html
+            - listitem [ref=f24e462]:
+              - link "we complained about our boss but nothing changed, I don’t want to buy my boss a gift, and more" [ref=f24e463] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/we-complained-about-our-boss-but-nothing-changed-i-dont-want-to-buy-my-boss-a-gift-and-more.html
+            - listitem [ref=f24e464]:
+              - link "employee parked in parking lot outside of work hours — and it’s costing us money" [ref=f24e465] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/employee-parked-in-parking-lot-outside-of-work-hours-and-its-costing-us-money.html
+            - listitem [ref=f24e466]:
+              - link "someone sent us racy photos of our employee" [ref=f24e467] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/someone-sent-us-racy-photos-of-our-employee.html
+            - listitem [ref=f24e468]:
+              - link "do I have to move an employee to a job he’s not qualified for or give him a pay cut?" [ref=f24e469] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/do-i-have-to-move-an-employee-to-a-job-hes-not-qualified-for-or-give-him-a-pay-cut.html
+            - listitem [ref=f24e470]:
+              - link "coworkers stopped talking to me after I mentioned my wife, should I hug my coworker goodbye, and more" [ref=f24e471] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/coworkers-stopped-talking-to-me-after-i-mentioned-my-wife-should-i-hug-my-coworker-goodbye-and-more.html
+            - listitem [ref=f24e472]:
+              - link "weekend open thread – July 11-12, 2026" [ref=f24e473] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/weekend-open-thread-june-13-14-2026-2.html
+            - listitem [ref=f24e474]:
+              - link "open thread – July 10, 2026" [ref=f24e475] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/open-thread-june-12-2026-2.html
+            - listitem [ref=f24e476]:
+              - link "co-op student is now our manager, do executives never get real time off, and more" [ref=f24e477] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/co-op-student-is-now-our-manager-do-executives-never-get-real-time-off-and-more.html
+            - listitem [ref=f24e478]:
+              - link "what info should an employer share with the parents of teenage employees?" [ref=f24e479] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/what-info-should-an-employee-share-with-the-parents-of-teenage-employees.html
+            - listitem [ref=f24e480]:
+              - 'link "updates: the hovering coworker, the late class aide, and more" [ref=f24e481] [cursor=pointer]':
+                - /url: https://www.askamanager.org/2026/07/updates-the-hovering-coworker-the-late-class-aide-and-more.html
+            - listitem [ref=f24e482]:
+              - link "let’s talk about your mortifying moments at work" [ref=f24e483] [cursor=pointer]:
+                - /url: https://www.askamanager.org/2026/07/lets-talk-about-your-mortifying-moments-at-work-5.html
+        - complementary [ref=f24e484]:
+          - link [ref=f24e486] [cursor=pointer]:
+            - /url: https://www.askamanager.org/?redirect_to=random&cat=-56,-65
+            - paragraph [ref=f24e487]:
+              - strong [ref=f24e488]: show me a random post
+        - complementary [ref=f24e489]:
+          - heading "Advertisement" [level=3] [ref=f24e490]
+        - generic [ref=f24e684]:
+          - text: ···
+          - img "Ad Info" [ref=f24e706] [cursor=pointer]
+        - complementary [ref=f24e491]:
+          - generic [ref=f24e492]:
+            - heading "Get my books" [level=3] [ref=f24e493]
+            - generic [ref=f24e494]:
+              - link [ref=f24e496] [cursor=pointer]:
+                - /url: http://amzn.to/2BY7ytW
+                - 'img "Ask a Manager: How to Navigate Clueless Colleagues, Lunch-stealing Bosses, and the Rest of Your Life at Work by Alison Green" [ref=f24e497]'
+              - link [ref=f24e499] [cursor=pointer]:
+                - /url: https://www.askamanager.org/how-to-get-job-e-book
+                - 'img "How to Get a Job: Secrets of a Hiring Manager by Alison Green" [ref=f24e500]'
+              - link [ref=f24e502] [cursor=pointer]:
+                - /url: https://www.askamanager.org/how-to-guide
+                - 'img "Free Guide: How to Prepare For an Interview by Alison Green" [ref=f24e503]'
+              - link [ref=f24e505] [cursor=pointer]:
+                - /url: https://www.askamanager.org/my-book
+                - img "Managing to Change the World by Alison Green and Jerry Hauser" [ref=f24e506]
+            - separator [ref=f24e507]
+            - link [ref=f24e509] [cursor=pointer]:
+              - /url: https://www.askamanager.org/sign-up-for-updates
+              - img "Sign Up For Email Updates" [ref=f24e510]
+        - complementary [ref=f24e511]:
+          - heading "Categories" [level=3] [ref=f24e512]
+          - list [ref=f24e513]:
+            - listitem [ref=f24e514]:
+              - link "advice about your boss" [ref=f24e515] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/advice-about-your-boss
+              - text: (1,066)
+            - listitem [ref=f24e516]:
+              - link "advice about your coworkers" [ref=f24e517] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/advice-about-your-coworkers
+              - text: (1,281)
+            - listitem [ref=f24e518]:
+              - link "AI at work" [ref=f24e519] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/ai-at-work
+              - text: (27)
+            - listitem [ref=f24e520]:
+              - link "ask the readers" [ref=f24e521] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/ask-the-readers
+              - text: (715)
+            - listitem [ref=f24e522]:
+              - link "bad advice" [ref=f24e523] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/bad-advice
+              - text: (73)
+            - listitem [ref=f24e524]:
+              - link "bad interviewer behavior" [ref=f24e525] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/bad-interviewer-behavior
+              - text: (82)
+            - listitem [ref=f24e526]:
+              - link "being the boss" [ref=f24e527] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/being-the-boss
+              - text: (1,259)
+            - listitem [ref=f24e528]:
+              - link "cover letters" [ref=f24e529] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/cover-letters
+              - text: (74)
+            - listitem [ref=f24e530]:
+              - link "external recruiters" [ref=f24e531] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/external-recruiters
+              - text: (26)
+            - listitem [ref=f24e532]:
+              - link "family, friends & significant others" [ref=f24e533] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/family-friends-significant-others
+              - text: (299)
+            - listitem [ref=f24e534]:
+              - link "firing" [ref=f24e535] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/firing
+              - text: (144)
+            - listitem [ref=f24e536]:
+              - link "freelancing" [ref=f24e537] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/freelancing
+              - text: (44)
+            - listitem [ref=f24e538]:
+              - link "good news" [ref=f24e539] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/good-news
+              - text: (193)
+            - listitem [ref=f24e540]:
+              - link "happy endings" [ref=f24e541] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/happy-endings
+              - text: (71)
+            - listitem [ref=f24e542]:
+              - link "hiring" [ref=f24e543] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/hiring
+              - text: (303)
+            - listitem [ref=f24e544]:
+              - link "interesting jobs" [ref=f24e545] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/miscellaneous/interesting-jobs
+              - text: (24)
+            - listitem [ref=f24e546]:
+              - link "internships" [ref=f24e547] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/internships
+              - text: (89)
+            - listitem [ref=f24e548]:
+              - link "interviewing" [ref=f24e549] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/interviewing
+              - text: (584)
+            - listitem [ref=f24e550]:
+              - link "jerks" [ref=f24e551] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/jerks
+              - text: (221)
+            - listitem [ref=f24e552]:
+              - link "job offers" [ref=f24e553] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/job-offers
+              - text: (160)
+            - listitem [ref=f24e554]:
+              - link "job searching" [ref=f24e555] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/job-searching
+              - text: (643)
+            - listitem [ref=f24e556]:
+              - link "law + order" [ref=f24e557] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/law-order
+              - text: (249)
+            - listitem [ref=f24e558]:
+              - link "layoffs" [ref=f24e559] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/layoffs
+              - text: (52)
+            - listitem [ref=f24e560]:
+              - link "me, media, etc." [ref=f24e561] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/me-media-etc
+              - text: (113)
+            - listitem [ref=f24e562]:
+              - link "miscellaneous" [ref=f24e563] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/miscellaneous
+              - text: (467)
+            - listitem [ref=f24e564]:
+              - link "mortification" [ref=f24e565] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/mortification
+              - text: (60)
+            - listitem [ref=f24e566]:
+              - link "networking" [ref=f24e567] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/networking
+              - text: (128)
+            - listitem [ref=f24e568]:
+              - link "new grads" [ref=f24e569] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/new-grads
+              - text: (44)
+            - listitem [ref=f24e570]:
+              - link "open threads" [ref=f24e571] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/open-threads
+              - text: (1,357)
+            - listitem [ref=f24e572]:
+              - link "phone interviews" [ref=f24e573] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/phone-interviews
+              - text: (27)
+            - listitem [ref=f24e574]:
+              - link "podcast" [ref=f24e575] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/podcast
+              - text: (60)
+            - listitem [ref=f24e576]:
+              - link "references" [ref=f24e577] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/references
+              - text: (131)
+            - listitem [ref=f24e578]:
+              - link "rejections" [ref=f24e579] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/rejections
+              - text: (112)
+            - listitem [ref=f24e580]:
+              - link "resigning" [ref=f24e581] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/resigning
+              - text: (206)
+            - listitem [ref=f24e582]:
+              - link "resumes" [ref=f24e583] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/resumes
+              - text: (137)
+            - listitem [ref=f24e584]:
+              - link "sagas" [ref=f24e585] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/sagas
+              - text: (236)
+            - listitem [ref=f24e586]:
+              - link "salary" [ref=f24e587] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/salary
+              - text: (335)
+            - listitem [ref=f24e588]:
+              - link "short answers" [ref=f24e589] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/short-answers
+              - text: (3,873)
+            - listitem [ref=f24e590]:
+              - link "sponsors" [ref=f24e591] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/sponsors
+              - text: (47)
+            - listitem [ref=f24e592]:
+              - link "students" [ref=f24e593] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/students
+              - text: (46)
+            - listitem [ref=f24e594]:
+              - link "thank-you notes" [ref=f24e595] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/thank-you-notes
+              - text: (22)
+            - listitem [ref=f24e596]:
+              - link "the plague" [ref=f24e597] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/the-plague
+              - text: (96)
+            - listitem [ref=f24e598]:
+              - link "unemployment" [ref=f24e599] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/unemployment
+              - text: (16)
+            - listitem [ref=f24e600]:
+              - link "updates" [ref=f24e601] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/updates
+              - text: (1,685)
+            - listitem [ref=f24e602]:
+              - link "volunteering" [ref=f24e603] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/volunteering
+              - text: (29)
+            - listitem [ref=f24e604]:
+              - link "wait, what?!" [ref=f24e605] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/wait-what
+              - text: (196)
+            - listitem [ref=f24e606]:
+              - link "work habits" [ref=f24e607] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/work-habits
+              - text: (640)
+            - listitem [ref=f24e608]:
+              - link "workplace practices" [ref=f24e609] [cursor=pointer]:
+                - /url: https://www.askamanager.org/category/workplace-practices
+              - text: (1,239)
+        - complementary [ref=f24e610]:
+          - heading "Advertisement" [level=3] [ref=f24e611]
+        - complementary [ref=f24e612]:
+          - paragraph [ref=f24e614] [cursor=pointer]: Collapse/Expand all threaded comments
+        - complementary [ref=f24e615]:
+          - generic [ref=f24e617]:
+            - link [ref=f24e618] [cursor=pointer]:
+              - /url: https://www.askamanager.org/ask-a-question
+              - img "Ask a Question" [ref=f24e619]
+            - link [ref=f24e620] [cursor=pointer]:
+              - /url: https://www.askamanager.org/how-to-comment
+              - img "How to Comment" [ref=f24e621]
+            - link [ref=f24e622] [cursor=pointer]:
+              - /url: https://www.askamanager.org/favorite-posts
+              - img "My Favorite Posts" [ref=f24e623]
+    - contentinfo [ref=f24e624]:
+      - generic [ref=f24e625]:
+        - paragraph [ref=f24e626]:
+          - link "Ask a Manager" [ref=f24e627] [cursor=pointer]:
+            - /url: https://www.askamanager.org
+        - generic [ref=f24e628]:
+          - link [ref=f24e630] [cursor=pointer]:
+            - /url: https://www.twitter.com/askamanager
+            - img "twitter" [ref=f24e631]
+          - link [ref=f24e633] [cursor=pointer]:
+            - /url: https://www.facebook.com/askamanager
+            - img "facebook" [ref=f24e634]
+          - link [ref=f24e636] [cursor=pointer]:
+            - /url: https://www.askamanager.org/feed
+            - img "rss" [ref=f24e637]
+          - link [ref=f24e639] [cursor=pointer]:
+            - /url: https://bsky.app/profile/askamanager.org
+            - img "rss" [ref=f24e640]
+      - paragraph [ref=f24e641]:
+        - link "^ Back to top" [ref=f24e642] [cursor=pointer]:
+          - /url: "#page"
+      - paragraph [ref=f24e643]:
+        - text: Copyright © 2007 - 2026 Ask A Manager. All rights reserved.
+        - link "Privacy Policy and Affiliate Disclosures" [ref=f24e644] [cursor=pointer]:
+          - /url: https://www.askamanager.org/privacy-policy
+  - text:   
+  - generic [ref=f24e707]:
+    - iframe [ref=f24e710]:
+      
+    - generic [ref=f24e711]:
+      - generic [ref=f24e712] [cursor=pointer]:
+        - button "Close ad":
+          - img "Close ad"
+      - img "Ad Info" [ref=f24e714] [cursor=pointer]

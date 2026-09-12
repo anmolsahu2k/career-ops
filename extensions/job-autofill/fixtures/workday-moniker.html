@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fixture: Workday moniker search box</title>
+  <!--
+    Workday's skills and field-of-study prompts are NOT filter-as-you-type
+    menus. This reproduces the three behaviours that made the real widget look
+    like an empty taxonomy on the Exelixis tenant:
+
+      1. typing alone queries nothing, so no options ever render;
+      2. the search runs only when Enter is submitted from the input;
+      3. the magnifier button blurs the input first, and the blur handler wipes
+         the text, so a click-to-search reaches the backend with an empty term.
+
+    An option commits on pointer events, not on a bare .click(), which is what
+    filler.fireMouse exists for.
+  -->
+  <style>
+    body { font: 15px/1.6 -apple-system, sans-serif; max-width: 640px; margin: 30px auto; padding: 0 16px; }
+    .menu { border: 1px solid #ccc; margin-top: 4px; }
+    [data-automation-id="promptOption"] { padding: 6px 8px; cursor: pointer; }
+    [data-automation-id="promptOption"]:hover { background: #eee; }
+    input { padding: 7px; font: inherit; width: 300px; }
+    #selected { margin-top: 16px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Fixture: Workday moniker search box</h1>
+
+  <div data-automation-id="multiSelectContainer">
+    <div data-automation-id="multiselectInputContainer">
+      <input id="skills--skills" placeholder="Search" autocomplete="off">
+      <button data-automation-id="promptSearchButton" type="button">search</button>
+    </div>
+    <div class="menu" id="menu"></div>
+  </div>
+
+  <div id="selected">selected: (none)</div>
+
+<script>
+  // A stand-in taxonomy. The real endpoint is /cxs/common/{tenant}/skillsearch,
+  // which answers ?search= and returns [] for any other parameter name.
+  const TAXONOMY = [
+    'Python (Programming Language)', 'Python IDLE', 'Maya Python',
+    'Java (Programming Language)', 'JavaScript', 'Structured Query Language (SQL)',
+    'PyTorch', 'Machine Learning (ML)', 'Deep Learning',
+  ];
+
+  const input = document.getElementById('skills--skills');
+  const menu = document.getElementById('menu');
+  const selected = [];
+
+  function runSearch(term) {
+    menu.innerHTML = '';
+    const hits = term
+      ? TAXONOMY.filter(s => s.toLowerCase().includes(term.toLowerCase()))
+      : [];
+    // Workday renders an explicit empty state rather than an empty menu, which
+    // is exactly what an unsubmitted search looks like.
+    if (!hits.length) {
+      const none = document.createElement('div');
+      none.setAttribute('data-automation-id', 'promptLeafNode');
+      none.textContent = 'No Items.';
+      menu.appendChild(none);
+      return;
+    }
+    for (const hit of hits) {
+      const opt = document.createElement('div');
+      opt.setAttribute('data-automation-id', 'promptOption');
+      opt.setAttribute('role', 'option');
+      opt.id = 'promptOption-' + hit.replace(/\W+/g, '-').toLowerCase();
+      opt.textContent = hit;
+      // Commits on mousedown, the way the real prompt does. A bare .click()
+      // from an automation script never reaches this.
+      opt.addEventListener('mousedown', () => {
+        selected.push(hit);
+        document.getElementById('selected').textContent = 'selected: ' + selected.join(', ');
+        menu.innerHTML = '';
+      });
+      menu.appendChild(opt);
+    }
+  }
+
+  // Typing does NOT search. This is the whole trap.
+  input.addEventListener('input', () => {});
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') runSearch(input.value.trim());
+  });
+
+  // The magnifier blurs first, so by the time the search runs the field is
+  // empty and the query goes out blank.
+  document.querySelector('[data-automation-id="promptSearchButton"]')
+    .addEventListener('click', () => {
+      input.value = '';
+      runSearch('');
+    });
+
+  window.__selected = selected;
+</script>
+</body>
+</html>

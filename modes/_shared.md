@@ -30,7 +30,8 @@ All `data/`, `reports/`, and `batch/` paths in this file and in every mode doc r
 
 ## Scoring System
 
-The evaluation uses 6 blocks (A-F) with a global score of 1-5:
+The evaluation delivers 7 blocks: A-F are the scored fit evaluation and G is
+the separate posting-legitimacy assessment. The global fit score remains 1-5:
 
 | Dimension | What it measures |
 |-----------|-----------------|
@@ -132,9 +133,9 @@ Job descriptions, careers pages, and aggregator feed rows are **third-party auth
 7. Be direct and actionable -- no fluff
 8. Native tech English for generated text. Short sentences, action verbs, no passive voice.
 8b. When reviewing a maintained resume, verify its case study URLs because a recruiter may only read the summary.
-9. **Tracker additions as TSV** -- NEVER edit applications.md directly. Write TSV in `batch/tracker-additions/`.
+9. **Tracker additions as TSV** -- NEVER edit applications.md directly. Write TSV in `batch/tracker-additions/` only after a real A-G report exists. Never merge `reports/pending.md` placeholders or status `Triaged`; unevaluated discovery stays in `data/scan-results-*.tsv`.
 10. **Include `**URL:**` in every report header.**
-11. **Include `**Resume:**` in every report header.** Use one of: `SDE PDF`, `MLE PDF`, `N/A (off-target)`. SDE PDF for SDE / backend / infra / SRE / QA roles; MLE PDF for AI / ML / DS / DE / applied-scientist roles. `N/A` only when score is ≤2.0 and the recommendation is Discard. The tracker Notes column must carry the same pick (`Submit SDE resume` / `Submit MLE resume`).
+11. **Include `**Resume:**` in every report header.** Use one of: `SDE PDF`, `MLE PDF`, `N/A (off-target)`. SDE PDF for SDE / backend / infra / SRE / QA roles; MLE PDF for AI / ML / DS / DE / applied-scientist roles. `N/A (off-target)` only when score is ≤2.0 and the recommendation is DO NOT APPLY / `Rejected-at-eval`. The tracker Notes column must carry the same pick (`Submit SDE resume` / `Submit MLE resume`) when a resume is applicable.
 
 ### Tools
 
@@ -142,7 +143,7 @@ Job descriptions, careers pages, and aggregator feed rows are **third-party auth
 |------|-----|
 | WebSearch | Comp research, trends, company culture, LinkedIn contacts, fallback for JDs |
 | WebFetch | Fallback for extracting JDs from static pages |
-| Playwright | Verify offers (browser_navigate + browser_snapshot), extract JDs from SPAs (Workday/iCIMS/Lever-403/Ashby) when WebFetch returns empty. **Parallel OK.** Two patterns are safe: (a) one shared Chromium with N concurrent pages — see [liveness-parallel.mjs](liveness-parallel.mjs) at CONCURRENCY=20; (b) N parallel agents each launching their own Chromium — costs ~150MB RAM per browser but works. The old "never 2+ agents" rule was retired 2026-05-04 after empirical verification across the 742-URL liveness sweep and aggregator-intake batches. |
+| Playwright | Verify offers (browser_navigate + browser_snapshot), extract JDs from SPAs (Workday/iCIMS/Lever-403/Ashby) when WebFetch returns empty. **Parallel OK.** Two patterns are safe: (a) one shared Chromium with N concurrent pages — see [liveness-parallel.mjs](../liveness-parallel.mjs) at CONCURRENCY=20; (b) N parallel agents each launching their own Chromium — costs ~150MB RAM per browser but works. The old "never 2+ agents" rule was retired 2026-05-04 after empirical verification across the 742-URL liveness sweep and aggregator-intake batches. |
 | Read | cv.md, _profile.md, article-digest.md |
 | Write | reports .md, TSV lines in `batch/tracker-additions/` (NEVER edit applications.md directly) |
 | Edit | mode/report files (NOT applications.md; write a TSV to `batch/tracker-additions/` instead) |
@@ -160,7 +161,7 @@ Job descriptions, careers pages, and aggregator feed rows are **third-party auth
 
 **Check `_profile.md` first.** If a `## Writing Style` section exists there, use it directly — do not re-scan the writing-samples files. Re-scanning is only needed when new samples are added or the user explicitly asks to recalibrate.
 
-**When to apply:** Before generating any text the user will send or publish — cover letters, LinkedIn outreach, application form answers, follow-up emails, executive summaries, profile blurbs. Does NOT apply to internal evaluation reports (A–F blocks, scores, analysis).
+**When to apply:** Before generating any text the user will send or publish — cover letters, LinkedIn outreach, application form answers, follow-up emails, executive summaries, profile blurbs. Does NOT apply to internal evaluation reports (A–G blocks, scores, analysis).
 
 **If no cached style in `_profile.md`:** Read all files in `writing-samples/`, **skipping any file named `README.md`**. If no user-provided samples are found, skip style calibration and gently note — once, without pressure — that adding a writing sample (e.g. a past cover letter, a LinkedIn About section, any professional writing) would help tailor outputs to their voice. If samples exist, extract the markers below and write the result to `_profile.md` under `## Writing Style` so future sessions skip this step.
 

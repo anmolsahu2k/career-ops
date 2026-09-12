@@ -47,7 +47,7 @@ Follow-up Cadence Dashboard — {date}
 Use visual indicators:
 - **URGENT** — respond within 24 hours (company replied)
 - **OVERDUE** — follow-up is past due
-- **waiting (X days)** — on track, follow-up scheduled
+- **waiting (X days)** — on track, follow-up due after the stated interval; no reminder is scheduled automatically
 - **COLD** — 2+ follow-ups sent, suggest closing
 
 ## Step 3 — Generate Follow-up Drafts
@@ -116,7 +116,7 @@ Do NOT generate another follow-up. Instead suggest:
 Follow-ups, thank-you notes, and nudges are candidate-facing text the user will send under their own name. They inherit every hard rule in `CLAUDE.md` and `modes/_shared.md`, and add one of their own:
 
 1. **No new claims.** See the rule above. Before sending a draft, name (to yourself) the submitted artifact each claim came from. If a claim has no source, cut it. The archived posting at `reports/{company-slug}/{NN}-{role-slug}-jd.md` (written at apply time) is the reference for what the role actually asked for; the report's Block B match is the reference for what was offered against it.
-2. **No visa, OPT, H-1B, or sponsorship content** (CLAUDE.md Rule 3). If asked about start date, "Available January 2027." Nothing more.
+2. **No visa, OPT, H-1B, or sponsorship content** (CAREER_OPS.md). Do not volunteer a start date; if the workflow explicitly asks for one, use the current value from the user's profile and nothing more.
 3. **No em-dashes or en-dashes** (CLAUDE.md Rule 1). Run the scrub pass before presenting.
 4. **No internal jargon** — no `on_site`, `remote_us`, archetype names, block letters, or scores leak into a message.
 5. **Draft only, never send.** This mode produces text for the user. It never emails, messages, or submits. It must not be wired to a tool that does.

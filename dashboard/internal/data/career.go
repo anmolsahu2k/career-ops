@@ -456,6 +456,7 @@ func ComputeMetrics(apps []model.CareerApplication) model.PipelineMetrics {
 			m.WithPDF++
 		}
 		if status != "skip" && status != "rejected" && status != "discarded" {
+		if status != "skip" && status != "rejected" && status != "discarded" && status != "purged" {
 			m.Actionable++
 		}
 	}
@@ -493,6 +494,8 @@ func NormalizeStatus(raw string) string {
 		return "responded"
 	case strings.Contains(s, "applied") || strings.Contains(s, "aplicado") || s == "enviada" || s == "aplicada" || s == "sent":
 		return "applied"
+	case strings.Contains(s, "purged") || s == "purge" || strings.Contains(s, "auto-discarded") || strings.Contains(s, "age-purged") || strings.Contains(s, "liveness-purged"):
+		return "purged"
 	case strings.Contains(s, "rejected") || strings.Contains(s, "rechazado") || s == "rechazada":
 		return "rejected"
 	case strings.Contains(s, "discarded") || strings.Contains(s, "descartado") || s == "descartada" || s == "cerrada" || s == "cancelada" ||
@@ -806,6 +809,7 @@ func ComputeProgressMetrics(apps []model.CareerApplication) model.ProgressMetric
 			pm.TotalOffers++
 		}
 		if norm != "skip" && norm != "rejected" && norm != "discarded" {
+		if norm != "skip" && norm != "rejected" && norm != "discarded" && norm != "purged" {
 			pm.ActiveApps++
 		}
 	}

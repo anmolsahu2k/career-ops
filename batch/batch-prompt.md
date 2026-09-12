@@ -1,10 +1,16 @@
-# career-ops Batch Worker — Full Evaluation + PDF + Tracker Line
+# Legacy career-ops Batch Worker — Full Evaluation + Tracker Line
 
-You are a job posting evaluation worker for the candidate (read name from config/profile.yml). You receive a posting (URL + JD text) and produce:
+> Compatibility prompt only. The active batch path is the provider-free runtime
+> (`node bin/career-ops.mjs batch --manifest ...`) or Codex workers described in
+> `modes/batch.md`. This prompt is consumed only when
+> `CAREER_OPS_RUNTIME=legacy`; that shell branch is root-archive oriented,
+> requires Bash and `claude`, and does not implement the current `ft/` resolver.
 
-1. Full A-G evaluation (report .md)
-2. Tailored ATS-optimized PDF
-3. Tracker line for later merge
+You are a legacy job-posting evaluation worker for the candidate (read the name
+from `config/profile.yml`). You receive a posting (URL + JD text) and produce:
+
+1. Full A-G evaluation (report `.md`)
+2. A tracker line for later merge
 
 **IMPORTANT**: This prompt is self-contained. You have EVERYTHING you need here. You do not depend on any other skill or system.
 
@@ -18,8 +24,6 @@ You are a job posting evaluation worker for the candidate (read name from config
 | llms.txt | `llms.txt (if exists)` | ALWAYS |
 | article-digest.md | `article-digest.md (project root)` | ALWAYS (proof points) |
 | i18n.ts | `i18n.ts (if exists, optional)` | Interviews/deep only |
-| cv-template.html | `templates/cv-template.html` | For PDF |
-| generate-pdf.mjs | `generate-pdf.mjs` | For PDF |
 
 **RULE: NEVER write to cv.md or i18n.ts.** They are read-only.
 **RULE: NEVER hardcode metrics.** Read them from cv.md + article-digest.md at the time.
@@ -176,10 +180,13 @@ Analyze posting signals to assess whether this is a real, active opening.
 
 Save the full evaluation to:
 ```
-ft/reports/{company-slug}/{{REPORT_NUM}}-{role-slug}-{{DATE}}.md
+reports/{company-slug}/{{REPORT_NUM}}-{role-slug}-{{DATE}}.md
 ```
 
-Where `{company-slug}` is the company name in lowercase, no spaces, hyphenated. All `reports/`, `data/` and `batch/` paths resolve under `$CAREER_OPS_DATA_DIR` (default `ft/`).
+Where `{company-slug}` is the company name in lowercase, no spaces, hyphenated.
+The legacy shell runner writes to the repository-root `reports/`, `data/`, and
+`batch/` paths. The active runtime resolves equivalent paths under `ft/` by
+default.
 
 **Report format:**
 
@@ -192,7 +199,6 @@ Where `{company-slug}` is the company name in lowercase, no spaces, hyphenated. 
 **Legitimacy:** {High Confidence | Proceed with Caution | Suspicious}
 **URL:** {URL of the original posting}
 **Resume:** {SDE PDF | MLE PDF | N/A}
-**PDF:** N/A (user submits own resume PDF from resumes/)
 **Batch ID:** {{ID}}
 
 ---
@@ -238,7 +244,7 @@ JD keyword extraction is still useful for the report's "Extracted keywords" bloc
 
 Write one TSV line to:
 ```
-ft/batch/tracker-additions/{{ID}}.tsv
+batch/tracker-additions/{{ID}}.tsv
 ```
 
 TSV format (a single line, no header, 9 tab-separated columns):
@@ -279,7 +285,7 @@ When finished, print a JSON summary to stdout for the orchestrator to parse:
   "role": "{role}",
   "score": {score_num},
   "legitimacy": "{High Confidence|Proceed with Caution|Suspicious}",
-  "pdf": "{pdf_path}",
+  "pdf": null,
   "report": "{report_path}",
   "error": null
 }

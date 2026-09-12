@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fixture: Workday file upload and split date</title>
+  <!--
+    Two things the extension used to leave entirely to the user:
+
+      1. the resume input, which the README called impossible to fill;
+      2. a date split across three boxes whose accessible names are "Month",
+         "Day" and "Year" — no question of their own, so filling them
+         individually also taught the answer bank three junk keys.
+
+    Ids and automation ids are the shapes observed on a live Workday tenant.
+  -->
+</head>
+<body>
+  <h1>Fixture: Workday upload + split date</h1>
+
+  <div data-automation-id="resumeSection">
+    <label for="resume-upload">Resume/CV *</label>
+    <input type="file" id="resume-upload" data-automation-id="file-upload-input-ref">
+    <button data-automation-id="delete-file" type="button" hidden>delete</button>
+    <div id="uploadState">no file</div>
+  </div>
+
+  <fieldset id="startDateGroup">
+    <legend>What is your desired start date?</legend>
+    <input id="primaryQuestionnaire--q1-dateSectionMonth-input" aria-label="Month" placeholder="MM">
+    <input id="primaryQuestionnaire--q1-dateSectionDay-input" aria-label="Day" placeholder="DD">
+    <input id="primaryQuestionnaire--q1-dateSectionYear-input" aria-label="Year" placeholder="YYYY">
+  </fieldset>
+
+  <fieldset id="signatureGroup">
+    <legend>Date</legend>
+    <input id="selfIdentifiedDisabilityData--dateSignedOn-dateSectionMonth-input" aria-label="Month">
+    <input id="selfIdentifiedDisabilityData--dateSignedOn-dateSectionDay-input" aria-label="Day">
+    <input id="selfIdentifiedDisabilityData--dateSignedOn-dateSectionYear-input" aria-label="Year">
+  </fieldset>
+
+<script>
+  const input = document.getElementById('resume-upload');
+  input.addEventListener('change', () => {
+    const f = input.files?.[0];
+    document.getElementById('uploadState').textContent = f ? `uploaded: ${f.name} (${f.size}B)` : 'no file';
+    document.querySelector('[data-automation-id="delete-file"]').hidden = !f;
+  });
+</script>
+</body>
+</html>

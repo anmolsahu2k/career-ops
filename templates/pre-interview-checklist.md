@@ -70,7 +70,7 @@ The morning of an actual interview, run this 20-minute warm-up:
 1. **5 minutes:** review the company's recent eng blog posts (last 6 months). Skim the architecture pieces. You want one fresh reference to drop if asked.
 2. **5 minutes:** re-read the relevant story from `career-ops/templates/5ws-storytelling.md` for the role match. Speak the deep-dive Q and A pairs out loud.
 3. **5 minutes:** one easy LeetCode warm-up (Easy tier, problem you have solved before). Goal is finger-warming, not learning.
-4. **5 minutes:** review the company's eval report (`career-ops/reports/{NN}-{slug}-{date}.md`) Block A and Block B. You want the JD-to-CV mapping fresh.
+4. **5 minutes:** review the company's eval report (`ft/reports/{company-slug}/{NN}-{slug}-{date}.md` by default) Block A and Block B. You want the JD-to-CV mapping fresh.
 
 Do NOT cram the morning of. Cramming raises cortisol and tanks recall. The 14-day rotation above is the actual prep; the day-of warm-up is just unsticking.
 

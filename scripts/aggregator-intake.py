@@ -7,27 +7,18 @@ Pulls public GitHub READMEs that maintain markdown-table summer 2026
 internship listings, parses the tables, dedupes by URL (intra-batch AND
 against existing tracker rows), drops off-season postings (Fall 2026 /
 Spring 2027 / Summer 2027 / Winter), filters for target-role internships
-in the US (or remote, including India remote), and emits one TSV row per
-kept listing to
-  career-ops/batch/tracker-additions/{NNN}-{slug}-aggregator.tsv
+in the US (or remote, including India remote), and emits one triage row
+per kept listing to
+  data/scan-results-{YYYY-MM-DD}.tsv
 
-NNN allocation is dynamic: starts at max(applications.md NN, existing
-batch/tracker-additions/*.tsv NN, 100) + 1. This avoids collisions with
-the 138-row tracker that already spans NN 1-257.
-
-Output TSV is 9 tab-separated columns matching the merge-tracker.mjs
-contract (status BEFORE score; merge-tracker handles the column swap when
-writing into applications.md):
-  num\tdate\tcompany\trole\tstatus\tscore\tpdf\treport\tnotes
+Unevaluated discovery stays in that scan-results handoff. Only a completed
+A-G evaluation may write a mergeable tracker-additions TSV and land in
+applications.md. Never emit reports/pending.md tracker placeholders.
 
 Hard rules respected:
   - No em-dashes or en-dashes anywhere in emitted text.
   - No CV PDFs, no F-1/CPT explainer text.
-  - Status uses canonical "Evaluated" from templates/states.yml.
-  - Score is "0.0/5" (placeholder; means "not yet scored").
-  - PDF emoji is the cross mark (no eval yet).
-  - Report link points at reports/pending.md (a real file, satisfies
-    verify-pipeline.mjs's existence check).
+  - No tracker row until a real eval report exists.
 
 Usage:
   python3 career-ops/scripts/aggregator-intake.py [--limit N] [--dry-run]
@@ -365,49 +356,23 @@ def harvest_table(rows, source_name):
 
 def write_tsv(num, date, company, role, notes_url, source, age_days, dry_run,
               sponsorship=None, citizen_only=False, extras=None):
-    slug = slugify(company)
-    fname = f"{num:03d}-{slug}-aggregator.tsv"
-    path = BATCH_DIR / fname
-
-    age_blurb = f"Posted {age_days}d ago. " if age_days is not None else "Age unknown. "
-    sponsor_blurb = ""
-    if sponsorship is True:
-        sponsor_blurb = "VISA-SPONSORSHIP: yes. "
-    elif sponsorship is False:
-        sponsor_blurb = "VISA-SPONSORSHIP: no (per source). "
+    """Append a triage scan-results row (never a tracker placeholder)."""
+    merged_extras = dict(extras or {})
     if citizen_only:
-        sponsor_blurb += "CITIZEN-ONLY: yes (per source). "
-    extras_blurb = ""
-    if extras:
-        parts = [f"{k}: {v}" for k, v in extras.items() if v not in (None, "")]
-        if parts:
-            extras_blurb = "; ".join(parts) + ". "
-    notes = (
-        f"Aggregator discovery via {source}. {age_blurb}{sponsor_blurb}{extras_blurb}URL: {notes_url}. "
-        "Not yet evaluated; promote to per-role eval before applying."
+        merged_extras["CITIZEN-ONLY"] = "yes"
+    return df.emit_tsv(
+        num=num,
+        date=date,
+        company=company,
+        role=role,
+        url=notes_url,
+        source=source,
+        age_days=age_days,
+        suffix="aggregator",
+        sponsorship=sponsorship,
+        extras=merged_extras or None,
+        dry_run=dry_run,
     )
-    notes = EM_DASH_RE.sub(",", notes)  # safety net
-
-    cols = [
-        str(num),
-        date,
-        company,
-        role,
-        "Evaluated",  # canonical status (means: discovery row, pending eval)
-        "0.0/5",
-        "❌",  # cross mark, no eval yet
-        "[%03d](reports/pending.md)" % num,
-        notes,
-    ]
-    line = "\t".join(cols) + "\n"
-
-    if dry_run:
-        return path, line
-
-    BATCH_DIR.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(line)
-    return path, line
 
 
 def main(argv=None):
@@ -576,9 +541,9 @@ def main(argv=None):
         novel = novel[: args.limit]
         print(f"  = {len(novel)} after --limit", file=sys.stderr)
 
-    # Emit TSVs with dynamic NN starting after the highest existing number.
+    # Emit triage rows into scan-results (no tracker placeholders).
     start_nn = next_available_nn()
-    print(f"  NN allocation starts at {start_nn} (max existing + 1)", file=sys.stderr)
+    print(f"  triage handoff (legacy NN counter starts at {start_nn})", file=sys.stderr)
     written = []
     for offset, entry in enumerate(novel):
         num = start_nn + offset
@@ -609,11 +574,12 @@ def main(argv=None):
         written.append((path, entry))
 
     if args.dry_run:
-        print(f"\n[dry-run] would write {len(written)} TSV files", file=sys.stderr)
+        print(f"\n[dry-run] would append {len(written)} triage rows", file=sys.stderr)
         for path, entry in written[:10]:
             print(f"  -> {path.name}: {entry['company']} | {entry['role']}", file=sys.stderr)
     else:
-        print(f"\nwrote {len(written)} TSV files to {BATCH_DIR}", file=sys.stderr)
+        out = written[0][0] if written else DATA_DIR
+        print(f"\nwrote {len(written)} triage rows to {out}", file=sys.stderr)
 
     # Write run log
     log_path = LOG_DIR / f"aggregator-intake-{today}.md"

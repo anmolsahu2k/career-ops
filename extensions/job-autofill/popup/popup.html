@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      width: 260px; margin: 0; padding: 14px;
+      font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    h1 { font-size: 13px; margin: 0 0 10px; font-weight: 600; }
+    #status { margin-bottom: 10px; color: #555; }
+    @media (prefers-color-scheme: dark) { #status { color: #aaa; } }
+    button {
+      width: 100%; padding: 8px; border-radius: 6px; cursor: pointer;
+      border: 1px solid #c9c9c9; background: #f7f7f7; font-size: 13px; margin-bottom: 6px;
+    }
+    button:hover:not(:disabled) { background: #ececec; }
+    button:disabled { opacity: .5; cursor: default; }
+    #primary { background: #2e9e4f; border-color: #2e9e4f; color: #fff; font-weight: 600; }
+    #primary:hover:not(:disabled) { background: #278542; }
+    #result { margin-top: 8px; font-size: 12px; }
+    #autoRow { display: flex; align-items: flex-start; gap: 6px; margin-top: 10px; font-size: 12px; }
+    #autoRow input { width: auto; margin: 2px 0 0; }
+    #autoHint { color: #777; font-size: 11px; margin: 2px 0 0 20px; }
+    @media (prefers-color-scheme: dark) { #autoHint { color: #999; } }
+    .ok { color: #17632f; } .warn { color: #8a5a00; } .err { color: #a12626; }
+    a { display: block; margin-top: 10px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Job Autofill</h1>
+  <div id="status">Checking page…</div>
+  <button id="primary" disabled>Fill this page</button>
+  <button id="inject" hidden>Inject on this page</button>
+  <div id="result"></div>
+  <label id="autoRow">
+    <input type="checkbox" id="autoFill"> Fill automatically when a form opens
+  </label>
+  <div id="autoHint">Applies from the next page load.</div>
+  <button id="diag">Copy page diagnostics</button>
+  <a href="#" id="openOptions">Review saved answers</a>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { advanceLifecycle, aggregateQualificationResults, composeQualificationEvidence, qualifyModel, wilsonInterval } from '../lib/runtime/qualification.mjs';
-import { effectiveReserveRatio, routeTask } from '../lib/runtime/router.mjs';
+import { effectiveReserveRatio, routeProfileTask, routeTask } from '../lib/runtime/router.mjs';
 import { makeTask, NOW } from './runtime-fixtures.mjs';
 import { createProvider } from '../lib/runtime/providers/index.mjs';
 import { allowedEnvironment, resolveSchemaPath } from '../lib/runtime/providers/command.mjs';
@@ -161,6 +161,31 @@ test('unknown or reserved quota fails closed', () => {
   assert.equal(reserve.reason, 'QUOTA_UNAVAILABLE');
 });
 
+test('profile routing skips Flash for individual jobs and preserves live eligibility gates', () => {
+  const task = makeTask();
+  const runtime = {
+    providers: {
+      flash: provider({ capability_class: 'STANDARD' }),
+      luna: provider(),
+      sol: provider(),
+    },
+    resource_pools: pools,
+    routing_profiles: {
+      'career-ops-job-v1': {
+        triage: { provider: 'flash', authority: 'RANK_ONLY' },
+        judgment: { provider: 'luna', authority: 'ADVISORY_FULL_A_G' },
+        escalation: { provider: 'sol', authority: 'ADVISORY_REVIEW' },
+      },
+    },
+  };
+  const individual = routeProfileTask(task, runtime, 'career-ops-job-v1', { mode: 'individual', now: NOW });
+  assert.equal(individual.triage_skipped, true);
+  assert.deepEqual(individual.stages.map(item => item.provider_id), ['luna', 'sol']);
+  runtime.providers.luna.enabled = false;
+  const blocked = routeProfileTask(task, runtime, 'career-ops-job-v1', { mode: 'individual', now: NOW });
+  assert.equal(blocked.stages[0].route.result, 'NO_ELIGIBLE_PROVIDER');
+});
+
 test('adaptive reserve rises when quota burn is ahead of the reset window', () => {
   const reserve = effectiveReserveRatio({
     remaining_ratio: 0.35, minimum_reserve_ratio: 0.2, adaptive_reserve_enabled: true,
@@ -309,8 +334,10 @@ test('command adapter conservatively records Codex total-token stderr', async ()
     capability_class: 'STANDARD', execution_surface: 'test',
   }, {});
   const raw = await adapter.complete({ instruction: 'test', task: { task_id: 'task-codex-usage' }, evidence: [] });
-  assert.equal(raw.usage.input_tokens, 14435);
+  assert.equal(raw.usage.input_tokens, 0);
   assert.equal(raw.usage.output_tokens, 0);
+  assert.equal(raw.usage.total_tokens, 14435);
+  assert.equal(raw.usage.measurement_quality, 'REPORTED_TOTAL_ONLY');
 });
 
 test('shadow suite expands deterministically and records metrics without raw responses', async () => {
@@ -368,6 +395,10 @@ test('shadow suite batches independent case metrics across fewer provider runs',
   assert.equal(run.results.length, 3);
   assert.equal(run.results.every(item => item.completed), true);
   assert.equal(run.metrics.token_use, 15);
+  assert.equal(run.provider_requests.length, 1);
+  assert.equal(run.provider_requests[0].usage.total_tokens, 45);
+  assert.equal(run.provider_requests[0].request, 'INITIAL');
+  assert.equal(run.provider_requests[0].response, undefined);
 });
 
 test('shadow suite can target unique challenge case IDs without evaluating neighbors', async () => {

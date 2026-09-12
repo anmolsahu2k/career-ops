@@ -6,19 +6,23 @@ Scans configured job portals, filters by title relevance, and **evaluates every 
 
 > **HARD OVERRIDE for Anmol's workspace (CLAUDE.md Rule 7):** Scan and evaluation can run together OR separately. There is no `data/pipeline.md` triage inbox. After `scan.mjs` writes `ft/data/scan-results-{YYYY-MM-DD}.tsv`, the skill workflow has two valid completion modes: **(default, inline)** immediately evaluate every row through auto-pipeline (parallel agents) and DELETE the TSV before returning; **(scan-only mode, when invoked as `/career-ops scan scan-only`)** stop after the title-level filter, report counts, and leave the TSV on disk for a later invocation to consume. In split mode, the next `/career-ops` invocation MUST detect any pre-existing `ft/data/scan-results-*.tsv` files and run the inline-evaluation pass against them before doing anything else; that pass is what deletes the TSV. The scan workflow is not complete until every candidate has either an eval report or an explicit drop reason logged in `ft/data/scan-history.tsv`. The Spanish "pipeline.md / Pendientes" steps below are SUPERSEDED. Read them as historical/upstream context only.
 
-> **Note (v1.5+):** The default scanner (`scan.mjs` / `npm run scan`) is **zero-token** and only queries the public Greenhouse, Ashby, and Lever APIs directly. The Playwright/WebSearch levels described below are the **agent** flow (executed by Claude/Codex), not what `scan.mjs` does. If a company has no Greenhouse/Ashby/Lever API, `scan.mjs` will ignore it; for those cases the agent must manually complete Level 1 (Playwright) or Level 3 (WebSearch).
+> **Note:** The default single-board scanner (`scan.mjs` / `npm run scan`) is **zero-token** and directly handles public Greenhouse, Ashby, Lever, and Workday APIs plus configured JSON and sitemap feeds. Prefer `npm run scan:all` when the user wants every active discovery source in one pass. The Playwright/WebSearch levels described below are the **agent** flow (executed by Claude/Codex), not what `scan.mjs` / `scan-all.mjs` do. Companies without one of the supported direct sources are handled through `scan-spa.mjs`, an enabled feed, or explicit agent discovery.
 
 ## Sources (FT pivot, 2026-06-08)
 
 A full `/career-ops scan` runs each ACTIVE source below. All write into `$CAREER_OPS_DATA_DIR` (default `ft/`). Run in order; each appends candidates to `ft/data/scan-results-{date}.tsv`.
 
+**Manual discovery-only shortcut:** `npm run scan:all` (or `node scan-all.mjs`) runs every ACTIVE source below except H1BGrader enrichment, with zero LLM tokens and no evaluation. Use `--dry-run`, `--skip adzuna,hiringcafe`, or `--only scan,spa,freehire` as needed.
+
+**Manual end-to-end (no agent chat):** after `scan:all`, run `npm run evaluate` to plan, then `npm run evaluate -- --config config/runtime.local.yml --provider antigravity-gemini-flash-high --acknowledge-quota --apply` to commit. See [docs/SCRIPTS.md](../docs/SCRIPTS.md#manual-workflow-no-agent) and [README.md](../README.md#manual-workflow-no-agent).
+
 | Source | Command | Notes |
 |--------|---------|-------|
-| ATS APIs (Greenhouse/Ashby/Lever/BambooHR/Teamtailor/Workday) | `node scan.mjs` | Zero-token HTTP+JSON |
+| ATS APIs (Greenhouse/Ashby/Lever/Workday) | `node scan.mjs` | Zero-token HTTP+JSON |
 | SPA / Cloudflare boards (Workable, custom careers) | `node scan-spa.mjs` | Shared-Chromium Playwright |
 | freehire.me (~50 ATS platforms, public JSON API) | `node scan-freehire.mjs` | Zero-token HTTP+JSON. Best-effort third party (no SLA); an outage degrades this source only. `FREEHIRE_API_URL` points at a self-hosted instance. |
 | GitHub aggregators (8 new-grad / H-1B repos) | `python3 scripts/aggregator-intake.py` | Captures sponsorship emojis: VISA-SPONSORSHIP vs CITIZEN-ONLY |
-| JobSpy (Indeed / LinkedIn / ZipRecruiter / Glassdoor) | `python3 scripts/jobspy-ingest.py` | JobSpy 1.1.82 installed |
+| JobSpy (Indeed / LinkedIn / ZipRecruiter / Glassdoor) | `python3 scripts/jobspy-ingest.py` | Install from GitHub main via `requirements-discovery.txt` (ahead of PyPI 1.1.82) |
 | Adzuna | `python3 scripts/adzuna-ingest.py` | Keys in gitignored `.env` or process env; writes `jd_snippet:` |
 | Hiring Cafe | `python3 scripts/hiringcafe-ingest.py` | Needs FlareSolverr on `localhost:8191` |
 | HN "Who is hiring" | `python3 scripts/hn-hiring-ingest.py` | Monthly thread parse |
@@ -41,7 +45,15 @@ which only generates search URLs for the user to click.
 
 ## Recommended execution
 
-Run as a subagent to avoid consuming main-session context:
+**Discovery-only (manual, zero tokens):** run `npm run scan:all` (or
+`node scan-all.mjs`). That orchestrates every ACTIVE source in the table above
+except H1BGrader enrichment. It does not evaluate, merge, or delete handoff
+files. Prefer this when the user asks to scan all sources without evaluating.
+
+**Full skill scan (discovery + optional inline eval):** run as a subagent to
+avoid consuming main-session context. Prefer `npm run scan:all` for the
+discovery phase instead of invoking each Node/Python scanner separately, then
+continue with the liveness gate and evaluation pass below.
 
 ```
 Agent(
@@ -77,17 +89,17 @@ For companies with a public API or structured feed, use the JSON/XML response as
 **Current support (variables in `{}`):**
 - **Greenhouse**: `https://boards-api.greenhouse.io/v1/boards/{company}/jobs`
 - **Ashby**: `https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams`
-- **BambooHR**: list `https://{company}.bamboohr.com/careers/list`; single-posting detail `https://{company}.bamboohr.com/careers/{id}/detail`
 - **Lever**: `https://api.lever.co/v0/postings/{company}?mode=json`
-- **Teamtailor**: `https://{company}.teamtailor.com/jobs.rss`
 - **Workday**: `https://{company}.{shard}.myworkdayjobs.com/wday/cxs/{company}/{site}/jobs`
+
+BambooHR and Teamtailor URL patterns may appear in historical configuration or
+third-party research, but `scan.mjs` does not parse them. Treat those sources as
+manual/agent work only after confirming the current page and feed contract.
 
 **Parsing convention per provider:**
 - `greenhouse`: `jobs[]` → `title`, `absolute_url`
 - `ashby`: GraphQL `ApiJobBoardWithTeams` with `organizationHostedJobsPageName={company}` → `jobBoard.jobPostings[]` (`title`, `id`; build the public URL if it is not in the payload)
-- `bamboohr`: list `result[]` → `jobOpeningName`, `id`; build the detail URL `https://{company}.bamboohr.com/careers/{id}/detail`; to read the full JD, GET the detail and use `result.jobOpening` (`jobOpeningName`, `description`, `datePosted`, `minimumExperience`, `compensation`, `jobOpeningShareUrl`)
 - `lever`: root array `[]` → `text`, `hostedUrl` (fallback: `applyUrl`)
-- `teamtailor`: RSS items → `title`, `link`
 - `workday`: `jobPostings[]`/`jobPostings` (depending on tenant) → `title`, `externalPath` or a URL built from the host
 
 ### Level 3 — WebSearch queries (BROAD DISCOVERY)
@@ -120,15 +132,14 @@ The levels are additive — all of them run, and the results are merged and dedu
 5. **Level 2 — ATS APIs / feeds** (parallel):
    For each company in `tracked_companies` with `api:` defined and `enabled: true`:
    a. WebFetch the API/feed URL
-   b. If `api_provider` is defined, use its parser; if not defined, infer from the domain (`boards-api.greenhouse.io`, `jobs.ashbyhq.com`, `api.lever.co`, `*.bamboohr.com`, `*.teamtailor.com`, `*.myworkdayjobs.com`)
+   b. If `api_provider` is defined, use its parser; if not defined, infer from the supported domains (`boards-api.greenhouse.io`, `jobs.ashbyhq.com`, `api.lever.co`, `*.myworkdayjobs.com`)
    c. For **Ashby**, send a POST with:
       - `operationName: ApiJobBoardWithTeams`
       - `variables.organizationHostedJobsPageName: {company}`
       - GraphQL query for `jobBoardWithTeams` + `jobPostings { id title locationName employmentType compensationTierSummary }`
-   d. For **BambooHR**, the list only carries basic metadata. For each relevant item, read `id`, GET `https://{company}.bamboohr.com/careers/{id}/detail`, and extract the full JD from `result.jobOpening`. Use `jobOpeningShareUrl` as the public URL if present; otherwise use the detail URL.
-   e. For **Workday**, send a JSON POST with at least `{"appliedFacets":{},"limit":20,"offset":0,"searchText":""}` and paginate by `offset` until results are exhausted
-   f. For each job extract and normalize: `{title, url, company}`
-   g. Accumulate into the candidate list (dedup against Level 1)
+   d. For **Workday**, send a JSON POST with at least `{"appliedFacets":{},"limit":20,"offset":0,"searchText":""}` and paginate by `offset` until results are exhausted
+   e. For each job extract and normalize: `{title, url, company}`
+   f. Accumulate into the candidate list (dedup against Level 1)
 
 6. **Level 3 — WebSearch queries** (parallel if possible):
    For each query in `search_queries` with `enabled: true`:
@@ -173,6 +184,8 @@ The levels are additive — all of them run, and the results are merged and dedu
 
 12. **Evaluation pass — REQUIRED in default mode, SKIPPED in `scan-only` mode:**
     > **Mode check.** If invoked as `/career-ops scan scan-only` (or any equivalent split-mode flag the user passed), STOP here: report `{date}.tsv` row count + which company/role buckets, surface the TSV path, and exit. Do NOT dispatch eval agents and do NOT delete the TSV. Otherwise continue with steps a-h below to complete inline evaluation.
+    >
+    > **Single-command alternative:** when a provider-backed runtime config is available, `npm run evaluate -- --config config/runtime.local.yml --provider <id> --acknowledge-quota --apply` (or `node bin/career-ops.mjs evaluate ...`) runs the same triage pass deterministically: liveness → JD fetch → prepare/respond/commit. Prefer that for unattended evaluation; keep the agent path below when you need interactive review or no eligible provider is configured.
     a. Read `ft/data/scan-results-{date}.tsv`, the list of N new candidates with title-level filter applied. (In split-mode resume, also pick up any older `ft/data/scan-results-*.tsv` files left from prior scan-only invocations and process them in the same pass.)
     b. Apply a second title-level filter to drop obvious non-targets (intern/co-op/apprentice — the FT search targets new-grad full-time only — plus sales/GTM/marketing/HR/legal/finance/senior/staff/principal/non-target geo) without writing per-URL eval reports. Log dropped rows in `scan-history.tsv` with status `skipped_filter` and a one-line reason.
     c. **Liveness gate (MANDATORY HARD GATE, no eval agent may be dispatched until this has run and every expired URL is dropped).** Run `npm run liveness:bulk -- /tmp/scan-urls.txt /tmp/scan-liveness.tsv` over the surviving URLs (zero Claude tokens, ~2-5 min for hundreds of URLs at CONCURRENCY=20). For results classified `expired` (HTTP 404/410, "no longer available", nav-error, JS-only empty page): drop the URL with `scan-history.tsv` status `skipped_expired` and **do NOT dispatch an eval agent**. For results `uncertain` (typically iCIMS/Workday SPAs whose apply iframe didn't render): keep the URL but flag the resulting tracker row with `LIVENESS-UNCERTAIN {date}.` prefix in the Notes column. This typically saves 25-35% of agent compute by short-circuiting dead URLs before WebFetch retries blow time on them. Empirical baseline (2026-05-04): 742 URLs → 530 active, 157 expired, 55 uncertain in 212s wall time.
@@ -180,21 +193,24 @@ The levels are additive — all of them run, and the results are merged and dedu
 
        **JD-snippet shortcut (Adzuna and other API-aggregator sources).** If the candidate row's Notes column carries a `jd_snippet:` field (the source API's ~500-char description, written at ingest time by `scripts/adzuna-ingest.py` and other adapters), use the snippet as the primary JD source for scoring. Adzuna in particular rate-limits the detail-page URL (`adzuna.com/details/{id}`) when N parallel eval agents WebFetch it simultaneously → HTTP 429 → eval falls back to title-only and flags `JD-FETCH-UNCERTAIN`. The snippet is sufficient for A-F scoring; WebFetch only if the snippet is empty or the role looks borderline and you want fuller context. Never fail the eval on 429: the snippet is the authoritative summary.
     e. Pre-allocate sequential `NN` numbers from `max(ft/data/applications.md ID, ft/reports/ NN prefix) + 1`. Read the FT tracker and `ft/reports/`, NOT the frozen intern archive at the repo root.
-    f. After all agents complete, merge `ft/batch/tracker-additions/*.tsv` into `ft/data/applications.md` and run `node verify-pipeline.mjs` for schema integrity.
+    f. After all agents complete, merge `ft/batch/tracker-additions/*.tsv` into `ft/data/applications.md` and run `node verify-pipeline.mjs` for schema integrity. If the ignored local runtime configuration explicitly enables `applications.auto_after_scan`, invoke `career-ops apply after-scan --config config/runtime.local.yml --tracker-numbers <only rows committed by this scan> --apply` after verification. This is the sole post-scan authorization handoff; scan-only runs never invoke it.
     g. Delete `ft/data/scan-results-{date}.tsv` (transient, consumed).
     h. The scan is complete only when every row in the original TSV has either an eval report (Evaluated/SKIP), a `skipped_filter` log line, or a `skipped_expired` log line.
 
-### Liveness gate cheat sheet (post-aggregator and post-merge)
+### Liveness gate cheat sheet (post-discovery and post-merge)
 
 ```bash
-# After aggregator-intake.py writes placeholder TSVs, before dispatching evals:
-npm run liveness:batch /tmp/liveness-results.tsv
-python3 scripts/prune-by-liveness.py
+# After intake appends triage rows to scan-results, before dispatching evals:
+# extract URLs from ft/data/scan-results-*.tsv then:
+npm run liveness:bulk -- /tmp/scan-urls.txt /tmp/scan-liveness.tsv
 
-# Periodically (recommended weekly) to keep applications.md clean:
-npm run liveness:batch /tmp/liveness-results.tsv
-python3 scripts/prune-by-liveness.py    # marks dead evaluated rows as Purged
+# Periodically (recommended weekly) to keep applications.md clean of dead links:
+# (evaluated rows only; unevaluated discovery stays in scan-results triage)
+npm run liveness:batch -- /tmp/liveness-results.tsv
+python3 scripts/prune-by-liveness.py    # marks dead evaluated batch TSVs; never merge pending.md
 ```
+
+**Hard rule:** discovery adapters append to `ft/data/scan-results-{date}.tsv`. They must not write `reports/pending.md` tracker placeholders. Only step 12d/e (real A-G report + tracker-additions TSV) may create tracker rows.
 
 9. **Postings filtered out by title**: log in `scan-history.tsv` with status `skipped_title`
 10. **Duplicate postings**: log with status `skipped_dup`
@@ -219,7 +235,7 @@ If a URL is found that is not publicly accessible:
 
 ## Scan History
 
-`data/scan-history.tsv` tracks ALL seen URLs:
+`ft/data/scan-history.tsv` tracks ALL seen URLs by default:
 
 ```
 url	first_seen	portal	title	company	status
@@ -237,7 +253,7 @@ Portal Scan — {YYYY-MM-DD}
 Queries executed: N
 Postings found: N total
 Title-filtered: N relevant
-Duplicates: N (already evaluated or in pipeline)
+Duplicates: N (already evaluated or in the scan/evaluation handoff)
 Expired discarded: N (dead links, Level 3)
 New candidates: N written to ft/data/scan-results-{date}.tsv
 
@@ -267,16 +283,12 @@ Fallback: if you only have the direct ATS URL, navigate to the company's website
 - **Ashby:** `https://jobs.ashbyhq.com/{slug}`
 - **Greenhouse:** `https://job-boards.greenhouse.io/{slug}` or `https://job-boards.eu.greenhouse.io/{slug}`
 - **Lever:** `https://jobs.lever.co/{slug}`
-- **BambooHR:** list `https://{company}.bamboohr.com/careers/list`; detail `https://{company}.bamboohr.com/careers/{id}/detail`
-- **Teamtailor:** `https://{company}.teamtailor.com/jobs`
 - **Workday:** `https://{company}.{shard}.myworkdayjobs.com/{site}`
 - **Custom:** The company's own URL (e.g. `https://openai.com/careers`)
 
 **API/feed patterns per platform:**
 - **Ashby API:** `https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams`
-- **BambooHR API:** list `https://{company}.bamboohr.com/careers/list`; detail `https://{company}.bamboohr.com/careers/{id}/detail` (`result.jobOpening`)
 - **Lever API:** `https://api.lever.co/v0/postings/{company}?mode=json`
-- **Teamtailor RSS:** `https://{company}.teamtailor.com/jobs.rss`
 - **Workday API:** `https://{company}.{shard}.myworkdayjobs.com/wday/cxs/{company}/{site}/jobs`
 
 **If `careers_url` does not exist** for a company:

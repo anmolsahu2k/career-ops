@@ -1,0 +1,27 @@
+[
+  {
+    "TypeName": "job_evaluator",
+    "Role": "Job Evaluator Batch 0",
+    "Prompt": "Please evaluate the following 5 placeholder TSVs according to your instructions:\nft\\batch\\tracker-additions\\5290-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5291-rivian-aggregator.tsv, ft\\batch\\tracker-additions\\5292-adobe-aggregator.tsv, ft\\batch\\tracker-additions\\5293-google-aggregator.tsv, ft\\batch\\tracker-additions\\5294-amazon-aggregator.tsv"
+  },
+  {
+    "TypeName": "job_evaluator",
+    "Role": "Job Evaluator Batch 1",
+    "Prompt": "Please evaluate the following 5 placeholder TSVs according to your instructions:\nft\\batch\\tracker-additions\\5295-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5296-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5297-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5298-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5299-lyft-aggregator.tsv"
+  },
+  {
+    "TypeName": "job_evaluator",
+    "Role": "Job Evaluator Batch 2",
+    "Prompt": "Please evaluate the following 5 placeholder TSVs according to your instructions:\nft\\batch\\tracker-additions\\5300-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5301-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5302-google-aggregator.tsv, ft\\batch\\tracker-additions\\5303-snap-aggregator.tsv, ft\\batch\\tracker-additions\\5306-twitch-aggregator.tsv"
+  },
+  {
+    "TypeName": "job_evaluator",
+    "Role": "Job Evaluator Batch 3",
+    "Prompt": "Please evaluate the following 5 placeholder TSVs according to your instructions:\nft\\batch\\tracker-additions\\5307-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5308-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5309-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5311-amazon-aggregator.tsv, ft\\batch\\tracker-additions\\5312-domino-data-lab-aggregator.tsv"
+  },
+  {
+    "TypeName": "job_evaluator",
+    "Role": "Job Evaluator Batch 4",
+    "Prompt": "Please evaluate the following 5 placeholder TSVs according to your instructions:\nft\\batch\\tracker-additions\\5313-greenboard-aggregator.tsv, ft\\batch\\tracker-additions\\5314-omegahires-aggregator.tsv, ft\\batch\\tracker-additions\\5315-replit-aggregator.tsv, ft\\batch\\tracker-additions\\5317-bluecross-blueshield-of-tennessee-aggregator.tsv, ft\\batch\\tracker-additions\\5319-clera-aggregator.tsv"
+  }
+]

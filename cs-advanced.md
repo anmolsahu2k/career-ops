@@ -1,0 +1,400 @@
+- main [ref=f28e3]:
+  - generic [ref=f28e4]:
+    - status [ref=f28e5]: Contacts Search
+    - generic [ref=f28e9]:
+      - link "Skip to main content" [ref=f28e10] [cursor=pointer]:
+        - /url: "#main-content"
+      - navigation "Primary navigation" [ref=f28e12]:
+        - link [ref=f28e16] [cursor=pointer]:
+          - /url: /
+          - img "Careershift" [ref=f28e18]
+        - button "Anmol Sahu" [ref=f28e22] [cursor=pointer]
+      - main [ref=f28e31]:
+        - generic [ref=f28e33]:
+          - generic [ref=f28e34]:
+            - navigation "Section navigation" [ref=f28e35]:
+              - generic [ref=f28e36]:
+                - link "Dashboard" [ref=f28e37] [cursor=pointer]:
+                  - /url: /dashboard
+                - button "Jobs" [ref=f28e44] [cursor=pointer]
+                - generic [ref=f28e52]:
+                  - button "Contacts" [expanded] [ref=f28e53] [cursor=pointer]
+                  - generic [ref=f28e63]:
+                    - link "Search Contacts" [ref=f28e64] [cursor=pointer]:
+                      - /url: /contacts/search
+                    - link "Saved Contacts" [ref=f28e70] [cursor=pointer]:
+                      - /url: /contacts/saved
+                    - link "Saved Searches" [ref=f28e75] [cursor=pointer]:
+                      - /url: /contacts/saved-searches
+                    - link "Last Search" [ref=f28e81] [cursor=pointer]:
+                      - /url: /contacts/last-search
+                - button "Companies" [ref=f28e89] [cursor=pointer]
+                - link "Folders" [ref=f28e98] [cursor=pointer]:
+                  - /url: /folders
+                - link "Resources" [ref=f28e103] [cursor=pointer]:
+                  - /url: /resources
+                - link "Tasks" [ref=f28e108] [cursor=pointer]:
+                  - /url: /dashboard/tasks
+                - button "Documents" [ref=f28e115] [cursor=pointer]
+                - link [ref=f28e124] [cursor=pointer]:
+                  - /url: /help
+                  - paragraph [ref=f28e134]: Help Center
+            - button "Collapse sidebar" [ref=f28e136] [cursor=pointer]
+          - generic [ref=f28e141]:
+            - generic [ref=f28e143]:
+              - generic [ref=f28e144]:
+                - textbox "Name" [ref=f28e147]
+                - textbox "School Attended" [ref=f28e150]
+                - generic [ref=f28e153] [cursor=pointer]:
+                  - generic: Search by company name
+                  - combobox
+              - generic [ref=f28e154]:
+                - generic [ref=f28e155] [cursor=pointer]:
+                  - checkbox "Advanced" [checked] [ref=f28e156]
+                  - generic [ref=f28e159]: Advanced
+                - button "Search" [ref=f28e160] [cursor=pointer]
+            - generic [ref=f28e527]:
+              - generic [ref=f28e528]:
+                - heading "Work Location" [level=3] [ref=f28e529]
+                - generic [ref=f28e530]:
+                  - generic [ref=f28e531]:
+                    - generic [ref=f28e532]:
+                      - text: Location
+                      - button "More information" [ref=f28e533]
+                    - combobox "City, state, country or zip" [ref=f28e538]
+                  - generic [ref=f28e539]:
+                    - generic [ref=f28e540]:
+                      - text: Zip Radius
+                      - button "More information" [ref=f28e541]
+                    - generic [ref=f28e544]:
+                      - combobox:
+                        - option "Select an option" [selected]
+                        - option "10 Miles"
+                        - option "25 Miles"
+                        - option "50 Miles"
+                        - option "100 Miles"
+                        - option "250 Miles"
+                      - combobox [ref=f28e545] [cursor=pointer]:
+                        - generic [ref=f28e546]: Select option
+                  - generic [ref=f28e547]:
+                    - generic [ref=f28e548]:
+                      - text: Office Type
+                      - button "More information" [ref=f28e549]
+                    - radiogroup [ref=f28e552]:
+                      - radio "All Locations" [checked] [ref=f28e554] [cursor=pointer]
+                      - radio "Regional Office" [ref=f28e560] [cursor=pointer]
+              - generic [ref=f28e563]:
+                - heading "Industry" [level=3] [ref=f28e564]
+                - generic [ref=f28e565]:
+                  - generic [ref=f28e566]:
+                    - generic [ref=f28e567]:
+                      - text: Industry
+                      - button "More information" [ref=f28e568]
+                    - generic [ref=f28e572] [cursor=pointer]:
+                      - generic: Any Industry
+                      - combobox
+                  - generic [ref=f28e573]:
+                    - generic [ref=f28e574]:
+                      - text: NAICS Code(s)
+                      - button "More information" [ref=f28e575]
+                    - generic [ref=f28e579] [cursor=pointer]:
+                      - generic: Select an option
+                      - combobox
+                  - generic [ref=f28e580]:
+                    - generic [ref=f28e581]:
+                      - text: SIC Code(s)
+                      - button "More information" [ref=f28e582]
+                    - generic [ref=f28e586] [cursor=pointer]:
+                      - generic: Select an option
+                      - combobox
+              - generic [ref=f28e587]:
+                - heading "Role & Position" [level=3] [ref=f28e588]
+                - generic [ref=f28e589]:
+                  - generic [ref=f28e590]:
+                    - generic [ref=f28e591]:
+                      - text: Department
+                      - button "More information" [ref=f28e592]
+                    - generic [ref=f28e596] [cursor=pointer]:
+                      - generic: Select an option
+                      - combobox
+                  - generic [ref=f28e597]:
+                    - generic [ref=f28e598]:
+                      - text: Job Function
+                      - button "More information" [ref=f28e599]
+                    - generic [ref=f28e603] [cursor=pointer]:
+                      - generic: Select an option
+                      - combobox
+                  - generic [ref=f28e604]:
+                    - generic [ref=f28e605]:
+                      - text: Job Title
+                      - button "More information" [ref=f28e606]
+                    - textbox "Enter job title" [ref=f28e611]
+                  - generic [ref=f28e612]:
+                    - generic [ref=f28e613]:
+                      - text: Company Tenure
+                      - button "More information" [ref=f28e614]
+                    - generic [ref=f28e617]:
+                      - combobox:
+                        - option "Select an option" [selected]
+                        - option "1+ years"
+                        - option "2+ years"
+                        - option "3+ years"
+                        - option "5+ years"
+                        - option "10+ years"
+                      - combobox [ref=f28e618] [cursor=pointer]:
+                        - generic [ref=f28e619]: Select option
+                - heading "Job Role" [level=3] [ref=f28e620]
+                - group [ref=f28e621]:
+                  - checkbox "Board Member" [ref=f28e623] [cursor=pointer]
+                  - checkbox "C-Level" [ref=f28e627] [cursor=pointer]
+                  - checkbox "Vice President" [ref=f28e631] [cursor=pointer]
+                  - checkbox "Director" [ref=f28e635] [cursor=pointer]
+                  - checkbox "Manager" [ref=f28e639] [cursor=pointer]
+                  - checkbox "Non Manager" [ref=f28e643] [cursor=pointer]
+              - generic [ref=f28e646]:
+                - heading "Contact Details" [level=3] [ref=f28e647]
+                - generic [ref=f28e648]:
+                  - generic [ref=f28e649]:
+                    - checkbox "Require Email" [ref=f28e650] [cursor=pointer]
+                    - button "More information" [ref=f28e653]
+                  - generic [ref=f28e656]:
+                    - checkbox "Require Phone" [ref=f28e657] [cursor=pointer]
+                    - button "More information" [ref=f28e660]
+            - generic [ref=f28e162]:
+              - generic [ref=f28e164]:
+                - generic [ref=f28e168]:
+                  - generic [ref=f28e169]: Recommended contacts in Pennsylvania
+                  - generic [ref=f28e170]: ·
+                  - button "Try advanced search" [active] [ref=f28e171] [cursor=pointer]
+                - button "Save Search" [disabled]
+              - generic [ref=f28e172]:
+                - generic [ref=f28e174]:
+                  - button "Amanda Lapina Company details Frontline | Executive Director" [ref=f28e175] [cursor=pointer]:
+                    - generic [ref=f28e176]:
+                      - heading "Amanda Lapina" [level=3] [ref=f28e177]
+                      - generic [ref=f28e178]:
+                        - button "Company details" [ref=f28e179]
+                        - button "Save contact" [ref=f28e184]
+                    - generic [ref=f28e187]: Frontline | Executive Director
+                  - button "Carla Sandy Company details The Samaritan Counseling Center | Therapist" [ref=f28e188] [cursor=pointer]:
+                    - generic [ref=f28e189]:
+                      - heading "Carla Sandy" [level=3] [ref=f28e190]
+                      - generic [ref=f28e191]:
+                        - button "Company details" [ref=f28e192]
+                        - button "Save contact" [ref=f28e197]
+                    - generic [ref=f28e200]: The Samaritan Counseling Center | Therapist
+                  - button "Daniel Stroiman Company details Elfant Wissahickon Realtors | Realtor" [ref=f28e201] [cursor=pointer]:
+                    - generic [ref=f28e202]:
+                      - heading "Daniel Stroiman" [level=3] [ref=f28e203]
+                      - generic [ref=f28e204]:
+                        - link "Company details" [ref=f28e205]:
+                          - /url: /companies/e/64502
+                        - button "Save contact" [ref=f28e210]
+                    - generic [ref=f28e213]: Elfant Wissahickon Realtors | Realtor
+                  - button "Bernd Roloff Company details TA Roloff | Managing Director" [ref=f28e214] [cursor=pointer]:
+                    - generic [ref=f28e215]:
+                      - heading "Bernd Roloff" [level=3] [ref=f28e216]
+                      - generic [ref=f28e217]:
+                        - button "Company details" [ref=f28e218]
+                        - button "Save contact" [ref=f28e223]
+                    - generic [ref=f28e226]: TA Roloff | Managing Director
+                  - button "Laura DiFrancesco Company details Laura DiFrancesco | Entrepreneur" [ref=f28e227] [cursor=pointer]:
+                    - generic [ref=f28e228]:
+                      - heading "Laura DiFrancesco" [level=3] [ref=f28e229]
+                      - generic [ref=f28e230]:
+                        - button "Company details" [ref=f28e231]
+                        - button "Save contact" [ref=f28e236]
+                    - generic [ref=f28e239]: Laura DiFrancesco | Entrepreneur
+                  - button "Tracy Hammond Company details St Ann School | Grade (5A)" [ref=f28e240] [cursor=pointer]:
+                    - generic [ref=f28e241]:
+                      - heading "Tracy Hammond" [level=3] [ref=f28e242]
+                      - generic [ref=f28e243]:
+                        - button "Company details" [ref=f28e244]
+                        - button "Save contact" [ref=f28e249]
+                    - generic [ref=f28e252]: St Ann School | Grade (5A)
+                  - button "Christy Evans Company details Upper Dublin Lutheran Church | Band Member (For the Spirit Contemporary Christian Band)" [ref=f28e253] [cursor=pointer]:
+                    - generic [ref=f28e254]:
+                      - heading "Christy Evans" [level=3] [ref=f28e255]
+                      - generic [ref=f28e256]:
+                        - button "Company details" [ref=f28e257]
+                        - button "Save contact" [ref=f28e262]
+                    - generic [ref=f28e265]: Upper Dublin Lutheran Church | Band Member (For the Spirit Contemporary Christian Band)
+                  - button "Willem John McGee Company details Cristo Rey Philadelphia High School | English Teacher" [ref=f28e266] [cursor=pointer]:
+                    - generic [ref=f28e267]:
+                      - heading "Willem John McGee" [level=3] [ref=f28e268]
+                      - generic [ref=f28e269]:
+                        - button "Company details" [ref=f28e270]
+                        - button "Save contact" [ref=f28e275]
+                    - generic [ref=f28e278]: Cristo Rey Philadelphia High School | English Teacher
+                  - button "Julie Bird Company details Red Door Early Learning Center | Building and Fundraising Support" [ref=f28e279] [cursor=pointer]:
+                    - generic [ref=f28e280]:
+                      - heading "Julie Bird" [level=3] [ref=f28e281]
+                      - generic [ref=f28e282]:
+                        - button "Company details" [ref=f28e283]
+                        - button "Save contact" [ref=f28e288]
+                    - generic [ref=f28e291]: Red Door Early Learning Center | Building and Fundraising Support
+                  - button "Cassandra Caldwell Company details Blooming Expression Therapy | Licensed Therapist, Art Therapist" [ref=f28e292] [cursor=pointer]:
+                    - generic [ref=f28e293]:
+                      - heading "Cassandra Caldwell" [level=3] [ref=f28e294]
+                      - generic [ref=f28e295]:
+                        - button "Company details" [ref=f28e296]
+                        - button "Save contact" [ref=f28e301]
+                    - generic [ref=f28e304]: Blooming Expression Therapy | Licensed Therapist, Art Therapist
+                  - button "Kellie Carpenter Company details Sullivan County Pennsylvania | Prothonotary, Recorder of Deeds, Clerk of Courts, Register of Wills and Clerk of Orphan's Court" [ref=f28e305] [cursor=pointer]:
+                    - generic [ref=f28e306]:
+                      - heading "Kellie Carpenter" [level=3] [ref=f28e307]
+                      - generic [ref=f28e308]:
+                        - button "Company details" [ref=f28e309]
+                        - button "Save contact" [ref=f28e314]
+                    - generic [ref=f28e317]: Sullivan County Pennsylvania | Prothonotary, Recorder of Deeds, Clerk of Courts, Register of Wills and Clerk of Orphan's Court
+                  - button "Edward Sikorski Company details CompCharge | Owner" [ref=f28e318] [cursor=pointer]:
+                    - generic [ref=f28e319]:
+                      - heading "Edward Sikorski" [level=3] [ref=f28e320]
+                      - generic [ref=f28e321]:
+                        - button "Company details" [ref=f28e322]
+                        - button "Save contact" [ref=f28e327]
+                    - generic [ref=f28e330]: CompCharge | Owner
+                  - button "Katelin McNally Company details Eagleville Hospital | Therapist" [ref=f28e331] [cursor=pointer]:
+                    - generic [ref=f28e332]:
+                      - heading "Katelin McNally" [level=3] [ref=f28e333]
+                      - generic [ref=f28e334]:
+                        - link "Company details" [ref=f28e335]:
+                          - /url: /companies/e/30598
+                        - button "Save contact" [ref=f28e340]
+                    - generic [ref=f28e343]: Eagleville Hospital | Therapist
+                  - button "Nicole Shehan Company details Scout Services | Senior Project Manager" [ref=f28e344] [cursor=pointer]:
+                    - generic [ref=f28e345]:
+                      - heading "Nicole Shehan" [level=3] [ref=f28e346]
+                      - generic [ref=f28e347]:
+                        - button "Company details" [ref=f28e348]
+                        - button "Save contact" [ref=f28e353]
+                    - generic [ref=f28e356]: Scout Services | Senior Project Manager
+                  - button "Camille Terk Company details Terk Consulting | Owner" [ref=f28e357] [cursor=pointer]:
+                    - generic [ref=f28e358]:
+                      - heading "Camille Terk" [level=3] [ref=f28e359]
+                      - generic [ref=f28e360]:
+                        - button "Company details" [ref=f28e361]
+                        - button "Save contact" [ref=f28e366]
+                    - generic [ref=f28e369]: Terk Consulting | Owner
+                  - button "Harold Mekeel Company details University of North Carolina at Chapel Hill | Research Specialist" [ref=f28e370] [cursor=pointer]:
+                    - generic [ref=f28e371]:
+                      - heading "Harold Mekeel" [level=3] [ref=f28e372]
+                      - generic [ref=f28e373]:
+                        - link "Company details" [ref=f28e374]:
+                          - /url: /companies/e/112095
+                        - button "Save contact" [ref=f28e379]
+                    - generic [ref=f28e382]: University of North Carolina at Chapel Hill | Research Specialist
+                  - button "Joseph Sunday Company details Tippecanoe Boat | Marine Technician" [ref=f28e383] [cursor=pointer]:
+                    - generic [ref=f28e384]:
+                      - heading "Joseph Sunday" [level=3] [ref=f28e385]
+                      - generic [ref=f28e386]:
+                        - button "Company details" [ref=f28e387]
+                        - button "Save contact" [ref=f28e392]
+                    - generic [ref=f28e395]: Tippecanoe Boat | Marine Technician
+                  - button "Christina Diamantas Company details Thruline | Manager, Talent" [ref=f28e396] [cursor=pointer]:
+                    - generic [ref=f28e397]:
+                      - heading "Christina Diamantas" [level=3] [ref=f28e398]
+                      - generic [ref=f28e399]:
+                        - button "Company details" [ref=f28e400]
+                        - button "Save contact" [ref=f28e405]
+                    - generic [ref=f28e408]: Thruline | Manager, Talent
+                  - button "Amanda Knight Company details Delicate Designs by Amanda | Jewelry Designer" [ref=f28e409] [cursor=pointer]:
+                    - generic [ref=f28e410]:
+                      - heading "Amanda Knight" [level=3] [ref=f28e411]
+                      - generic [ref=f28e412]:
+                        - button "Company details" [ref=f28e413]
+                        - button "Save contact" [ref=f28e418]
+                    - generic [ref=f28e421]: Delicate Designs by Amanda | Jewelry Designer
+                  - button "Elani Stauffenberg Company details Cardiovascular Experts | Front Desk Staff and Pre Authorizations" [ref=f28e422] [cursor=pointer]:
+                    - generic [ref=f28e423]:
+                      - heading "Elani Stauffenberg" [level=3] [ref=f28e424]
+                      - generic [ref=f28e425]:
+                        - button "Company details" [ref=f28e426]
+                        - button "Save contact" [ref=f28e431]
+                    - generic [ref=f28e434]: Cardiovascular Experts | Front Desk Staff and Pre Authorizations
+                  - generic [ref=f28e436]:
+                    - button "Previous page" [disabled] [ref=f28e437]: Previous
+                    - button "Page 1" [ref=f28e440]: "1"
+                    - button "Page 2" [ref=f28e441] [cursor=pointer]: "2"
+                    - generic [ref=f28e442]: …
+                    - button "Page 251880" [ref=f28e443] [cursor=pointer]: "251880"
+                    - button "Next page" [ref=f28e444] [cursor=pointer]: Next
+                - generic [ref=f28e448]:
+                  - generic [ref=f28e449]:
+                    - generic [ref=f28e451]:
+                      - generic [ref=f28e452]:
+                        - heading "Amanda Lapina" [level=2] [ref=f28e453]
+                        - generic [ref=f28e454]: Frontline | Executive Director
+                      - button "Generate Outreach" [ref=f28e456] [cursor=pointer]
+                    - generic [ref=f28e460]:
+                      - button "Search LinkedIn" [ref=f28e461] [cursor=pointer]
+                      - button "Company Details" [ref=f28e466] [cursor=pointer]
+                      - generic [ref=f28e471]:
+                        - button "Copy Link" [ref=f28e472] [cursor=pointer]
+                        - button "Save Contact" [ref=f28e476] [cursor=pointer]
+                  - generic [ref=f28e479]:
+                    - generic [ref=f28e481]:
+                      - generic [ref=f28e482]:
+                        - generic [ref=f28e483]: Email
+                        - generic [ref=f28e484]: email@example.com
+                      - generic [ref=f28e485]:
+                        - generic [ref=f28e486]: Company Phone
+                        - generic [ref=f28e487]: (555) 123-4567
+                      - generic [ref=f28e488]:
+                        - generic [ref=f28e489]: Location
+                        - generic [ref=f28e490]: San Francisco, CA
+                      - link "View Contact Details" [ref=f28e492] [cursor=pointer]:
+                        - /url: "#unlock"
+                    - generic [ref=f28e493]:
+                      - heading "Current Workplace" [level=3] [ref=f28e494]
+                      - generic [ref=f28e495]:
+                        - generic:
+                          - generic:
+                            - generic
+                          - generic:
+                            - heading "TechCorp Inc" [level=4]
+                            - generic
+                        - generic [ref=f28e496]:
+                          - paragraph [ref=f28e502]:
+                            - text: View
+                            - strong [ref=f28e503]: Amanda Lapina's
+                            - text: current workplace details
+                          - link "View Contact Details" [ref=f28e504] [cursor=pointer]:
+                            - /url: "#unlock"
+                    - generic [ref=f28e505]:
+                      - heading "Employment History" [level=3] [ref=f28e506]
+                      - generic [ref=f28e507]:
+                        - generic:
+                          - generic:
+                            - generic "TechCorp Inc logo"
+                            - generic
+                          - generic:
+                            - generic "StartupXYZ logo"
+                            - generic
+                          - generic:
+                            - generic "Previous Company logo"
+                            - generic
+                        - generic [ref=f28e508]:
+                          - paragraph [ref=f28e513]:
+                            - text: View
+                            - strong [ref=f28e514]: Amanda Lapina's
+                            - text: employment history
+                          - link "View Contact Details" [ref=f28e515] [cursor=pointer]:
+                            - /url: "#unlock"
+                    - generic [ref=f28e516]:
+                      - heading "Education" [level=3] [ref=f28e517]
+                      - generic [ref=f28e518]:
+                        - generic:
+                          - generic:
+                            - generic: Stanford University | BS Computer Science
+                            - generic: "Graduated: 2015"
+                          - generic:
+                            - generic: MIT | MBA
+                            - generic: "Graduated: 2012"
+                        - generic [ref=f28e519]:
+                          - paragraph [ref=f28e524]:
+                            - text: View
+                            - strong [ref=f28e525]: Amanda Lapina's
+                            - text: education
+                          - link "View Contact Details" [ref=f28e526] [cursor=pointer]:
+                            - /url: "#unlock"

@@ -1,0 +1,164 @@
+- main [ref=f48e3]:
+  - generic [ref=f48e4]:
+    - status [ref=f48e5]: Contacts Search
+    - generic [ref=f48e6]:
+      - link "Skip to main content" [ref=f48e7] [cursor=pointer]:
+        - /url: "#main-content"
+      - navigation "Primary navigation" [ref=f48e9]:
+        - link [ref=f48e13] [cursor=pointer]:
+          - /url: /
+          - img "Careershift" [ref=f48e15]
+        - button "Anmol Sahu" [ref=f48e19] [cursor=pointer]
+      - main [ref=f48e28]:
+        - generic [ref=f48e30]:
+          - generic [ref=f48e31]:
+            - navigation "Section navigation" [ref=f48e32]:
+              - generic [ref=f48e33]:
+                - link "Dashboard" [ref=f48e34] [cursor=pointer]:
+                  - /url: /dashboard
+                - button "Jobs" [ref=f48e41] [cursor=pointer]
+                - generic [ref=f48e49]:
+                  - button "Contacts" [expanded] [ref=f48e50] [cursor=pointer]
+                  - generic [ref=f48e60]:
+                    - link "Search Contacts" [ref=f48e61] [cursor=pointer]:
+                      - /url: /contacts/search
+                    - link "Saved Contacts" [ref=f48e67] [cursor=pointer]:
+                      - /url: /contacts/saved
+                    - link "Saved Searches" [ref=f48e72] [cursor=pointer]:
+                      - /url: /contacts/saved-searches
+                    - link "Last Search" [ref=f48e78] [cursor=pointer]:
+                      - /url: /contacts/last-search
+                - button "Companies" [ref=f48e86] [cursor=pointer]
+                - link "Folders" [ref=f48e95] [cursor=pointer]:
+                  - /url: /folders
+                - link "Resources" [ref=f48e100] [cursor=pointer]:
+                  - /url: /resources
+                - link "Tasks" [ref=f48e105] [cursor=pointer]:
+                  - /url: /dashboard/tasks
+                - button "Documents" [ref=f48e112] [cursor=pointer]
+                - link [ref=f48e121] [cursor=pointer]:
+                  - /url: /help
+                  - paragraph [ref=f48e131]: Help Center
+            - button "Collapse sidebar" [ref=f48e133] [cursor=pointer]
+          - generic [ref=f48e138]:
+            - generic [ref=f48e140]:
+              - generic [ref=f48e141]:
+                - textbox "Name" [ref=f48e144]
+                - generic [ref=f48e146]:
+                  - textbox "School Attended" [ref=f48e147]: Carnegie Mellon University
+                  - button [ref=f48e148] [cursor=pointer]
+                - generic [ref=f48e154] [cursor=pointer]:
+                  - generic [ref=f48e156]:
+                    - generic [ref=f48e157]: Faros
+                    - button "Remove Faros" [ref=f48e158]
+                  - combobox
+              - generic [ref=f48e162]:
+                - generic [ref=f48e163] [cursor=pointer]:
+                  - checkbox "Advanced" [ref=f48e164]
+                  - generic [ref=f48e167]: Advanced
+                - button "Search" [ref=f48e216] [cursor=pointer]
+            - generic [ref=f48e169]:
+              - generic [ref=f48e217]:
+                - list "Active filters" [ref=f48e218]:
+                  - listitem [ref=f48e219]:
+                    - text: "School: Carnegie Mellon University"
+                    - 'button "Remove School: Carnegie Mellon University filter" [ref=f48e220] [cursor=pointer]'
+                - generic [ref=f48e224]:
+                  - generic [ref=f48e225]: First 1 of 1 Contacts Found
+                  - button "Save Search" [ref=f48e229] [cursor=pointer]
+              - generic [ref=f48e176]:
+                - button "Kamilah Gurdian Company details Faros Properties | Front Desk Concierge" [ref=f48e233] [cursor=pointer]:
+                  - generic [ref=f48e234]:
+                    - heading "Kamilah Gurdian" [level=3] [ref=f48e235]
+                    - generic [ref=f48e236]:
+                      - button "Company details" [ref=f48e237]
+                      - button "Save contact" [ref=f48e242]
+                  - generic [ref=f48e245]: Faros Properties | Front Desk Concierge
+                - generic [ref=f48e246]:
+                  - generic [ref=f48e247]:
+                    - generic [ref=f48e249]:
+                      - generic [ref=f48e250]:
+                        - heading "Kamilah Gurdian" [level=2] [ref=f48e251]
+                        - generic [ref=f48e252]: Faros Properties | Front Desk Concierge
+                      - button "Generate Outreach" [ref=f48e254] [cursor=pointer]
+                    - generic [ref=f48e258]:
+                      - button "Search LinkedIn" [ref=f48e259] [cursor=pointer]
+                      - button "Company Details" [ref=f48e264] [cursor=pointer]
+                      - generic [ref=f48e269]:
+                        - button "Copy Link" [ref=f48e270] [cursor=pointer]
+                        - button "Save Contact" [ref=f48e274] [cursor=pointer]
+                  - generic [ref=f48e277]:
+                    - generic [ref=f48e279]:
+                      - generic [ref=f48e280]:
+                        - generic [ref=f48e281]: Company Phone
+                        - generic [ref=f48e282]: (555) 123-4567
+                      - generic [ref=f48e283]:
+                        - generic [ref=f48e284]: Location
+                        - generic [ref=f48e285]: San Francisco, CA
+                      - link "View Contact Details" [ref=f48e287] [cursor=pointer]:
+                        - /url: "#unlock"
+                    - generic [ref=f48e288]:
+                      - heading "Current Workplace" [level=3] [ref=f48e289]
+                      - generic [ref=f48e290]:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - heading "Current Role & Company Overview" [level=4]
+                              - paragraph: Kamilah Gurdian is a Senior Software Engineer at TechCorp Inc since Jan 2020 in Engineering. Founded in 2017 and headquartered in San Francisco, California, TechCorp is an online program for tech professionals that provides career mentorship, training and consulting for job placement.
+                          - generic:
+                            - heading "TechCorp Inc" [level=4]
+                            - generic:
+                              - generic: "Website: www.techcorp.com"
+                              - generic: "Phone: +1 (555) 123-4567"
+                              - generic: San Francisco, CA, United States
+                              - generic: "Employees: 5,000 • Revenue: $500K"
+                        - generic [ref=f48e291]:
+                          - paragraph [ref=f48e297]:
+                            - text: View
+                            - strong [ref=f48e298]: Kamilah Gurdian's
+                            - text: current workplace details
+                          - link "View Contact Details" [ref=f48e299] [cursor=pointer]:
+                            - /url: "#unlock"
+                    - generic [ref=f48e300]:
+                      - heading "Employment History" [level=3] [ref=f48e301]
+                      - generic [ref=f48e302]:
+                        - generic:
+                          - generic:
+                            - generic "TechCorp Inc logo"
+                            - generic:
+                              - generic: TechCorp Inc | Senior Software Engineer
+                              - generic: Jan 2020 - Current
+                          - generic:
+                            - generic "StartupXYZ logo"
+                            - generic:
+                              - generic: StartupXYZ | Software Engineer
+                              - generic: Jun 2017 - Dec 2019
+                          - generic:
+                            - generic "Previous Company logo"
+                            - generic:
+                              - generic: Previous Company | Junior Developer
+                              - generic: Mar 2015 - May 2017
+                        - generic [ref=f48e303]:
+                          - paragraph [ref=f48e308]:
+                            - text: View
+                            - strong [ref=f48e309]: Kamilah Gurdian's
+                            - text: employment history
+                          - link "View Contact Details" [ref=f48e310] [cursor=pointer]:
+                            - /url: "#unlock"
+                    - generic [ref=f48e311]:
+                      - heading "Education" [level=3] [ref=f48e312]
+                      - generic [ref=f48e313]:
+                        - generic:
+                          - generic:
+                            - generic: Stanford University | BS Computer Science
+                            - generic: "Graduated: 2015"
+                          - generic:
+                            - generic: MIT | MBA
+                            - generic: "Graduated: 2012"
+                        - generic [ref=f48e314]:
+                          - paragraph [ref=f48e319]:
+                            - text: View
+                            - strong [ref=f48e320]: Kamilah Gurdian's
+                            - text: education
+                          - link "View Contact Details" [ref=f48e321] [cursor=pointer]:
+                            - /url: "#unlock"

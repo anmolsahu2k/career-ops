@@ -1,0 +1,107 @@
+{
+  "Python": [
+    "Python (Programming Language) :: REMOTE_SKILL-1-119486",
+    "Python IDLE :: REMOTE_SKILL-1-363940",
+    "Maya Python :: REMOTE_SKILL-1-225238",
+    "Python Software Development :: REMOTE_SKILL-1-181695",
+    "Python Frameworks :: REMOTE_SKILL-1-192963"
+  ],
+  "Java": [
+    "Java (Programming Language) :: REMOTE_SKILL-1-249998",
+    "JavaFX :: REMOTE_SKILL-1-91121",
+    "Java2D :: REMOTE_SKILL-1-226742",
+    "Java Software Development :: REMOTE_SKILL-1-129068",
+    "Java Web Development :: REMOTE_SKILL-1-91125"
+  ],
+  "JavaScript": [
+    "JavaScript :: REMOTE_SKILL-1-25310",
+    "JavaScript API :: REMOTE_SKILL-1-91115",
+    "Web Development :: REMOTE_SKILL-1-44127",
+    "JavaScript MVC :: REMOTE_SKILL-1-59530",
+    "JScript :: REMOTE_SKILL-1-59464"
+  ],
+  "SQL": [
+    "Structured Query Language (SQL) :: REMOTE_SKILL-1-55049",
+    "U-SQL :: REMOTE_SKILL-1-365222",
+    "SQLCLR :: REMOTE_SKILL-1-44868",
+    "Structured Query Language (SQL) Development :: REMOTE_SKILL-1-348092",
+    "Query Language :: REMOTE_SKILL-1-55047"
+  ],
+  "PyTorch": [
+    "PyTorch :: REMOTE_SKILL-1-348246",
+    "PyroSim :: REMOTE_SKILL-1-80195",
+    "Pyrotechnics :: REMOTE_SKILL-1-713",
+    "PyCharm :: REMOTE_SKILL-1-236240",
+    "Pyrotechnic Flares :: REMOTE_SKILL-1-723"
+  ],
+  "Machine Learning": [
+    "Machine Learning (ML) :: REMOTE_SKILL-1-365941",
+    "Machine Learning Methods :: REMOTE_SKILL-1-366426",
+    "AWS Machine Learning :: REMOTE_SKILL-1-365041",
+    "Azure Machine Learning :: REMOTE_SKILL-1-350508",
+    "Machine Learning Algorithms :: REMOTE_SKILL-1-47170"
+  ],
+  "Deep Learning": [
+    "Deep Learning :: REMOTE_SKILL-1-32353",
+    "AWS Deep Learning AMIs :: REMOTE_SKILL-1-349134",
+    "Deep Learning Algorithms :: REMOTE_SKILL-1-231759",
+    "Deep Thinking :: REMOTE_SKILL-1-173062",
+    "Deep Learning Hardware :: REMOTE_SKILL-1-348947"
+  ],
+  "Amazon Web Services": [
+    "Amazon Web Services (AWS) :: REMOTE_SKILL-1-111890",
+    "Amazon Web Services (AWS) Security :: REMOTE_SKILL-1-361025",
+    "AWS Cloud Computing :: REMOTE_SKILL-1-110221",
+    "Avaloq Web Services :: REMOTE_SKILL-1-356121",
+    "Java Web Services :: REMOTE_SKILL-1-59543"
+  ],
+  "Google Cloud": [
+    "Google Cloud Platform (GCP) :: REMOTE_SKILL-1-365688",
+    "Google Cloud Veo :: REMOTE_SKILL-1-366316",
+    "Google Cloud Run :: REMOTE_SKILL-1-362736",
+    "Google Cloud Platform Administration :: REMOTE_SKILL-1-356550",
+    "Google Cloud IoT :: REMOTE_SKILL-1-349032"
+  ],
+  "Docker": [
+    "Docker (Software) :: REMOTE_SKILL-1-349749",
+    "Dockerfile :: REMOTE_SKILL-1-197463",
+    "Docker Swarm :: REMOTE_SKILL-1-352306",
+    "Docker Container :: REMOTE_SKILL-1-362289",
+    "Docker Kubernetes Design :: REMOTE_SKILL-1-355445"
+  ],
+  "React": [
+    "React.js :: REMOTE_SKILL-1-347820",
+    "React VR :: REMOTE_SKILL-1-348802",
+    "Vue.js :: REMOTE_SKILL-1-351526",
+    "ReAct Framework :: REMOTE_SKILL-1-366866",
+    "React Redux :: REMOTE_SKILL-1-363768"
+  ],
+  "Node.js": [
+    "Node.js :: REMOTE_SKILL-1-25341",
+    "Node.js Development :: REMOTE_SKILL-1-260415",
+    "React.js :: REMOTE_SKILL-1-347820",
+    "JavaScript :: REMOTE_SKILL-1-25310",
+    "Moment.js :: REMOTE_SKILL-1-175237"
+  ],
+  "Data Analysis": [
+    "Data Analysis :: REMOTE_SKILL-1-31310",
+    "Statistical Analysis :: REMOTE_SKILL-1-44860",
+    "POS Data Analysis :: REMOTE_SKILL-1-350726",
+    "Database Analysis :: REMOTE_SKILL-1-102874",
+    "Web Data Analysis :: REMOTE_SKILL-1-260847"
+  ],
+  "Artificial Intelligence": [
+    "Artificial Intelligence (AI) :: REMOTE_SKILL-1-178544",
+    "Artificial Co-Intelligence :: REMOTE_SKILL-1-365464",
+    "Artificial Intelligence Technologies :: REMOTE_SKILL-1-67279",
+    "Artificial Intelligence Techniques :: REMOTE_SKILL-1-67278",
+    "Artificial Intelligence Software :: REMOTE_SKILL-1-20704"
+  ],
+  "Natural Language Processing": [
+    "Natural Language Processing (NLP) :: REMOTE_SKILL-1-250781",
+    "Natural Language Processing Tools :: REMOTE_SKILL-1-90429",
+    "Natural Language Programming (NLP) :: REMOTE_SKILL-1-354956",
+    "Natural Language :: REMOTE_SKILL-1-57379",
+    "Alibaba Cloud Natural Language Processing (NLP) Platform :: REMOTE_SKILL-1-355369"
+  ]
+}

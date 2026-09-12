@@ -10,7 +10,11 @@ states:
   - id: triaged
     label: Triaged
     aliases: [triage, scored]
-    description: Title+company-keyword score assigned by triage script; per-JD eval not yet done. Promote to Evaluated after WebFetch+report.
+    description: >-
+      Legacy alias only. Unevaluated discovery belongs in data/scan-results-*.tsv
+      triage, not in applications.md. Do not write Triaged into the tracker;
+      promote only after a full A-G eval report exists (status Evaluated or
+      Rejected-at-eval).
     dashboard_group: evaluated
 
   - id: evaluated

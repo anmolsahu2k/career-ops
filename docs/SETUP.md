@@ -16,8 +16,12 @@ Gemini CLI, and OpenCode files remain only as compatibility adapters.
 ```bash
 npm install
 npx playwright install chromium
+python -m pip install -U -r requirements-discovery.txt
 npm run doctor
 ```
+
+`requirements-discovery.txt` installs JobSpy from GitHub `main` (preferred over
+PyPI so LinkedIn and other scraper fixes land before the next package bump).
 
 ## Configure
 
@@ -46,10 +50,34 @@ To enable the project-scoped Playwright MCP, copy `.codex/config.example.toml` t
 ```text
 $career-ops
 $career-ops scan
+npm run scan:all
+npm run evaluate
 $career-ops tracker
 $career-ops offer <job URL>
 $career-ops <job URL or pasted JD>
 ```
+
+`npm run scan:all` is discovery-only (every active source, no evaluation). Use
+`$career-ops scan` when you also want the agent-driven inline evaluation pass.
+
+### Manual workflow (save agent tokens)
+
+To run the funnel without a Codex/Claude session, use the CLI path documented in
+[SCRIPTS.md](SCRIPTS.md#manual-workflow-no-agent):
+
+```powershell
+npm run scan:all
+npm run evaluate -- --max 25
+npm run evaluate -- `
+  --config config/runtime.local.yml `
+  --provider antigravity-gemini-flash-high `
+  --acknowledge-quota `
+  --apply
+npm run verify
+```
+
+Only step three spends provider quota. Discovery, plan mode, liveness, and
+verify are zero-LLM.
 
 Natural-language requests can also select the skill implicitly. See [CODEX.md](CODEX.md) for routing details and the optional Claude Code import flow.
 

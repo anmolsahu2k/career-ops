@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Hostile page CSS</title>
+  <!--
+    A board whose stylesheet attacks anything injected into the page. Ashby sets
+    line-height: 0 on divs, which collapsed every line of the summary panel to
+    4px and stacked the text on top of itself. The panel lives in a shadow root
+    so none of this can reach it; this fixture is what proves that.
+  -->
+  <style>
+    * {
+      line-height: 0 !important;
+      font-size: 40px !important;
+      color: #ff00ff !important;
+      letter-spacing: 3px !important;
+      text-transform: uppercase !important;
+    }
+    div, span, li, ul, h4, button { all: revert-layer; line-height: 0 !important; }
+    body { font-family: "Comic Sans MS", cursive !important; }
+    input, label { font-size: 14px !important; line-height: 1.4 !important; }
+  </style>
+</head>
+<body>
+  <h1>Apply</h1>
+  <form>
+    <div class="field">
+      <label for="first_name">First Name</label>
+      <input type="text" id="first_name" name="first_name">
+    </div>
+    <div class="field">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email">
+    </div>
+    <div class="field">
+      <label for="q_hostile">What is your favourite build tool?</label>
+      <input type="text" id="q_hostile">
+    </div>
+  </form>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://career-ops.local/schemas/runtime/application-salary-response.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["salaries"],
+  "properties": {
+    "salaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field_id", "value", "evidence_ids", "confidence"],
+        "properties": {
+          "field_id": {"type": "string"},
+          "value": {"type": "string", "maxLength": 80},
+          "evidence_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    }
+  }
+}

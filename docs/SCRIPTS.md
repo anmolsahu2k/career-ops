@@ -1,212 +1,411 @@
 # Scripts Reference
 
-The core pipeline scripts live in the project root as `.mjs` modules and are exposed via `npm run <name>`. The discovery-ingest scripts (which pull candidates from aggregators and job boards) live in [scripts/](../scripts/) and are invoked directly with `python3` — see [Discovery ingest scripts](#discovery-ingest-scripts-scripts) at the bottom.
+Career-Ops keeps its executable pipeline in root `.mjs` files, the provider-
+free runtime in `bin/` and `lib/runtime/`, and source-specific Python intake
+under `scripts/`. Pipeline data paths resolve through `CAREER_OPS_DATA_DIR`:
+the default is `ft/`; `.` selects the frozen root archive only for an explicit
+archive operation. Shared configuration stays at the repository root.
 
-## Quick Reference
+## Quick reference
 
-| Command | Script | Purpose |
-|---------|--------|---------|
-| `npm run doctor` | `doctor.mjs` | Validate setup prerequisites |
-| `npm run verify` | `verify-pipeline.mjs` | Check pipeline data integrity |
-| `npm run normalize` | `normalize-statuses.mjs` | Fix non-canonical statuses |
-| `npm run dedup` | `dedup-tracker.mjs` | Remove duplicate tracker entries |
-| `npm run merge` | `merge-tracker.mjs` | Merge batch TSVs into applications.md |
-| `npm run pdf` | `generate-pdf.mjs` | Convert HTML to ATS-optimized PDF |
-| `npm run sync-check` | `cv-sync-check.mjs` | Validate CV/profile consistency |
-| `npm run update:check` | `update-system.mjs check` | Check for upstream updates |
-| `npm run update` | `update-system.mjs apply` | Apply upstream update |
-| `npm run rollback` | `update-system.mjs rollback` | Rollback last update |
-| `npm run liveness` | `check-liveness.mjs` | Test if job URLs are still active |
-| `npm run scan` | `scan.mjs` | Zero-token portal scanner |
+| Command | Purpose |
+|---|---|
+| `npm run doctor` | Check Node, dependencies, Chromium, profile inputs, portals, and legacy setup directories |
+| `npm test` | Run the quick repository test suite |
+| `npm run verify` | Validate tracker rows, statuses, scores, report links, and pending additions |
+| `npm run normalize` | Normalize tracker status formatting and aliases |
+| `npm run dedup` | Detect and remove duplicate tracker rows |
+| `npm run merge` | Merge tracker-addition TSVs into the selected tracker |
+| `npm run liveness -- <urls>` | Check one or more URLs with the shared liveness classifier |
+| `npm run liveness:bulk -- <file>` | Run liveness over a URL list |
+| `npm run liveness:batch` | Check TSV additions under the selected `batch/` tree |
+| `npm run scan` | Run the structured, zero-token scanner |
+| `npm run scan:spa` | Run the Playwright career-page scanner |
+| `npm run scan:all` | Run every active discovery source in scan order (no eval) |
+| `npm run evaluate` | Evaluate `scan-results` triage: liveness → fetch JD → prepare/respond/commit |
+| `npm run runtime:test` | Run runtime-focused tests |
+| `npm run runtime:doctor` | Read-only runtime configuration and environment check |
 
----
+## Manual workflow (no agent)
 
-## doctor
+Use these commands when you want the FT funnel without an agent chat session.
+This is the token-saving path: discovery and liveness cost no LLM tokens; only
+`evaluate --apply` calls a provider (one A-G judgment per live or uncertain URL).
 
-Validates that all prerequisites are in place: Node.js >= 18, dependencies installed, Playwright chromium, required files (`cv.md`, `config/profile.yml`, `portals.yml`), fonts directory, and auto-creates `data/`, `output/`, `reports/` if missing.
-
-```bash
-npm run doctor
+```text
+scan:all  →  scan-results triage  →  evaluate [--apply]  →  verify / normalize / dedup
 ```
 
-**Exit codes:** `0` all checks passed, `1` one or more checks failed (fix messages printed).
+### Prerequisites
 
----
+1. Copy or maintain ignored `config/runtime.local.yml` (from
+   `config/runtime.example.yml`).
+2. Set `writer_host` to this machine's hostname.
+3. Enable a consequential provider. For Antigravity Gemini 3.8 Flash High:
 
-## verify
+```yaml
+providers:
+  antigravity-gemini-flash-high:
+    enabled: true
+    # ... remainder already defined in the example config
+```
 
-Health check for pipeline data integrity. Validates `data/applications.md` against seven rules: canonical statuses (per `templates/states.yml`), no duplicate company+role pairs, all report links point to existing files, scores match `X.XX/5` / `N/A` / `DUP`, rows have proper pipe-delimited format, no pending TSVs in `batch/tracker-additions/`, and no markdown bold in scores.
+4. Ensure Antigravity CLI (`agy`) is installed and signed in when using that provider.
+
+### Day-to-day loop
+
+```powershell
+# Discovery (0 LLM tokens). Writes/appends ft/data/scan-results-YYYY-MM-DD.tsv
+npm run scan:all
+# Optional: npm run scan:all -- --dry-run
+# Optional: npm run scan:all -- --skip adzuna,hiringcafe
+
+# Preview what evaluate would do (0 LLM tokens for plan; liveness uses Playwright)
+npm run evaluate
+npm run evaluate -- --file ft/data/scan-results-2026-09-12.tsv --max 25
+
+# Commit survivors through the runtime (provider quota only)
+npm run evaluate -- `
+  --config config/runtime.local.yml `
+  --provider antigravity-gemini-flash-high `
+  --acknowledge-quota `
+  --apply
+
+# Integrity after commits
+npm run verify
+```
+
+Optional hygiene (preview first on personal data):
+
+```powershell
+npm run normalize -- --dry-run
+npm run dedup -- --dry-run
+npm run merge -- --dry-run   # only if you still have agent-written tracker-additions TSVs
+```
+
+### Token and authorization notes
+
+| Step | LLM tokens | Writes tracker? |
+|---|---|---|
+| `npm run scan:all` | 0 | No (triage TSV only) |
+| `npm run evaluate` (no `--apply`) | 0 | No |
+| Liveness inside evaluate | 0 | No (drops expired from triage on `--apply`) |
+| `npm run evaluate -- ... --apply` | 1 call per live/uncertain URL | Yes (report + row via transactional commit) |
+| `npm run verify` / `normalize` / `dedup` | 0 | Hygiene only |
+
+- Do not merge `reports/pending.md` placeholders. Discovery stays in
+  `data/scan-results-*.tsv` until evaluate commits a real A-G report.
+- `--apply` requires `--config`, `--provider` (or `--profile`), and
+  `--acknowledge-quota`.
+- Application submit remains separately gated (`career-ops apply ...`); evaluate
+  never clicks Submit.
+- Prefer the agent (`$career-ops scan` / paste-a-JD) only when you want
+  interactive review, not for bulk unattended scoring.
+
+### Related docs
+
+- [RUNTIME.md](RUNTIME.md) — prepare/respond/commit contracts and provider setup
+- [MODEL_ROUTING.md](MODEL_ROUTING.md) — Flash High evaluate vs Luna profile ladder
+- [modes/scan.md](../modes/scan.md) — discovery sources and agent vs manual split
+
+## Path-aware tracker commands
+
+`verify-pipeline.mjs`, `normalize-statuses.mjs`, `dedup-tracker.mjs`, and
+`merge-tracker.mjs` all use the shared path resolver. With the default
+configuration they read or write:
+
+```text
+ft/data/applications.md
+ft/reports/
+ft/batch/tracker-additions/
+```
+
+Use `CAREER_OPS_DATA_DIR=.` only when the user explicitly asks to operate on
+the frozen internship archive. All mutating commands create a local rollback
+copy or transaction artifact where their contract requires one; inspect the
+dry run before applying a broad cleanup.
+
+### verify
+
+Checks the selected tracker against `templates/states.yml`, the fixed
+9-column row shape, score formatting, report links, pending tracker additions,
+and duplicate-risk signals. Warnings do not make the command fail.
 
 ```bash
 npm run verify
 ```
 
-**Exit codes:** `0` pipeline clean (zero errors), `1` errors found. Warnings (e.g. possible duplicates) do not cause a non-zero exit.
+### normalize
 
----
-
-## normalize
-
-Maps non-canonical statuses to their canonical equivalents and strips markdown bold and dates from the status column. Aliases like `Enviada` become `Aplicado`, `CERRADA` becomes `Descartado`, etc. DUPLICADO info is moved to the notes column.
+Maps recognized aliases to canonical state labels, removes markdown formatting
+and dates from status cells, and preserves duplicate information in Notes.
+Preview first when working on personal data:
 
 ```bash
-npm run normalize             # apply changes
-npm run normalize -- --dry-run  # preview without writing
+npm run normalize -- --dry-run
+npm run normalize
 ```
 
-Creates a `.bak` backup of `applications.md` before writing.
+### dedup
 
-**Exit codes:** `0` always (changes or no changes).
-
----
-
-## dedup
-
-Removes duplicate entries from `applications.md` by grouping on normalized company name + fuzzy role match. Keeps the entry with the highest score. If a removed entry had a more advanced pipeline status, that status is promoted to the keeper.
+Groups rows by normalized company and fuzzy role identity, then keeps the best
+record while preserving more advanced state and useful Notes from duplicates.
 
 ```bash
-npm run dedup             # apply changes
-npm run dedup -- --dry-run  # preview without writing
+npm run dedup -- --dry-run
+npm run dedup
 ```
 
-Creates a `.bak` backup before writing.
+### merge
 
-**Exit codes:** `0` always.
-
----
-
-## merge
-
-Merges batch tracker additions (`batch/tracker-additions/*.tsv`) into `applications.md`. Handles 9-column TSV, 8-column TSV, and pipe-delimited markdown formats. Detects duplicates by report number, entry number, and company+role fuzzy match. Higher-scored re-evaluations update existing entries in place.
+Consumes one-line tracker additions from the selected
+`batch/tracker-additions/` directory. It accepts the current 9-column TSV
+contract, older compatible forms, and pipe-delimited rows; it deduplicates by
+report number, tracker number, URL, and company-role identity before merging.
 
 ```bash
-npm run merge                 # apply merge
-npm run merge -- --dry-run    # preview without writing
-npm run merge -- --verify     # merge then run verify-pipeline
+npm run merge -- --dry-run
+npm run merge
+npm run merge -- --verify
 ```
 
-Processed TSVs are moved to `batch/tracker-additions/merged/`.
-
-**Exit codes:** `0` success, `1` verification errors (with `--verify`).
-
----
-
-## pdf
-
-Renders an HTML file to a print-quality, ATS-parseable PDF via headless Chromium. Resolves font paths from `fonts/`, normalizes Unicode for ATS compatibility (em-dashes, smart quotes, zero-width characters), and reports page count and file size.
+Successfully processed additions move to
+`batch/tracker-additions/merged/` under the selected data root. Workers must
+never edit `applications.md` directly. Merge refuses unevaluated placeholders
+(`reports/pending.md`, status `Triaged`, "not yet evaluated" Notes). Those
+candidates belong in `data/scan-results-*.tsv` triage until a real A-G report
+exists. To demote legacy placeholder tracker rows:
 
 ```bash
-npm run pdf -- input.html output.pdf
-npm run pdf -- input.html output.pdf --format=letter   # US letter
-npm run pdf -- input.html output.pdf --format=a4        # A4 (default)
+node backfill-unevaluated-to-triage.mjs --dry-run
+node backfill-unevaluated-to-triage.mjs --apply
 ```
 
-**Exit codes:** `0` PDF generated, `1` missing arguments or generation failure.
+## Setup and diagnostics
 
----
+### doctor
 
-## sync-check
+Checks Node.js 18+, installed dependencies, Playwright Chromium, `cv.md`,
+`config/profile.yml`, `portals.yml`, and the legacy font/setup directories.
+The current implementation also creates root `data/`, `output/`, and
+`reports/` directories for compatibility; it does not evaluate roles or alter
+the selected live tracker.
 
-Validates that the career-ops setup is internally consistent: `cv.md` exists and is not too short, `config/profile.yml` exists with required fields, no hardcoded metrics in `modes/_shared.md` or `batch/batch-prompt.md`, and `article-digest.md` freshness (warns if older than 30 days).
+```bash
+npm run doctor
+```
+
+### sync-check
+
+Checks profile/CV consistency and stale setup assumptions. It is read-only
+except for diagnostics.
 
 ```bash
 npm run sync-check
 ```
 
-**Exit codes:** `0` no errors (warnings allowed), `1` errors found.
+### update and rollback
 
----
-
-## update:check
-
-Checks whether a newer version of career-ops is available upstream. Outputs JSON to stdout:
+`update:check`, `update`, and `rollback` are the upstream system-file updater
+commands. Review the data contract and the proposed diff before applying an
+update to a personalized workspace.
 
 ```bash
 npm run update:check
-```
-
-Possible JSON responses:
-
-| `status` | Meaning |
-|----------|---------|
-| `up-to-date` | Local version matches remote |
-| `update-available` | Newer version exists (includes `local`, `remote`, `changelog`) |
-| `dismissed` | User dismissed the update prompt |
-| `offline` | Could not reach GitHub |
-
-**Exit codes:** `0` always.
-
----
-
-## update
-
-Applies the upstream update. Creates a backup branch (`backup-pre-update-{version}`), fetches from the canonical repo, checks out only system-layer files, runs `npm install`, and commits. User-layer files (`cv.md`, `config/profile.yml`, `data/`, etc.) are never touched.
-
-```bash
 npm run update
-```
-
-**Exit codes:** `0` success, `1` lock conflict or safety violation.
-
----
-
-## rollback
-
-Restores system-layer files from the most recent backup branch created during an update.
-
-```bash
 npm run rollback
 ```
 
-**Exit codes:** `0` success, `1` no backup branch found or git error.
+### backup
 
----
+There is no `npm run backup` script. The user-triggered off-disk backup is:
 
-## liveness
+```bash
+node backup.mjs --dry-run
+node backup.mjs --dest <off-disk-folder>
+```
 
-Tests whether job posting URLs are still live using headless Chromium. Detects expired patterns (e.g. "job no longer available"), HTTP 404/410, ATS redirect patterns, and apply-button presence. Supports multi-language expired patterns (English, German, French).
+Secrets are excluded from the main archive by default. See
+[RECOVERY.md](RECOVERY.md) for the recovery set and credential re-auth rules.
+
+## Discovery and liveness
+
+### liveness
+
+`check-liveness.mjs` and `liveness-core.mjs` classify a posting as `active`,
+`expired`, or `uncertain` using HTTP state, closed-page signals, redirects,
+content length, and visible application controls.
 
 ```bash
 npm run liveness -- https://example.com/job/123
-npm run liveness -- https://a.com/job/1 https://b.com/job/2
 npm run liveness -- --file urls.txt
+npm run liveness:bulk -- urls.txt
+npm run liveness:batch
 ```
 
-Each URL gets a verdict: `active`, `expired`, or `uncertain` with a reason.
+The batch command reads pending `*.tsv` files under the selected
+`batch/tracker-additions/` tree and writes bounded verdict output. Expired
+roles are skipped before evaluation; uncertain roles remain visible with an
+explicit reason.
 
-**Exit codes:** `0` all URLs active, `1` any expired or uncertain.
+### scan
 
----
-
-## scan
-
-Zero-token portal scanner. Hits ATS APIs (Greenhouse, Ashby, Lever) and career pages directly — no LLM tokens consumed. Reads `portals.yml` for target companies and search queries, outputs matching listings to stdout, and writes new candidates to a transient `data/scan-results-{YYYY-MM-DD}.tsv` for immediate inline evaluation by the calling skill (no triage state — see Anmol's CLAUDE.md Hard Rule 7).
+`scan.mjs` reads `portals.yml`, applies the shared title, geography, age, and
+deduplication filters, and writes the dated handoff under
+`ft/data/scan-results-YYYY-MM-DD.tsv` by default. It supports the structured
+Greenhouse, Ashby, Lever, and Workday paths implemented in the scanner plus
+configured JSON or sitemap feeds.
 
 ```bash
 npm run scan
+npm run scan:spa
+node scan-freehire.mjs
+npm run scan:all
+npm run scan:all -- --dry-run
+npm run scan:all -- --skip adzuna,hiringcafe
 ```
 
-**Exit codes:** `0` scan completed, `1` configuration error or no portals.yml found.
+`scan:all` runs the active Node scanners plus Python intake adapters in the
+order from `modes/scan.md`. It does not evaluate, merge, or apply. Optional
+sources (Adzuna without credentials, Hiring Cafe without FlareSolverr) are
+skipped instead of failing the whole run. LinkedIn guest scan and deferred
+YC/Levels/startup.jobs ingest stay excluded.
 
----
+The scan is user-triggered. The normal skill flow evaluates survivors inline;
+an explicit `scan-only` run may leave the dated TSV for a later resume pass.
+There is no `pipeline.md` triage queue and no scheduled scanner.
 
-## Discovery ingest scripts (`scripts/`)
+### Python intake
 
-These Python scripts pull candidate rows from aggregators and job boards. They are user-triggered (no cron, per CLAUDE.md Rule 6), invoked directly with `python3`, and each routes its raw rows through the shared filter chain in `discovery_filters.py` before writing `*.tsv` placeholders into `batch/tracker-additions/`. See [docs/ARCHITECTURE.md](ARCHITECTURE.md) for the per-source mechanism, volume, and flags.
+These adapters are also user-triggered and route raw rows through
+`scripts/discovery_filters.py` before appending to
+`data/scan-results-{date}.tsv` triage. They do not write unevaluated
+`reports/pending.md` placeholders into the tracker. Only a completed A-G
+eval may emit mergeable `batch/tracker-additions/` rows.
 
-| Script | Source | Notes |
-|--------|--------|-------|
-| `aggregator-intake.py` | 8 public GitHub README aggregators | Highest-volume source; parses markdown/HTML job tables. |
-| `jobspy-ingest.py` | LinkedIn / Indeed / Google Jobs | Wraps python-jobspy; heavy URL churn at the liveness gate. |
-| `hiringcafe-ingest.py` | hiring.cafe | Rich payload (visa, comp, workplace type). Exposes `visa_sponsorship`. |
-| `adzuna-ingest.py` | Adzuna REST API | Needs `ADZUNA_APP_ID` + `ADZUNA_APP_KEY` env vars. |
-| `startupjobs-ingest.py` | startup.jobs | Playwright via subprocess; low yield (GTM/non-US heavy). |
-| `yc-ingest.py` | YC Work at a Startup | Playwright scrape of `/internships`. |
-| `hn-hiring-ingest.py` | HN "Ask HN: Who is hiring?" | Parses monthly thread via Algolia + items API. |
-| `levels-ingest.py` | levels.fyi/jobs/internships | Route is FTE-heavy; most rows dropped by the filter. |
+| Script | Source | Current disposition |
+|---|---|---|
+| `aggregator-intake.py` | Curated GitHub job-list repositories | Active |
+| `jobspy-ingest.py` | LinkedIn, Indeed, Google Jobs via JobSpy | Active; install JobSpy from GitHub with `python -m pip install -U -r requirements-discovery.txt` |
+| `hiringcafe-ingest.py` | Hiring Cafe | Active when configured |
+| `adzuna-ingest.py` | Adzuna API | Active when credentials exist |
+| `hn-hiring-ingest.py` | Hacker News Who Is Hiring | Active |
+| `yc-ingest.py` | YC Work at a Startup | Deferred until FT surface is verified |
+| `levels-ingest.py` | Levels.fyi jobs | Deferred until FT surface is verified |
+| `startupjobs-ingest.py` | startup.jobs | Deferred until FT surface is verified |
 
-**Shared / utility:**
+The Python `prune-by-liveness.py` and report-reorganization utilities remain
+compatibility helpers. Prefer the shared JavaScript liveness/runtime paths for
+new FT workflow work.
 
-- `discovery_filters.py` — canonical filter chain, dedup, and NN allocation imported by the ingest scripts above. Not run directly.
-- `prune-by-liveness.py` — post-liveness-gate cleanup; deletes expired placeholder TSVs and flags uncertain rows.
-- `reorg-reports-by-company.py` — canonical company-slug normalizer (cited by CLAUDE.md and `templates/cover-letter.md`); idempotent report reorganizer, dry-run by default.
+## Provider-free runtime
+
+The runtime CLI is [bin/career-ops.mjs](../bin/career-ops.mjs). The normal
+sequence is:
+
+```text
+prepare -> respond -> validate -> PolicyEngine -> commit -> recover
+```
+
+Useful commands include:
+
+```bash
+node bin/career-ops.mjs prepare --input seed.json --out task.json
+node bin/career-ops.mjs validate --task task.json --response response.json
+node bin/career-ops.mjs commit --task task.json --response response.json
+node bin/career-ops.mjs batch --manifest batch.json
+node bin/career-ops.mjs evaluate --skip-liveness
+node bin/career-ops.mjs evaluate --config <runtime.yml> --provider <id> --acknowledge-quota --apply
+node bin/career-ops.mjs recover --target <data-root> --config <runtime.yml> --apply
+```
+
+### evaluate
+
+`npm run evaluate` (or `node bin/career-ops.mjs evaluate`) is the single
+command for the triage evaluation pass. It reads `data/scan-results-*.tsv`,
+runs the liveness gate, fetches JD evidence, then
+`prepare -> respond -> commit` through an explicitly selected provider.
+
+```bash
+# Plan only (no writes, optional liveness)
+npm run evaluate
+npm run evaluate -- --file ft/data/scan-results-2026-09-12.tsv --max 25
+
+# Commit survivors (requires local runtime config + provider + quota ack)
+npm run evaluate -- \
+  --config config/runtime.local.yml \
+  --provider antigravity-gemini-flash-high \
+  --acknowledge-quota \
+  --apply
+```
+
+Without `--apply` the command only prints an `EvaluateScanPlanV1` /
+`EvaluateScanResultV1` plan. With `--apply` it writes reports and tracker
+rows through the transactional commit path, drops expired and committed URLs
+from the scan-results handoff, and never merges `reports/pending.md`
+placeholders. Use `--profile career-ops-job-v1` instead of `--provider` to
+select that profile's judgment provider (`codex-luna` in the example config).
+`antigravity-gemini-flash-high` is the checked-in Antigravity Gemini 3.8 Flash
+High provider for unattended evaluate runs. Use `--skip-liveness` only in tests
+or when a fresh liveness TSV was already applied.
+
+Mutation requires an explicit local runtime configuration, writer authorization,
+and `--apply`. Providers may be disabled or ineligible; routing fails closed
+with `NO_ELIGIBLE_PROVIDER` instead of silently lowering task capability.
+Runtime contracts live in `schemas/runtime/` and implementation lives in
+`lib/runtime/`.
+
+Runtime qualification and shadow helpers are exposed through the `runtime:*`
+package scripts in `package.json`. They are diagnostic or rollout controls and
+do not enable production routing by themselves.
+
+## Optional application pipeline
+
+Application attempts are configuration-gated and disabled by default. Use the
+runtime CLI, not an ad hoc script:
+
+```bash
+node bin/career-ops.mjs apply enqueue
+node bin/career-ops.mjs apply run --config config/runtime.local.yml --apply
+node bin/career-ops.mjs apply serve
+```
+
+The runner uses the dedicated Job Autofill profile, an ATS allowlist, exact
+tracker-number plus canonical-URL attempt keys, and terminal attempt states.
+Only recognized submission evidence may change a tracker row to `Applied`.
+It never auto-answers sensitive or ambiguous questions and never retries
+`SUBMITTED` or `SUBMISSION_UNKNOWN` automatically.
+
+## Analytics and compatibility entrypoints
+
+These utilities are direct Node commands rather than package scripts:
+
+```bash
+node stats.mjs --summary
+node source-analytics.mjs
+node verify-pipeline.mjs
+```
+
+`gemini-eval.mjs` and `batch/batch-runner.sh` are compatibility entrypoints.
+They delegate to the provider-free runtime by default; set
+`CAREER_OPS_RUNTIME=legacy` only for an explicitly needed historical path.
+On native Windows, call `node bin/career-ops.mjs ...` directly because the shell
+wrapper requires Bash.
+
+`npm run pdf` and `generate-latex.mjs` remain legacy tooling. The active
+workspace does not generate or rebuild resume PDFs; the user supplies the
+maintained SDE or MLE resume.
+
+## Verification after changes
+
+For documentation-only changes, run the relevant link and diff checks. For
+runtime or script changes, run:
+
+```bash
+npm test
+npm run verify
+(cd dashboard && go test ./...)
+```
+
+Do not commit or push as part of script execution unless the user explicitly
+requests it.

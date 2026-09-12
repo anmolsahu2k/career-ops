@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
-# requirements: python-jobspy (pip install python-jobspy)
+# requirements: python-jobspy from GitHub main
+#   python -m pip install -U -r requirements-discovery.txt
+#   # or: python -m pip install -U "git+https://github.com/speedyapply/JobSpy.git@main"
 """jobspy-ingest.py - JobSpy adapter for the career-ops discovery pipeline.
 
-Wraps python-jobspy (https://github.com/speedyapply/JobSpy) to scrape
-LinkedIn / Indeed / ZipRecruiter / Google Jobs for internship listings, then
-routes raw rows through the canonical filter chain in `discovery_filters.py`
-(same chain as `aggregator-intake.py`), then emits placeholder TSVs into
-`batch/tracker-additions/` for the standard liveness -> eval -> merge flow.
+Wraps JobSpy (https://github.com/speedyapply/JobSpy) to scrape
+LinkedIn / Indeed / ZipRecruiter / Google Jobs for full-time / new-grad
+listings, then routes raw rows through the canonical filter chain in
+`discovery_filters.py` (same chain as `aggregator-intake.py`), then emits
+placeholder TSVs into the scan-results triage handoff
+(`data/scan-results-{date}.tsv`) for the standard
+liveness -> eval -> merge flow. Discovery never writes unevaluated
+`reports/pending.md` rows into the curated tracker.
 
 Pipeline (canonical, shared with all discovery sources):
   scrape_jobs(per keyword x location) -> raw rows
     -> apply_unified_filter():
          title allow + deny  | season filter  | geo filter
        | within-run URL dedup | tracker URL dedup | fingerprint dedup
-    -> emit TSVs at next_available_nn()..
-    -> standard liveness gate (npm run liveness:batch)
-    -> eval dispatch
+    -> append triage rows to data/scan-results-{date}.tsv
+    -> standard liveness gate (npm run liveness:bulk)
+    -> eval dispatch (writes real reports + tracker-additions)
     -> merge-tracker.mjs
 
 Multi-keyword sweep: --keyword accepts comma-separated terms.
@@ -172,7 +177,9 @@ def main(argv=None):
         from jobspy import scrape_jobs  # type: ignore
     except ImportError:
         print(
-            "error: python-jobspy not installed. Run: pip install python-jobspy",
+            "error: python-jobspy not installed. Run:\n"
+            "  python -m pip install -U -r requirements-discovery.txt\n"
+            "  # installs JobSpy from GitHub main (preferred over PyPI)",
             file=sys.stderr,
         )
         return 2

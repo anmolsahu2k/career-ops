@@ -27,7 +27,7 @@ Career-ops is agentic: Codex verifies career pages, evaluates fit by reasoning a
 | **Interview Story Bank** | Accumulates STAR+Reflection stories across evaluations -- 5-10 master stories that answer any behavioral question |
 | **Negotiation Scripts** | Salary negotiation frameworks, geographic discount pushback, competing offer leverage |
 | **Resume Selection** | Chooses the maintained SDE or MLE resume; this fork never generates CV PDFs |
-| **Portal Scanner** | 45+ companies pre-configured (Anthropic, OpenAI, ElevenLabs, Retool, n8n...) + custom queries across Ashby, Greenhouse, Lever, Wellfound |
+| **Portal Scanner** | On-demand scanning of configured company boards, ATS APIs, company pages, and external feeds |
 | **Batch Processing** | Parallel evaluation with Codex subagents; legacy agent adapters remain isolated |
 | **Dashboard TUI** | Terminal UI to browse, filter, and sort your pipeline |
 | **Human-in-the-Loop** | AI evaluates and recommends, you decide and act. The system never submits an application -- you always have the final call |
@@ -94,6 +94,8 @@ In Codex, Career-Ops is a repository skill with multiple modes:
 $career-ops                → Show all available modes
 $career-ops {paste a JD}   → Full auto-pipeline (evaluate + report + tracker)
 $career-ops scan           → Scan configured sources and evaluate survivors
+npm run scan:all           → Discovery only: every active source, zero LLM tokens
+npm run evaluate           → Evaluate scan-results triage (provider-backed; see Manual workflow)
 $career-ops offer          → Full A-G evaluation of one role
 $career-ops offers         → Compare multiple roles
 $career-ops batch          → Batch evaluate with Codex subagents
@@ -106,6 +108,56 @@ $career-ops project        → Evaluate a portfolio project
 ```
 
 You can also paste a job URL or description directly. The skill can be selected implicitly and routes it to the full pipeline. Claude, Gemini, and OpenCode retain their existing slash-command adapters.
+
+## Manual workflow (no agent)
+
+Use this path when you want the funnel without Codex/Claude chat tokens.
+Discovery and liveness stay zero-LLM; only `evaluate --apply` spends provider
+quota (one call per live URL).
+
+**Prerequisites:** `config/runtime.local.yml` with `writer_host` set to this
+machine, and a consequential provider enabled (for example
+`antigravity-gemini-flash-high` via Antigravity/`agy`). Details:
+[docs/SCRIPTS.md](docs/SCRIPTS.md#manual-workflow-no-agent).
+
+```powershell
+# 0) One-time / occasional checks
+npm run doctor
+npm run runtime:doctor
+
+# 1) Discovery only → ft/data/scan-results-YYYY-MM-DD.tsv (0 LLM tokens)
+npm run scan:all
+
+# 2) Plan evaluation (liveness + queue preview; 0 LLM tokens if you stop here)
+npm run evaluate
+npm run evaluate -- --file ft/data/scan-results-2026-09-12.tsv --max 25
+
+# 3) Commit evaluations (1 provider call per live/uncertain URL)
+npm run evaluate -- `
+  --config config/runtime.local.yml `
+  --provider antigravity-gemini-flash-high `
+  --acknowledge-quota `
+  --apply
+
+# 4) Tracker hygiene
+npm run verify
+npm run normalize -- --dry-run
+npm run dedup -- --dry-run
+
+# 5) Optional: dashboard / apply (still user-triggered; submit stays gated)
+cd dashboard; go build -o career-dashboard .; ./career-dashboard --path ../ft
+# node bin/career-ops.mjs apply enqueue
+# node bin/career-ops.mjs apply run --config config/runtime.local.yml --apply
+```
+
+Rules for the manual path:
+
+- Unevaluated jobs stay in `ft/data/scan-results-*.tsv` triage, never as
+  `reports/pending.md` tracker stubs.
+- Only a completed A-G commit may add a row to `ft/data/applications.md`.
+- Prefer `--max N` until you trust provider quota and output quality.
+- Agent modes (`$career-ops scan`, paste-a-JD) remain available when you want
+  interactive review instead of unattended evaluate.
 
 ## How It Works
 
@@ -123,15 +175,19 @@ You paste a job URL or description
 │  (reads cv.md)   │
 └────────┬─────────┘
          │
-    ┌────┼────┐
-    ▼    ▼    ▼
- Report Resume Tracker
-  .md    pick   .tsv
+     ┌────┼────┐
+     ▼    ▼    ▼
+ ┌──────┐ ┌──────┐ ┌─────────┐
+ │Report│ │Resume│ │Tracker  │
+ │ .md  │ │ pick │ │  .tsv   │
+ └──────┘ └──────┘ └─────────┘
 ```
 
 ## Pre-configured Portals
 
-The scanner comes with **45+ companies** ready to scan and **19 search queries** across major job boards. Copy `templates/portals.example.yml` to `portals.yml` and add your own:
+The scanner reads the ignored, user-owned `portals.yml`. Copy
+`templates/portals.example.yml` to activate a starter configuration, then add
+or remove companies and queries for your own search:
 
 **AI Labs:** Anthropic, OpenAI, Mistral, Cohere, LangChain, Pinecone
 **Voice AI:** ElevenLabs, PolyAI, Parloa, Hume AI, Deepgram, Vapi, Bland AI
@@ -142,7 +198,12 @@ The scanner comes with **45+ companies** ready to scan and **19 search queries**
 **Automation:** n8n, Zapier, Make.com
 **European:** Factorial, Attio, Tinybird, Clarity AI, Travelperk
 
-**Job boards searched:** Ashby, Greenhouse, Lever, Wellfound, Workable, RemoteFront
+**Supported source surfaces:** Greenhouse, Ashby, Lever, Workday, enabled
+Playwright career pages, and configured JSON or sitemap feeds. Additional
+Python intake adapters are documented in [docs/SCRIPTS.md](docs/SCRIPTS.md).
+Run `npm run scan:all` for a manual discovery pass across every active source
+without evaluating roles. For the full no-agent loop (scan → evaluate → verify),
+see [Manual workflow](#manual-workflow-no-agent).
 
 ## Dashboard TUI
 
@@ -155,7 +216,9 @@ go build -o career-dashboard .
 # ./career-dashboard --path ..    # opens the read-only intern archive at the repo root
 ```
 
-Features: 6 filter tabs, 4 sort modes, grouped/flat view, lazy-loaded previews, inline status changes.
+Features: filter tabs, multiple sort modes, grouped/flat view, lazy-loaded
+previews, URL opening, progress metrics, and candidate-controlled status
+changes.
 
 > **Note:** CV PDF generation is deprecated in this fork. The user submits their own resume PDFs; career-ops provides evaluations, form answers, and cover letters only.
 
@@ -170,7 +233,7 @@ career-ops/
 ├── article-digest.md            # Your proof points (optional)
 ├── config/
 │   └── profile.example.yml      # Template for your profile
-├── modes/                       # 14 skill modes
+├── modes/                       # Workflow modes and compatibility aliases
 │   ├── _shared.md               # Shared context (customize this)
 │   ├── offer.md                 # Single evaluation
 │   ├── pdf.md                   # Legacy formatting reference; generation disabled
@@ -178,15 +241,20 @@ career-ops/
 │   ├── batch.md                 # Batch processing
 │   └── ...
 ├── templates/
-│   ├── cv-template.html         # ATS-optimized CV template
+│   ├── cv-template.html         # Legacy CV template (generation disabled)
 │   ├── portals.example.yml      # Scanner config template
 │   └── states.yml               # Canonical statuses
-├── batch/
-│   ├── batch-prompt.md          # Self-contained worker prompt
-│   └── batch-runner.sh          # Orchestrator script
+├── ft/                          # Default live FT/new-grad data root
+│   ├── data/applications.md     # Canonical 9-column tracker
+│   ├── reports/                 # Evaluation reports and JD archives
+│   └── batch/                   # Additions and scan artifacts
+├── data/, reports/              # Frozen internship archive
+├── batch/                       # Legacy wrapper and compatibility prompt
+├── scan.mjs / scan-spa.mjs / scan-all.mjs  # Zero-token discovery scanners
 ├── dashboard/                   # Go TUI pipeline viewer
-├── data/                        # Your tracking data (gitignored)
-├── reports/                     # Evaluation reports (gitignored)
+├── lib/runtime/                 # Provider-free runtime and policy engine
+├── lib/applications/            # Optional gated application runner
+├── schemas/runtime/             # Versioned runtime contracts
 ├── output/                      # Legacy generated artifacts (gitignored)
 ├── fonts/                       # Legacy resume-template fonts
 └── docs/                        # Setup, customization, architecture
@@ -201,7 +269,7 @@ career-ops/
 ![Bubble Tea](https://img.shields.io/badge/Bubble_Tea-FF75B5?style=flat&logo=go&logoColor=white)
 
 - **Agent**: Codex with a repository skill and shared mode files
-- **Compatibility**: Antigravity is active; Claude Code, Gemini CLI, and OpenCode files are legacy adapters
+- **Compatibility**: Antigravity is supported but disabled by default; Claude Code, Gemini CLI, and OpenCode files are compatibility adapters
 - **Scanner**: Playwright + public ATS APIs + live web research
 - **Dashboard**: Go + Bubble Tea + Lipgloss (Catppuccin Mocha theme)
 - **Data**: Markdown tables + YAML config + TSV batch files

@@ -35,7 +35,7 @@ If the input was a URL (not pasted JD text), apply the liveness classifier (same
 - `FRESHNESS: unknown` — age not confirmable (no penalty; it could not be measured)
 
 ## Step 1 — A-G Evaluation
-Run exactly as in `offer` mode (read `modes/offer.md` for all A-F blocks + Block G Posting Legitimacy).
+Run exactly as in `offer` mode (read `modes/offer.md` for the scored A-F blocks plus Block G Posting Legitimacy).
 
 ## Step 2: Save Report .md
 Save the full evaluation to `ft/reports/{company-slug}/{###}-{role-slug}-{YYYY-MM-DD}.md` (path resolves under `$CAREER_OPS_DATA_DIR`, default `ft/`; see format in `modes/offer.md`).
@@ -78,10 +78,15 @@ Include Block G in the saved report. Add `**Legitimacy:** {tier}` to the report 
 - **Good fit?** → "I sit at the intersection of [A] and [B], which is exactly where this role lives."
 - **How did you hear?** → Honest: "Found through [portal/scan], evaluated against my criteria, and it scored highest."
 
-**Language**: Always match the JD's language (EN default). Apply `/tech-translate`.
+**Language**: Always match the JD's language (English by default). If a
+translation is needed, use an available translation capability only when the
+user asks for translated output; do not assume a `/tech-translate` command is
+installed.
 
 ## Step 5: Update Tracker
 **NEVER edit `ft/data/applications.md` directly.** Write a 9-column TSV line to `ft/batch/tracker-additions/{NN}.tsv` (schema: `| # | Date | Company | Role | Score | Status | PDF | Report | Notes |`). **Column 7 (PDF) is always `❌`** (no PDFs are generated). **Column 8 (Report) is the markdown link to the report file you just wrote: `[{NN}](reports/{company-slug}/{NN}-{role-slug}-{date}.md)`** — the dashboard's report-open path reads this cell, so a bare word there (a resume pick, `N/A`, a status) silently breaks it for that row. The resume pick belongs in **Notes**, as `Submit SDE resume` or `Submit MLE resume` per the archetype, and nowhere else. The later merge incorporates the line into the tracker.
+
+**Never write a tracker row without a real A-G report.** Do not point Report at `reports/pending.md`, do not use status `Triaged`, and do not merge "Not yet evaluated" discovery stubs. Unevaluated scan/intake survivors stay in `ft/data/scan-results-*.tsv` until this step completes.
 
 **Every row MUST end its Notes with a `SRC: {source}` token** naming the discovery source, so per-source funnel analytics stay computable from the tracker alone (`node source-analytics.mjs`). Take the value from the `source` column of `ft/data/scan-results-{date}.tsv` for scanned rows, or the `Discovery via {x}` clause of an aggregator placeholder row, **and map it to a canonical id before writing it** — a feed's own label is not a source id. The mappings that bite most often: `linkedin` -> `jobspy-linkedin`, `indeed` -> `jobspy-indeed`, `hnhiring` -> `hn-hiring`, `greenhouse`/`ashby`/`lever`/`workday` -> the `-api` suffixed form, `playwright-{provider}` -> `playwright-spa`. If the row came from a URL the user pasted directly, use `SRC: manual`. Canonical source ids live in [lib/sources.mjs](../lib/sources.mjs) — use one of those, never a company name or a free-text phrase.
 

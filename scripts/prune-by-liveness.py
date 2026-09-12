@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-"""prune-by-liveness.py — apply a liveness-results.tsv to the live aggregator
+﻿#!/usr/bin/env python3
+"""prune-by-liveness.py â€” apply a liveness-results.tsv to the live aggregator
 TSVs. Deletes expired placeholders, marks expired evaluated rows as Discarded,
 and flags uncertain rows in their Notes column.
 
@@ -27,7 +27,7 @@ URL_RE_REPORT = re.compile(r"\*\*URL:\*\*\s*(\S+)")
 def load_results(path):
     """Returns {normalized_url: {result, status, reason}}."""
     out = {}
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding='utf-8').splitlines():
         parts = line.split("\t")
         if len(parts) >= 4:
             url = parts[0].lower().rstrip("/")
@@ -38,7 +38,7 @@ def load_results(path):
 def url_for_tsv(tsv_path):
     """Pull the URL for a TSV from its Notes (placeholder) or from the report
     file's `**URL:**` header (evaluated)."""
-    line = tsv_path.read_text().splitlines()[0]
+    line = tsv_path.read_text(encoding='utf-8').splitlines()[0]
     parts = line.split("\t")
     notes = parts[8] if len(parts) > 8 else ""
     report_cell = parts[7] if len(parts) > 7 else ""
@@ -97,7 +97,7 @@ def main(argv=None):
                 deleted += 1
             else:
                 # Mark Discarded in TSV
-                line = tsv.read_text().splitlines()[0]
+                line = tsv.read_text(encoding='utf-8').splitlines()[0]
                 parts = line.split("\t")
                 if len(parts) >= 9:
                     parts[5] = "Discarded"
@@ -107,13 +107,13 @@ def main(argv=None):
                     if args.dry_run:
                         print(f"DISCARD {tsv.name}")
                     else:
-                        tsv.write_text("\t".join(parts) + "\n")
+                        tsv.write_text("\t".join(parts) + "\n", encoding='utf-8')
                 # Mark Discarded in report file
                 m2 = re.search(r"\(([^)]+\.md)\)", report_cell)
                 if m2:
                     rp = TARGET_ROOT / m2.group(1)
                     if rp.exists() and rp.name != "pending.md":
-                        text = rp.read_text()
+                        text = rp.read_text(encoding='utf-8')
                         new_text = re.sub(
                             r"(\*\*Status:\*\*\s*)\S+", r"\1Discarded", text, count=1
                         )
@@ -125,11 +125,11 @@ def main(argv=None):
                                 count=1,
                             )
                         if not args.dry_run and new_text != text:
-                            rp.write_text(new_text)
+                            rp.write_text(new_text, encoding='utf-8')
                 discarded += 1
 
         elif result == "uncertain":
-            line = tsv.read_text().splitlines()[0]
+            line = tsv.read_text(encoding='utf-8').splitlines()[0]
             parts = line.split("\t")
             if len(parts) >= 9:
                 prefix = f"LIVENESS-UNCERTAIN {today}. "
@@ -138,7 +138,7 @@ def main(argv=None):
                     if args.dry_run:
                         print(f"FLAG    {tsv.name}")
                     else:
-                        tsv.write_text("\t".join(parts) + "\n")
+                        tsv.write_text("\t".join(parts) + "\n", encoding='utf-8')
                     flagged += 1
 
     print(
@@ -153,3 +153,5 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
+
+

@@ -1,0 +1,152 @@
+[
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.moaijobs.com/job/ai-engineer-platform-infrastructure-special-programs-spacex-3413. Its canonical source id is external-moaijobs. Its reserved report number is 6169. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6169-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6169.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.moaijobs.com/job/software-engineer-ml-infrastructure-platform-nuro-6108. Its canonical source id is external-moaijobs. Its reserved report number is 6170. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6170-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6170.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://jobs.apple.com/en-us/details/200677133/ai-engineer-algorithm-evaluation-agentic-systems. Its canonical source id is freehire. Its reserved report number is 6171. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6171-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6171.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.moaijobs.com/job/data-scientist-lightning-ai-6. Its canonical source id is external-moaijobs. Its reserved report number is 6172. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6172-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6172.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.moaijobs.com/job/applied-ai-ml-engineer-oddball-702. Its canonical source id is external-moaijobs. Its reserved report number is 6173. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6173-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6173.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.moaijobs.com/job/machine-learning-data-scientist-forecasting-openai-3819. Its canonical source id is external-moaijobs. Its reserved report number is 6174. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6174-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6174.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.moaijobs.com/job/software-engineer-ml-inference-platform-nuro-4245. Its canonical source id is external-moaijobs. Its reserved report number is 6175. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6175-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6175.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.moaijobs.com/job/machine-learning-engineer-ai-safety-nvidia-3133. Its canonical source id is external-moaijobs. Its reserved report number is 6176. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6176-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6176.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.moaijobs.com/job/student-worker-machine-learning-engineer-data-mining-vlm-zoox-3396. Its canonical source id is external-moaijobs. Its reserved report number is 6177. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6177-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6177.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://ekkt.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/jobsearch/job/6928. Its canonical source id is freehire. Its reserved report number is 6178. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6178-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6178.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://job-boards.greenhouse.io/accordion/jobs/8044436. Its canonical source id is freehire. Its reserved report number is 6179. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6179-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6179.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://aderant.wd5.myworkdayjobs.com/Aderant_External_Careers/job/Atlanta-Georgia/AI-Engineer---Center-of-Excellence_REQ_100000409. Its canonical source id is freehire. Its reserved report number is 6180. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6180-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6180.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://adventservices.bamboohr.com/careers/361. Its canonical source id is freehire. Its reserved report number is 6181. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6181-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6181.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://job-boards.greenhouse.io/air/jobs/4062770009. Its canonical source id is freehire. Its reserved report number is 6182. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6182-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6182.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://job-boards.greenhouse.io/air/jobs/4077374009. Its canonical source id is freehire. Its reserved report number is 6183. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6183-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6183.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://job-boards.greenhouse.io/alarmcom/jobs/8344401002. Its canonical source id is freehire. Its reserved report number is 6184. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6184-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6184.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://alight.wd5.myworkdayjobs.com/Careers/job/US-IL-Deerfield-510-Lake-Cook/AI-Engineer--Virtual_R-37949. Its canonical source id is freehire. Its reserved report number is 6185. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6185-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6185.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://jobs.smartrecruiters.com/ALTEN/744000140500555-data-analyst. Its canonical source id is freehire. Its reserved report number is 6186. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6186-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6186.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.amazon.jobs/en/jobs/10501023/machine-learning-engineer-sponsored-products-off-search-sourcing-and-relevance. Its canonical source id is freehire. Its reserved report number is 6187. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6187-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6187.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.amazon.jobs/en/jobs/10497374/machine-learning-engineer-sponsored-products. Its canonical source id is freehire. Its reserved report number is 6188. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6188-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6188.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://amgen.wd1.myworkdayjobs.com/Careers/job/US---California---Thousand-Oaks/Data-Scientist_R-252243. Its canonical source id is freehire. Its reserved report number is 6189. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6189-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6189.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://job-boards.greenhouse.io/analyticservicesinc/jobs/5222813008?gh_jid=5222813008. Its canonical source id is freehire. Its reserved report number is 6190. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6190-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6190.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://analyticallc.applytojob.com/apply/lCrScUPWGy/AI-Engineer. Its canonical source id is freehire. Its reserved report number is 6191. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6191-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6191.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://analyticallc.applytojob.com/apply/eTytnpIV0Z/Data-Scientist. Its canonical source id is freehire. Its reserved report number is 6192. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6192-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6192.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://www.usajobs.gov/job/879689500. Its canonical source id is freehire. Its reserved report number is 6193. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6193-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6193.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://job-boards.greenhouse.io/anteriad/jobs/6011799004. Its canonical source id is freehire. Its reserved report number is 6194. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6194-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6194.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://job-boards.greenhouse.io/aperiasolutions/jobs/5200477007. Its canonical source id is freehire. Its reserved report number is 6195. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6195-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6195.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://jobs.apple.com/en-us/details/200676456/machine-learning-engineer. Its canonical source id is freehire. Its reserved report number is 6196. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6196-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6196.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://jobs.apple.com/en-us/details/200676373/machine-learning-engineer-foundation-model-services. Its canonical source id is freehire. Its reserved report number is 6197. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6197-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6197.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  },
+  {
+    "TypeName": "self",
+    "Role": "Evaluator",
+    "Prompt": "Use modes/_shared.md and modes/auto-pipeline.md to evaluate this URL: https://jobs.apple.com/en-us/details/200659977/machine-learning-engineer-health-aiml. Its canonical source id is freehire. Its reserved report number is 6198. Write the full Block A-G report to ft/reports/COMPANY_SLUG/6198-ROLE_SLUG.md and write a 1-line TSV to ft/batch/tracker-additions/6198.tsv. Infer the company slug and role slug from the URL/JD. Then finish."
+  }
+]

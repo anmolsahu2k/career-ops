@@ -162,8 +162,8 @@ Save the full evaluation to `ft/reports/{company-slug}/{###}-{role-slug}-{YYYY-M
 
 **URL:** {single canonical apply URL}
 
-**Score:** {X.X}/5  **Status:** {canonical status from templates/states.yml}  **Resume:** {SDE|MLE}
-**Legitimacy:** {High Confidence | Medium | Low} ({source, e.g. Greenhouse, active})
+**Score:** {X.X}/5  **Status:** {canonical status from templates/states.yml}  **Resume:** {SDE PDF|MLE PDF|N/A (off-target)}
+**Legitimacy:** {High Confidence | Proceed with Caution | Suspicious} ({source, e.g. Greenhouse, active})
 **Level strategy:** {New-grad-only | New-grad + experienced | Mixed}
 **Comp research:** {salary range with source, or "unknown"}
 **Sponsorship flag:** {Y | N | Unknown}
@@ -205,9 +205,11 @@ Save the full evaluation to `ft/reports/{company-slug}/{###}-{role-slug}-{YYYY-M
 - Company
 - Role
 - Score: match average (1-5)
-- Status: `Evaluated`
+- Status: `Evaluated` for APPLY/CONSIDER, or `Rejected-at-eval` for DO NOT APPLY on the merits
 - PDF: ❌ (no PDFs are generated; the user submits their own resume from `resumes/`)
-- Report: relative link to the report .md (e.g.: `[001](reports/company/001-company-2026-01-01.md)`)
+- Report: relative link to the report .md (e.g.:
+  `[001](reports/company/001-company-2026-01-01.md)`), stored as tracker data
+  rather than a link from this mode file
 - Notes: `Submit SDE resume` or `Submit MLE resume` according to the archetype (SDE/backend/infra → SDE; AI/ML/DS/DE → MLE)
 
 **Tracker schema (9 columns, do NOT change):**

@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "Job Autofill (career-ops)",
+  "version": "0.1.0",
+  "description": "Click-to-fill job application forms on Workday, Greenhouse, Ashby, Lever, and SuccessFactors. Learns answers as you type. Personal tool, unpacked only.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://*.myworkdayjobs.com/*",
+    "https://*.myworkdaysite.com/*",
+    "https://boards.greenhouse.io/*",
+    "https://job-boards.greenhouse.io/*",
+    "https://*.greenhouse.io/*",
+    "https://jobs.ashbyhq.com/*",
+    "https://jobs.lever.co/*",
+    "https://www.linkedin.com/jobs/*",
+    "https://*.successfactors.com/*",
+    "https://*.successfactors.eu/*",
+    "http://localhost/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.myworkdayjobs.com/*",
+        "https://*.myworkdaysite.com/*",
+        "https://boards.greenhouse.io/*",
+        "https://job-boards.greenhouse.io/*",
+        "https://*.greenhouse.io/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://jobs.lever.co/*",
+        "https://jobs.eu.lever.co/*",
+        "https://www.linkedin.com/jobs/*",
+        "https://*.successfactors.com/*",
+        "https://*.successfactors.eu/*",
+        "https://*.sapsf.com/*",
+        "https://*.sapsf.eu/*",
+        "https://*.jobs2web.com/*",
+        "http://localhost/*"
+      ],
+      "js": ["content/bootstrap.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Job Autofill"
+  },
+  "options_page": "options/options.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["content/*.js", "content/adapters/*.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

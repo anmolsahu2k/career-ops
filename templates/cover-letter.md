@@ -1,6 +1,12 @@
 # Cover Letter Template (body-only, paste-ready)
 
-This is the canonical format for every cover letter generated in this workspace, whether by a `/career-ops` invocation, the dashboard `u`-keybinding, or a direct request. It is body-only by design so the file's contents can be pasted directly into an application form's "Cover letter" text field with zero pre-trim. The form already collects the candidate's name, contact info, and the company name in separate fields; repeating them in the letter body is noise.
+This is the canonical format for every cover letter generated in this workspace,
+whether by a `$career-ops` request in Codex, a compatibility `/career-ops`
+request, or a direct user request. The dashboard does not generate letters. It
+is body-only by design so the file's contents can be pasted directly into an
+application form's "Cover letter" text field with zero pre-trim. The form
+already collects the candidate's name, contact info, and company name in
+separate fields; repeating them in the letter body is noise.
 
 ## Hard rules
 
@@ -10,7 +16,7 @@ This is the canonical format for every cover letter generated in this workspace,
 4. **No closing line.** Do not write `Resume attached.` or any equivalent meta-line about what is being submitted alongside.
 5. **No sign-off.** Do not write `Sincerely,`, `Thanks for the consideration,`, `Thanks,`, `Best,`, the candidate's name at the bottom, or any equivalent valediction. The letter ends on the last substantive sentence of the body.
 6. **No internal-tooling footer.** Do not append a `## Things deliberately NOT included` audit checklist or any meta-commentary about what was scrubbed. Scrubbing is the writer's job, not the user's.
-7. **Length cap: body <= 200 words.** Keep the whole body at or under 200 words. This cap exists to reduce the AI-tell of an over-long letter; short and specific reads as human, long and even reads as generated. The canonical reference `reports/sinfonik/426-...cover-letter.md` is a good model for the voice at this length.
+7. **Length cap: body <= 200 words.** Keep the whole body at or under 200 words. This cap exists to reduce the AI-tell of an over-long letter; short and specific reads as human, long and even reads as generated. The historical examples under the frozen root `reports/` tree are voice references only.
 
 ## Body shape
 
@@ -36,10 +42,8 @@ Recommended structure (treat as a default, not a rigid template):
 
 ## Reference letters
 
-- **Canonical voice / structure reference**: [reports/sinfonik/426-sinfonik-ai-engineering-intern-cover-letter.md](../reports/sinfonik/426-sinfonik-ai-engineering-intern-cover-letter.md), body-only, paste-ready, flowing paragraphs. Copy the voice; note it predates the 200-word cap (hard rule 7), so trim if you model on it.
-- **Voice secondary**: [reports/evolution-design-lab/2140-evolution-design-lab-ai-operations-intern-cover-letter.md](../reports/evolution-design-lab/2140-evolution-design-lab-ai-operations-intern-cover-letter.md), flowing-paragraph format, but predates the body-only rule so still has the greeting + sign-off; copy the voice, not the framing.
-- **Anti-patterns**: [reports/tifin/616-tifin-ai-engineering-intern-cover-letter.md](../reports/tifin/616-tifin-ai-engineering-intern-cover-letter.md), uses the ```` ``` ``` ```` code-fence + hard-wrap layout that mangles email pastes. Do not copy the format.
+- **Historical voice references**: the frozen root `reports/` archive contains older examples. Copy voice only, not their greetings, sign-offs, headers, or paths.
 
 ## Filename convention (unchanged)
 
-Path: `reports/{company-slug}/{NN}-{company-slug}-{role-slug}-cover-letter.md` where `{NN}` is the tracker row number (or eval#, depending on origin) and `{company-slug}` matches the slugifier in `scripts/reorg-reports-by-company.py`. Dashboard `u`-keybinding writes to this exact path.
+Path: `ft/reports/{company-slug}/{NN}-{company-slug}-{role-slug}-cover-letter.md` by default, or the corresponding `reports/` path under the explicitly selected `CAREER_OPS_DATA_DIR`. `{NN}` is the tracker row number or evaluation number, and `{company-slug}` matches the slugifier in `scripts/reorg-reports-by-company.py`. Cover letters are created only on explicit request.

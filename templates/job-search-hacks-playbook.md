@@ -13,7 +13,7 @@ Self-contained brief for an agent picking up Anmol's FT / new-grad search. Read 
 
 1. No em-dashes or en-dashes in candidate-facing content.
 2. No CV PDF generation. Provide evals + form answers + cover letters (on request) only.
-3. No F-1 / OPT / H-1B / sponsorship explainer anywhere candidate-facing. If a start date is asked: "Available January 2027."
+3. No F-1 / OPT / H-1B / sponsorship explainer anywhere candidate-facing. Do not volunteer an availability statement; answer a required start-date question from the current profile.
 4. **Cover letters ONLY on explicit user request. Do NOT auto-draft one during evaluation, even for a top-tier (>= 4.0) role.** Application-question files follow the same on-request rule.
 5. Don't push commits, send emails, or send LinkedIn messages. Drafts only; the user sends.
 6. Don't change the tracker schema. Embed the cover-letter pointer in Notes with the `CL:` prefix only. Eval reports must include a `**URL:**` line (not `**Apply:**`).
@@ -52,16 +52,16 @@ Self-contained brief for an agent picking up Anmol's FT / new-grad search. Read 
 ### Tier 5: filtering noise
 
 **K. Ghost-job filter** (18-22% of postings are ghosts): skip 30+ day-old or reposted-every-few-weeks roles, no team/responsibilities, present on aggregators but missing from the company's own careers page, or the same role open in many geos with identical text.
-**L. Rejection is not a dead lead.** 26% who reply professionally are reconsidered within 6 months. Set a 45-60 day reconnect reminder for any clean reject with a real recruiter.
+**L. Rejection is not a dead lead.** 26% who reply professionally are reconsidered within 6 months. Record a 45-60 day reconnect date for yourself for any clean reject with a real recruiter; Career-Ops does not create reminders or schedules.
 
 ## 4. Workflow recipes
 
 ### Recipe 1: process a fresh posting
 1. Read the JD; verify US or remote-US and not a ghost (Tier 5K).
 2. Score 1-5 against [config/profile.yml](../config/profile.yml) `target_roles` + `ft_constraints`.
-3. Write `ft/reports/{slug}/{NN}-{slug}-{date}.md` with a mandatory `**URL:**` header, score, and fit narrative.
-4. Append a 9-column row to `ft/data/applications.md`. Do NOT auto-draft a cover letter (Rule 4); generate one only if the user asks, into `{NN}-{slug}-cover-letter.md`, and add the `CL:` pointer to Notes.
-5. Pick the resume (SDE vs MLE PDF), note it in Notes.
+3. Write `ft/reports/{slug}/{NN}-{slug}-{date}.md` with the full Block A-G format and a mandatory `**URL:**` header.
+4. Write one 9-column TSV row to `ft/batch/tracker-additions/{NN}.tsv`; do not edit `ft/data/applications.md` directly. Merge and verify it with `npm run merge -- --verify`.
+5. Pick the resume (SDE vs MLE PDF), note it in Notes. Do NOT auto-draft a cover letter (Rule 4); create one only when the user asks, under the selected report root, and add the `CL:` pointer to Notes.
 
 ### Recipe 2: hiring-manager outreach for an applied role
 1. Pull company + role from `ft/data/applications.md`.

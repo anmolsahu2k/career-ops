@@ -3,9 +3,11 @@
 
 Every discovery source (aggregator-intake.py, jobspy-ingest.py, future
 handshake-ingest.py, future scan.py wrappers, manual paste handlers) MUST
-route raw rows through `apply_unified_filter()` before writing TSVs into
-`batch/tracker-additions/`. This guarantees that liveness gating, eval
-dispatch, and tracker merge see consistent inputs regardless of source.
+route raw rows through `apply_unified_filter()` before writing into the
+scan-results triage handoff (`data/scan-results-{date}.tsv`). Discovery
+never writes `reports/pending.md` placeholders into `applications.md` or
+into mergeable `batch/tracker-additions/` rows. Tracker rows require a real
+A-G evaluation report.
 
 The canonical pipeline (per CLAUDE.md and modes/scan.md) is:
   raw rows
@@ -16,10 +18,11 @@ The canonical pipeline (per CLAUDE.md and modes/scan.md) is:
     -> geo filter (US, remote-US, or remote-anywhere)
     -> age filter (<=21d posted; sources without age metadata are kept)
     -> within-run URL dedup
-    -> tracker URL dedup (applications.md + reports/ + active batch dir)
+    -> tracker URL dedup (applications.md + reports/ + active batch dir + scan-results)
     -> tracker fingerprint dedup (company_norm + role_tokens)
-  -> emit TSV with dynamic NN allocation
+  -> append triage rows to data/scan-results-{date}.tsv
   -> hand off to liveness gate, then eval dispatch
+  -> only evaluated rows write tracker-additions + merge
 
 Module is stdlib-only so it can be imported from any context without pip.
 """
@@ -30,9 +33,11 @@ from pathlib import Path
 import _paths
 _P = _paths.resolve_paths(__file__)
 CAREER_OPS = _P["root"]
+DATA_DIR = _P["data_dir"]
 APPS_FILE = _P["apps_file"]
 REPORTS_DIR = _P["reports_dir"]
 BATCH_DIR = _P["batch_dir"]
+SCAN_HISTORY_PATH = DATA_DIR / "scan-history.tsv"
 
 MAX_AGE_DAYS_DEFAULT = 21
 
@@ -433,7 +438,8 @@ def _normalize_role(role):
 
 def collect_existing_signatures():
     """Returns (urls_set, fingerprints_set) from applications.md +
-    reports/*.md `**URL:**` headers + active batch TSVs.
+    reports/*.md `**URL:**` headers + active batch TSVs + scan-results
+    triage handoffs + scan-history.
 
     Fingerprint = (company_norm, role_tokens) catches the same role posted
     on a different surface (e.g. LinkedIn vs Greenhouse) where URL dedup
@@ -490,6 +496,32 @@ def collect_existing_signatures():
                 fps.add(fp)
             for m in URL_RE.finditer(line):
                 urls.add(normalize_url(m.group(0)))
+
+    if DATA_DIR.exists():
+        for path in DATA_DIR.glob("scan-results-*.tsv"):
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for line in text.splitlines()[1:]:
+                parts = line.split("\t")
+                if not parts or not parts[0]:
+                    continue
+                urls.add(normalize_url(parts[0]))
+                if len(parts) >= 3:
+                    fp = (_normalize_company(parts[1]), _normalize_role(parts[2]))
+                    if fp[0] and fp[1]:
+                        fps.add(fp)
+
+    if SCAN_HISTORY_PATH.exists():
+        try:
+            text = SCAN_HISTORY_PATH.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            text = ""
+        for line in text.splitlines()[1:]:
+            url = line.split("\t")[0] if line else ""
+            if url:
+                urls.add(normalize_url(url))
 
     urls.discard("")
     return urls, fps
@@ -620,67 +652,69 @@ def apply_unified_filter(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Placeholder TSV writer
+# Triage handoff writer (scan-results, not tracker)
 # ─────────────────────────────────────────────────────────────────────────
 
-def emit_tsv(num, date, company, role, url, source, age_days=None, suffix="aggregator", sponsorship=None, extras=None, dry_run=False):
-    """Write a single placeholder TSV in the canonical 9-col format.
+def scan_results_path(date=None):
+    """Return data/scan-results-{date}.tsv under the selected data root."""
+    day = date or _dt.date.today().isoformat()
+    return DATA_DIR / f"scan-results-{day}.tsv"
 
-    The Notes column embeds `URL: <url>` so liveness/dedup tooling can
-    re-extract it without parsing the report file. `suffix` controls the
-    filename suffix - aggregator-intake.py uses "aggregator", jobspy uses
-    "jobspy", handshake uses "handshake", hiringcafe uses "hiringcafe", etc.
 
-    `sponsorship` is a tri-state visa-sponsorship hint from the source
-    (True/False/None for unknown) - sources that expose it (Hiring Cafe,
-    Adzuna sometimes) should pass it so downstream eval agents can pre-weight
-    the F-1 viability dimension and skip obvious citizen-only roles.
+def emit_scan_result(company, role, url, source, location="", dry_run=False, date=None):
+    """Append one unevaluated candidate to the scan-results triage TSV.
 
-    `extras` is a dict of source-specific notes to append to Notes (e.g.
-    comp band, work-mode tag, security-clearance flag).
+    Format matches scan.mjs: url\\tcompany\\ttitle\\tlocation\\tsource
+    Never writes applications.md and never emits reports/pending.md stubs.
     """
-    slug = slugify(company)
-    path = BATCH_DIR / f"{num:03d}-{slug}-{suffix}.tsv"
-
-    age_blurb = ""
-    if age_days is not None:
-        age_blurb = f"Posted {age_days}d ago. "
-
-    sponsor_blurb = ""
-    if sponsorship is True:
-        sponsor_blurb = "VISA-SPONSORSHIP: yes. "
-    elif sponsorship is False:
-        sponsor_blurb = "VISA-SPONSORSHIP: no (per source). "
-    # sponsorship=None -> no blurb (unknown)
-
-    extras_blurb = ""
-    if extras:
-        parts = [f"{k}: {v}" for k, v in extras.items() if v not in (None, "")]
-        if parts:
-            extras_blurb = "; ".join(parts) + ". "
-
-    notes = (
-        f"Discovery via {source}. {age_blurb}{sponsor_blurb}{extras_blurb}URL: {url}. "
-        "Not yet evaluated; promote to per-role eval before applying."
-    )
-    notes = EM_DASH_RE.sub(",", notes)
-
-    cols = [
-        str(num),
-        date,
-        company,
-        role,
-        "Evaluated",
-        "0.0/5",
-        "❌",
-        "[%03d](reports/pending.md)" % num,
-        notes,
-    ]
-    line = "\t".join(cols) + "\n"
+    path = scan_results_path(date)
+    company = EM_DASH_RE.sub(",", clean_text(company))
+    role = EM_DASH_RE.sub(",", clean_text(role))
+    location = EM_DASH_RE.sub(",", clean_text(location or ""))
+    source = EM_DASH_RE.sub(",", clean_text(source))
+    line = f"{url}\t{company}\t{role}\t{location}\t{source}\n"
 
     if dry_run:
         return path, line
-    BATCH_DIR.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.write_text("url\tcompany\ttitle\tlocation\tsource\n", encoding="utf-8")
+    with open(path, "a", encoding="utf-8") as fh:
         fh.write(line)
     return path, line
+
+
+def emit_tsv(num, date, company, role, url, source, age_days=None, suffix="aggregator", sponsorship=None, extras=None, dry_run=False, location=""):
+    """Compatibility wrapper: discovery emits triage scan-results rows only.
+
+    `num`, `age_days`, `suffix`, `sponsorship`, and `extras` are retained for
+    caller compatibility but are not written into the tracker. Sponsorship and
+    age hints remain available to the eval agent via Notes once a real report
+    is produced; until then the candidate stays in scan-results triage.
+    """
+    # Preserve useful discovery hints in the source tag so the eval pass can
+    # see them without inventing a tracker placeholder row.
+    tag = source
+    hints = []
+    if age_days is not None:
+        hints.append(f"age-{age_days}d")
+    if sponsorship is True:
+        hints.append("visa-yes")
+    elif sponsorship is False:
+        hints.append("visa-no")
+    if extras:
+        for key, value in extras.items():
+            if value not in (None, ""):
+                hints.append(f"{key}={value}")
+    if hints:
+        tag = f"{source}|{'|'.join(hints)}"
+    return emit_scan_result(
+        company=company,
+        role=role,
+        url=url,
+        source=tag,
+        location=location,
+        dry_run=dry_run,
+        date=date,
+    )

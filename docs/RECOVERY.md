@@ -38,7 +38,7 @@ No secret values are recorded here on purpose. This file lists paths and key nam
 
 ## Canonical recovery path
 
-The intended recovery mechanism is a user-triggered `backup.mjs` (`/career-ops backup`), which copies the in-repo gitignored set plus the out-of-repo surface to an off-disk location on demand (user-triggered, per CLAUDE.md Rule 6: no schedules). Run it before risky operations and after meaningful state changes. Until it exists, copy the two surfaces above off disk manually.
+The intended recovery mechanism is the user-triggered `backup.mjs` (`$career-ops backup` in Codex, or `/career-ops backup` in compatibility clients), which copies the in-repo gitignored set plus the auto-memory surface to an off-disk location on demand. There is no `npm run backup` script and no schedule. Run `node backup.mjs --dry-run` to inspect the manifest, then pass an explicit `--dest` when the default Google Drive mount is unavailable.
 
 ## Gmail token re-auth
 
