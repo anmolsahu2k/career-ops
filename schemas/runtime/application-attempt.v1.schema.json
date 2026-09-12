@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://career-ops.local/schemas/runtime/application-attempt.v1.schema.json",
+  "title": "Application Attempt V1",
+  "type": "object",
+  "required": ["schema", "schema_version", "attempt_id", "idempotency_key", "tracker_number", "canonical_url", "state"],
+  "properties": {
+    "schema": {"const": "ApplicationAttemptV1"},
+    "schema_version": {"const": 1},
+    "attempt_id": {"type": "string"},
+    "idempotency_key": {"type": "string"},
+    "tracker_number": {"type": "integer", "minimum": 1},
+    "canonical_url": {"type": "string", "format": "uri"},
+    "selection_override": {
+      "type": "object",
+      "required": ["reason", "authorized_at"],
+      "properties": {
+        "reason": {"const": "USER_SELECTION_OVERRIDE"},
+        "authorized_at": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    },
+    "state": {"enum": ["QUEUED", "RUNNING", "WAITING_LOGIN", "NEEDS_REVIEW", "READY_TO_SUBMIT", "SUBMITTING", "SUBMITTED", "SUBMISSION_UNKNOWN", "SKIPPED", "FAILED"]}
+  },
+  "additionalProperties": true
+}

@@ -54,7 +54,7 @@ Identify ALL visible questions:
 - Dropdowns (how did you hear, work authorization, etc.)
 - Yes/No (relocation, visa, etc.)
 - Salary fields (range, expectation)
-- Upload fields (resume, cover letter PDF)
+- Upload fields (user-supplied resume, and a user-supplied cover-letter file only when explicitly requested)
 
 Classify each question:
 - **Already answered in Section H / application-questions.md** → adapt the existing response
@@ -69,6 +69,22 @@ For each question, generate the response following:
 3. **"I'm choosing you" tone**: Same auto-pipeline framework
 4. **Specificity**: Reference something specific from the JD visible on screen
 5. **career-ops proof point**: Include in "Additional info" if there is a field for it
+
+### Greenhouse manual cover letters
+
+When the user has explicitly enabled `applications.local_prose.cover_letters`
+in ignored local runtime configuration, the autonomous applier may use
+Greenhouse's exact `cover_letter-text` control to open the **Enter manually**
+textarea. Generate the body locally from the current report, `cv.md`, and
+`modes/_profile.md`, then fill only that exact textarea. Apply the canonical
+`templates/cover-letter.md` contract: body only, 200 words maximum, no greeting,
+sign-off, contact block, visa explanation, or availability statement.
+
+This path never uploads a document and never falls back to a hosted provider.
+Every candidate claim must pass deterministic evidence validation; unsupported
+sentences may only be removed, never rewritten into new claims. If fewer than
+four valid sentences remain, if an AI-use disclosure is present, or if the
+generated text does not survive exact readback, stop for review.
 
 **Output format:**
 
