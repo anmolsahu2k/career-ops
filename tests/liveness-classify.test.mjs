@@ -71,3 +71,51 @@ test('an explicit closed banner still wins over any control', () => {
   });
   assert.equal(r.result, 'expired');
 });
+
+test('empty ATS shells are uncertain, not expired', () => {
+  const ashby = classifyLiveness({
+    status: 200,
+    finalUrl: 'https://jobs.ashbyhq.com/acme/abc',
+    bodyText: 'Loading…',
+    applyControls: [],
+  });
+  assert.equal(ashby.result, 'uncertain');
+  assert.match(ashby.reason, /empty SPA shell/i);
+});
+
+test('jobright security walls and LinkedIn empty shells are not expired', () => {
+  const jobright = classifyLiveness({
+    status: 200,
+    finalUrl: 'https://jobright.ai/jobs/info/abc',
+    bodyText: 'Security check | Jobright One quick security check We’ll continue automatically',
+    applyControls: [],
+  });
+  assert.equal(jobright.result, 'uncertain');
+  assert.match(jobright.reason, /bot\/challenge|security check/i);
+
+  const linkedinEmpty = classifyLiveness({
+    status: 200,
+    finalUrl: 'https://www.linkedin.com/jobs/view/1',
+    bodyText: 'Loading',
+    applyControls: [],
+  });
+  assert.equal(linkedinEmpty.result, 'uncertain');
+
+  const linkedinLive = classifyLiveness({
+    status: 200,
+    finalUrl: 'https://www.linkedin.com/jobs/view/2',
+    bodyText: `${'Role summary. '.repeat(40)} Easy Apply`,
+    applyControls: [],
+  });
+  assert.equal(linkedinLive.result, 'active');
+});
+
+test('HTTP 403 access denied is uncertain, not expired', () => {
+  const r = classifyLiveness({
+    status: 403,
+    finalUrl: 'https://www.tesla.com/careers/search/job/1',
+    bodyText: 'Access Denied',
+    applyControls: [],
+  });
+  assert.equal(r.result, 'uncertain');
+});

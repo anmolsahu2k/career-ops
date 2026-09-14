@@ -57,7 +57,10 @@ TARGET_ROLE_TOKENS = [
 ]
 
 ROLE_DENY_TOKENS = [
-    "manager", "senior", " staff ", "principal", "director", "vp ",
+    # "sr." / "sr " mirror the portals.yml negative list; without them the
+    # abbreviated senior titles pass the new-grad gate.
+    "manager", "senior", "sr.", "sr ", "snr", " staff ", "principal",
+    "distinguished", " iii", " iv", "director", "vp ",
     "vice president", "head of", "lead ", "marketing", "sales", " hr ",
     "human resources", "finance", "accounting", "consultant", "consulting",
     "strategy", "operations", "recruiter", "designer", "ux ", "ui ",

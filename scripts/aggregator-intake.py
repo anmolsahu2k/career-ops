@@ -544,6 +544,8 @@ def main(argv=None):
     # Emit triage rows into scan-results (no tracker placeholders).
     start_nn = next_available_nn()
     print(f"  triage handoff (legacy NN counter starts at {start_nn})", file=sys.stderr)
+    total_novel = len(novel)
+    print(f"  writing {total_novel} triage rows (progress every 50)…", file=sys.stderr)
     written = []
     for offset, entry in enumerate(novel):
         num = start_nn + offset
@@ -572,6 +574,10 @@ def main(argv=None):
             extras=entry.get("extras"),
         )
         written.append((path, entry))
+        done = offset + 1
+        if done == 1 or done == total_novel or done % 50 == 0:
+            pct = int((done / max(total_novel, 1)) * 100)
+            print(f"  … wrote {done}/{total_novel} ({pct}%)", file=sys.stderr)
 
     if args.dry_run:
         print(f"\n[dry-run] would append {len(written)} triage rows", file=sys.stderr)
