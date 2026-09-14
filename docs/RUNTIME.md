@@ -2,6 +2,8 @@
 
 The runtime makes model output advisory. Its provider-free flow is `prepare -> respond -> validate -> PolicyEngine -> commit -> recover`. Contracts live in `schemas/runtime/`; executable policy and validation live in `lib/runtime/`.
 
+Evaluation PolicyEngine (`lib/runtime/policy-engine.mjs`) authorizes report and tracker writes from tri-state gates. Application submit is a separate fail-closed gate (`lib/applications/policy.mjs` `submissionGate`); it never calls evaluation `decide()`, and evaluation PolicyEngine never clicks Submit.
+
 ## Safe first run
 
 Copy `config/runtime.example.yml` to an ignored local configuration and leave every provider disabled. Observe commands and hardware without making provider calls:
@@ -264,6 +266,10 @@ Recovery never invokes a model. Artifact paths must remain inside the selected r
 
 ## Application attempts
 
+Submit authorization is `lib/applications/policy.mjs` `submissionGate` (page,
+field risk, resume hash, certifications). Evaluation PolicyEngine only decided
+whether the tracker row and report could be written earlier.
+
 The optional application pipeline uses the existing Job Autofill extension in a
 headed, dedicated persistent Chrome profile. It is disabled by default and is
 not scheduled: invoke it only after a user-triggered scan has merged and passed
@@ -313,8 +319,13 @@ node bin/career-ops.mjs apply run --tracker-number 5237 --config config/runtime.
 # login or one-time code; it never reads email or enters the code.
 node bin/career-ops.mjs apply run --config config/runtime.local.yml --apply --submit --pause-for-auth
 
-# Review local blockers and terminal outcomes.
+# Review local blockers and terminal outcomes (Apply Attempts board).
 node bin/career-ops.mjs apply serve
+
+# Readiness + queue near-misses without mutating attempts.
+node bin/career-ops.mjs apply doctor --config config/runtime.local.yml
+node bin/career-ops.mjs apply enqueue --human
+node bin/career-ops.mjs apply analytics
 ```
 
 An enabled post-merge scan workflow may call `career-ops apply after-scan --config
@@ -323,10 +334,15 @@ config/runtime.local.yml --tracker-numbers 5280 --apply` only when
 then processes one at a time.
 
 Attempts live under `ft/.career-ops-runtime/applications/`, keyed by tracker
-number plus canonical URL. `SUBMITTED` and `SUBMISSION_UNKNOWN` are never
-automatically retried. Only an adapter-recognized success transitions the
-nine-column tracker row to `Applied`; incomplete cases stay `Evaluated` and
-are shown in the local board at `127.0.0.1`.
+number plus canonical URL. Before fill, the runner classifies posting liveness;
+expired URLs become `SKIPPED`, uncertain ones `NEEDS_REVIEW`. `SUBMITTED` and
+`SUBMISSION_UNKNOWN` are never automatically retried. Only an adapter-recognized
+success transitions the nine-column tracker row to `Applied`; incomplete cases
+stay `Evaluated` and are shown in the local Apply Attempts board at
+`127.0.0.1`.
+
+If a process dies after the submit click (`SUBMISSION_UNKNOWN`), check the
+employer confirmation email before confirming non-submission and retrying.
 
 Local prose remains canary-only until it passes a separate application-prose
 qualification benchmark; hardware residency alone never grants it submission

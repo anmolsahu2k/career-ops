@@ -26,10 +26,53 @@ to Luna.
 Individual user-supplied jobs skip Flash and begin with Luna.
 
 For the unattended `npm run evaluate` / `career-ops evaluate` path, an explicit
-`--provider antigravity-gemini-flash-high` selects Gemini 3.8 Flash High through
-Antigravity (`agy`) for full A-G judgment. That provider is consequential-capable
-and is separate from Flash Low triage in `career-ops-job-v1`. The full
+`--provider antigravity-gemini-flash-high` or
+`--provider antigravity-gemini-flash-medium` selects Gemini 3.8 Flash High or
+Medium through Antigravity (`agy`) for full A-G judgment. Flash High is
+consequential-capable; Flash Medium is the standard-tier Antigravity option.
+Both are separate from Flash Low triage in `career-ops-job-v1`. The full
 manual/no-agent loop is in [SCRIPTS.md](SCRIPTS.md#manual-workflow-no-agent).
+
+## Windows workstation configuration
+
+The active workstation is the Windows machine (`AnmolDaPredator`: i5 13th gen,
+16 GB RAM, RTX 4050 6 GB), which also holds the writer lock. `agy`, `codex`,
+`ollama`, and `python` are all on `PATH` there. The 6 GB VRAM budget rules out a
+local judgment model: a 4-bit 14B model leaves no room for the 20k-plus token
+evidence payload an A-G evaluation carries, so local inference stays limited to
+Qwen3 4B extraction and application prose.
+
+`config/runtime.local.yml` therefore defines `career-ops-windows-v1`, which
+keeps deterministic policy identical to `career-ops-job-v1` but sources
+judgment from the subscription with the most headroom:
+
+| Stage | Provider | Why |
+|---|---|---|
+| Bulk triage | `antigravity-gemini-flash-low` | Cheapest ranking pass on the Google AI Pro pool |
+| Routine judgment | `antigravity-gemini-flash-high` | Consequential-capable, long-context, already qualified for evaluate |
+| Escalation | `codex-luna` | Different vendor on ChatGPT Plus, so boundary cases get an independent read |
+
+`cerebras-gpt-oss-120b` is configured separately as the high-throughput sweep
+provider. Its free-tier key incurs no charges, which the provider entry
+declares with `free_tier: true` so it runs without enabling the global
+`api_billing` switch. Use it to score a large backlog quickly, then re-run the
+boundary cases through Flash High. `groq-llama-70b` is the overflow if Cerebras
+is rate-limited.
+
+Ready-made commands (`package.json`):
+
+| Script | Purpose |
+|---|---|
+| `npm run evaluate:plan` | Dry run: pre-filters, liveness, prune rejects, save eval queue |
+| `npm run evaluate:sweep` | Score only the saved eval queue through Cerebras |
+| `npm run evaluate:overflow` | Cerebras backup: score only the saved eval queue through Groq |
+| `npm run evaluate:judge` | Score only the saved eval queue through Flash High |
+| `npm run evaluate:ladder` | Score only the saved eval queue through the Windows profile |
+
+Concurrency stays low deliberately. The bottleneck is not the CPU but the
+liveness stage's Chromium instances and the provider's rate limit, and each
+committed evaluation takes the single writer lock, so parallel commits
+serialize regardless.
 
 ## Sol escalation policy
 
@@ -96,10 +139,18 @@ support Structured Outputs:
 ## Current activation state
 
 This is the final target strategy, not a claim that live automatic routing is
-currently enabled. All profile providers remain disabled in the local runtime
-configuration, resource-pool quota states are `UNKNOWN`, and automatic routing
-must fail closed until qualification, quota, receipt, migration, integrity, and
-writer-authorization gates pass.
+currently enabled. Automatic routing must still fail closed until qualification,
+quota, receipt, migration, integrity, and writer-authorization gates pass.
+
+The Windows runtime enables `antigravity-gemini-flash-low`,
+`antigravity-gemini-flash-medium`, `antigravity-gemini-flash-high`,
+`codex-luna`, `cerebras-gpt-oss-120b`, and `ollama-qwen3-4b`. Enabling a
+provider only makes it selectable; it does not qualify it. The subscription
+pools (`chatgpt-plus`, `google-gemini`) still report `UNKNOWN` quota, so every
+run needs an explicit `--provider` or `--profile` plus `--acknowledge-quota`.
+Providers without a qualification artifact are recorded as forced in the result
+under `provider_override`, and a provider that deliberately failed
+qualification requires `--force-provider`.
 
 In one line:
 

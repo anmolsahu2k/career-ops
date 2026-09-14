@@ -234,7 +234,7 @@ The implementation is in `lib/runtime/`, the interchange contracts are in
 | Prepare | Build a versioned task envelope and hash-bound evidence bundle |
 | Respond | Invoke a configured, qualified provider or accept a saved response |
 | Validate | Check schema, semantics, evidence boundaries, normalization, and presentation safety |
-| PolicyEngine | Apply deterministic tri-state gates and minimum-capability rules |
+| PolicyEngine | Apply deterministic tri-state gates and authorize evaluation writes (`lib/runtime/policy-engine.mjs`). Application Submit uses a separate `submissionGate` in `lib/applications/policy.mjs`. |
 | Commit | Reserve a report number, write the report and tracker row transactionally, and record a receipt |
 | Recover | Complete or roll back interrupted artifacts deterministically without a model call |
 
@@ -362,6 +362,8 @@ architecture.
 | Liveness classification | `liveness-core.mjs`, `liveness-parallel.mjs` |
 | Evaluation/runtime contracts | `schemas/runtime/`, `lib/runtime/`, `docs/RUNTIME.md` |
 | Application attempts | `lib/applications/`, `extensions/job-autofill/` |
+| Apply Attempts board | `career-ops apply serve` → `lib/applications/board.mjs` |
+| Scan checklist board | `node apply-board.mjs` (scan-history; not attempt state) |
 | Current funnel state | `ft/data/applications.md`, `ft/reports/`, and `STATUS.md` |
 | Historical run narratives | `CHANGELOG.md` |
 
