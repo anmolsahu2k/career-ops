@@ -146,6 +146,28 @@ test('a deterministic hard rejection cannot be weakened by a missing model score
   assert.equal(result.decision.reasons.some(reason => reason.code === 'SCORE_MISSING'), false);
 });
 
+test('a deterministic hard rejection cannot be weakened by incomplete required evidence', () => {
+  const task = makeTask({
+    structured_fields: {
+      citizenship_restricted: 'YES',
+      required_evidence_complete: 'UNKNOWN',
+    },
+  });
+  const result = evaluateResponse(task, makeResponse({
+    gates: {
+      citizenship_restricted: 'YES',
+      required_evidence_complete: 'UNKNOWN',
+    },
+    recommendation: 'APPLY',
+    score: 4.5,
+  }));
+  assert.equal(result.decision.decision, 'DO_NOT_APPLY');
+  assert.equal(result.decision.tracker_status, 'Rejected-at-eval');
+  assert.equal(result.decision.score, null);
+  assert.ok(result.decision.reasons.some(reason => reason.code === 'CITIZENSHIP_RESTRICTED'));
+  assert.equal(result.decision.reasons.some(reason => reason.code === 'REQUIRED_EVIDENCE_INCOMPLETE'), false);
+});
+
 test('all tri-state combinations preserve hard policy invariants', () => {
   const states = ['YES', 'NO', 'UNKNOWN'];
   const task = makeTask();
@@ -165,14 +187,24 @@ test('all tri-state combinations preserve hard policy invariants', () => {
         });
         assertNormalizedEvaluation(normalized);
         const decision = decide(task, normalized);
-        if (posting_live === 'NO') assert.equal(decision.decision, 'DEFERRED');
-        else if (required_evidence_complete !== 'YES') {
+        const hardReject = citizenship_restricted === 'YES'
+          || geography_eligible === 'NO'
+          || sponsorship_compatible === 'NO';
+        if (posting_live === 'NO') {
+          assert.equal(decision.decision, 'DEFERRED');
+          assert.deepEqual(decision.authorized_writes, []);
+        } else if (hardReject) {
+          assert.equal(decision.decision, 'DO_NOT_APPLY');
+          assert.equal(decision.tracker_status, 'Rejected-at-eval');
+          if (required_evidence_complete !== 'YES') assert.equal(decision.score, null);
+          else assert.equal(decision.score, 4.5);
+        } else if (required_evidence_complete !== 'YES') {
           assert.equal(decision.decision, 'REVIEW_REQUIRED');
           assert.equal(decision.score, null);
-        } else if (citizenship_restricted === 'YES' || geography_eligible === 'NO' || sponsorship_compatible === 'NO') {
-          assert.equal(decision.decision, 'DO_NOT_APPLY');
         } else if ([citizenship_restricted, geography_eligible, sponsorship_compatible].includes('UNKNOWN')) {
           assert.equal(decision.decision, 'CONSIDER');
+        } else {
+          assert.equal(decision.decision, 'APPLY');
         }
         cases++;
       }
