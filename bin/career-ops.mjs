@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import '../lib/runtime/playwright-preload.mjs';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,12 +31,24 @@ import { canonicalJson, record } from '../lib/runtime/util.mjs';
 import { assertWriterHost } from '../lib/runtime/writer-authorization.mjs';
 import { enqueueEligible, enqueuedAttemptKeys, enqueueSelectionOverride, exactAttemptKeys, retryApplication, runApplications, stageMfaCode } from '../lib/applications/runner.mjs';
 import { serveApplyBoard } from '../lib/applications/board.mjs';
-import { eligibleRows } from '../lib/applications/eligibility.mjs';
 import { acknowledgeManualSubmission } from '../lib/applications/acknowledge.mjs';
 import { runLocalApplicationProseQualification } from '../lib/applications/local-prose-qualification.mjs';
+import { diagnoseApplications } from '../lib/applications/doctor.mjs';
+import { applicationQueuePreview } from '../lib/applications/enqueue-summary.mjs';
+import { applicationAttemptAnalytics } from '../lib/applications/analytics.mjs';
 import { evaluateScanResults } from '../lib/runtime/evaluate-scan.mjs';
+import {
+  formatEvaluateProgress,
+  formatEvaluateSummary,
+  shouldUseHumanEvaluateOutput,
+} from '../lib/runtime/evaluate-report.mjs';
+import { serveCareerOpsApp } from '../lib/web/career-ops-app.mjs';
+import { loadLocalEnv } from '../lib/runtime/load-env.mjs';
+import { sanitizePlaywrightBrowsersEnv } from '../lib/runtime/playwright-browser.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+loadLocalEnv({ root: repoRoot });
+sanitizePlaywrightBrowsersEnv();
 
 function argsOf(argv) {
   const positional = [];
@@ -84,7 +97,7 @@ function writeState(target, state) {
   renameSync(temp, path);
 }
 
-function output(value, path) {
+function output(value, path, { overwrite = false } = {}) {
   const text = `${JSON.stringify(value, null, 2)}\n`;
   if (!path) {
     process.stdout.write(text);
@@ -92,7 +105,7 @@ function output(value, path) {
   }
   const resolved = resolve(path);
   mkdirSync(dirname(resolved), { recursive: true, mode: 0o700 });
-  if (existsSync(resolved)) throw new Error(`Output already exists: ${resolved}`);
+  if (existsSync(resolved) && !overwrite) throw new Error(`Output already exists: ${resolved}`);
   const temporary = `${resolved}.${process.pid}.${Date.now()}.tmp`;
   writeFileSync(temporary, text, { flag: 'wx', mode: 0o600 });
   renameSync(temporary, resolved);
@@ -131,7 +144,7 @@ async function autoApplyCommittedRows(target, config, trackerNumbers) {
   if (policy?.enabled !== true || policy.auto_after_scan !== true) return null;
   const numbers = [...new Set((trackerNumbers || []).map(Number).filter(Number.isFinite))];
   if (!numbers.length) return null;
-  const queued = enqueueEligible(target, { trackerNumbers: numbers, includeCurrent: true });
+  const queued = await enqueueEligible(target, { trackerNumbers: numbers, includeCurrent: true });
   const run = await runApplications(target, config, {
     // This is intentionally configuration-gated rather than inherited from a
     // generic commit flag. The user enables application submission locally;
@@ -161,7 +174,7 @@ async function main() {
   const { positional, flags } = argsOf(process.argv.slice(2));
   const [command, subcommand] = positional;
   if (!command || command === 'help') {
-    process.stdout.write('Usage: career-ops <apply|baseline|prepare|respond|validate|commit|batch|evaluate|shadow|route-shadow|hardware-qualify|canary-certify|recover|route|qualify|qualify-bundle|doctor|quota|cleanup> [options]\n');
+    process.stdout.write('Usage: career-ops <apply|baseline|prepare|respond|validate|commit|batch|evaluate|ui|shadow|route-shadow|hardware-qualify|canary-certify|recover|route|qualify|qualify-bundle|doctor|quota|cleanup> [options]\n');
     return;
   }
   const target = targetFrom(flags);
@@ -183,18 +196,28 @@ async function main() {
       } finally { provider.close?.(); }
       return;
     }
+    if (subcommand === 'doctor') {
+      if (!flags.config) throw new Error('apply doctor requires --config');
+      const config = loadRuntimeConfig(flags.config);
+      const report = diagnoseApplications(target, config);
+      output(report, flags.out);
+      if (flags.human) process.stdout.write(`${report.summary}\n${report.queue?.near_misses?.length ? `\nNear-misses: ${report.queue.near_miss_count}\n` : ''}`);
+      if (!report.ready) process.exitCode = 2;
+      return;
+    }
+    if (subcommand === 'analytics') {
+      output(applicationAttemptAnalytics(target), flags.out);
+      return;
+    }
     if (subcommand === 'enqueue') {
       if (!flags.apply) {
-        const eligible = eligibleRows(target);
-        output(record('ApplicationEnqueuePreviewV1', {
-          eligible_count: eligible.filter(item => item.eligible).length,
-          eligible: eligible.filter(item => item.eligible).map(item => ({ tracker_number: item.row.num, canonical_url: item.canonical_url })),
-          blocked: eligible.filter(item => !item.eligible).map(item => ({ tracker_number: item.row.num, blocker: item.blocker })),
-        }));
+        const preview = applicationQueuePreview(target);
+        output(preview, flags.out);
+        if (flags.human) process.stdout.write(`${preview.human_summary}\n`);
         return;
       }
       authorizeMutation(flags);
-      output(record('ApplicationEnqueueResultV1', enqueueEligible(target, { includeCurrent: flags['include-current'] === true })));
+      output(record('ApplicationEnqueueResultV1', await enqueueEligible(target, { includeCurrent: flags['include-current'] === true })));
       return;
     }
     if (subcommand === 'run') {
@@ -206,7 +229,7 @@ async function main() {
         throw new Error('apply run --tracker-number requires a positive integer');
       }
       const selected = selectedTrackerNumber === null ? null
-        : enqueueEligible(target, { trackerNumbers: [selectedTrackerNumber], includeCurrent: true });
+        : await enqueueEligible(target, { trackerNumbers: [selectedTrackerNumber], includeCurrent: true });
       output(record('ApplicationRunResultV1', await runApplications(target, config, {
         submit: flags.submit === true,
         max: flags.max || 1,
@@ -228,7 +251,7 @@ async function main() {
         throw new Error('apply override requires --tracker-number, --config, and --apply');
       }
       authorizeMutation(flags);
-      output(record('ApplicationSelectionOverrideV1', enqueueSelectionOverride(target, Number(flags['tracker-number']))));
+      output(record('ApplicationSelectionOverrideV1', await enqueueSelectionOverride(target, Number(flags['tracker-number']))));
       return;
     }
     if (subcommand === 'retry') {
@@ -247,7 +270,7 @@ async function main() {
       const config = mergeRuntimeState(authorizeMutation(flags), readState(target));
       if (config.applications?.auto_after_scan !== true) throw new Error('applications.auto_after_scan must be true for apply after-scan');
       const trackerNumbers = String(flags['tracker-numbers']).split(',').map(Number).filter(Number.isFinite);
-      const queued = enqueueEligible(target, { trackerNumbers, includeCurrent: true });
+      const queued = await enqueueEligible(target, { trackerNumbers, includeCurrent: true });
       output(record('PostScanApplicationResultV1', {
         queued,
         run: await runApplications(target, config, {
@@ -292,7 +315,7 @@ async function main() {
       })));
       return;
     }
-    throw new Error('Usage: career-ops apply <enqueue|run|override|retry|after-scan|serve|acknowledge>');
+    throw new Error('Usage: career-ops apply <doctor|analytics|enqueue|run|override|retry|after-scan|serve|acknowledge|qualify-local-prose|mfa-code>');
   }
   if (command === 'baseline') {
     const baseline = captureBaseline({ repoRoot, target });
@@ -385,22 +408,64 @@ async function main() {
         : mergeRuntimeState(loadRuntimeConfig(flags.config), readState(target)))
       : null;
     if (flags.apply && !flags.config) throw new Error('evaluate --apply requires --config');
+    const human = shouldUseHumanEvaluateOutput({
+      flags,
+      stdoutIsTTY: Boolean(process.stdout.isTTY),
+    });
+    const progressTty = Boolean(process.stderr.isTTY) && flags.json !== true;
+    let lastProgressStage = null;
+    let lastProgressAt = 0;
     const result = await evaluateScanResults({
       target,
       config,
       files,
       max: flags.max === undefined ? Infinity : Number(flags.max),
       apply: flags.apply === true,
+      fromQueue: flags['from-queue'] === true,
+      queuePath: flags.queue ? resolve(flags.queue) : null,
       skipLiveness: flags['skip-liveness'] === true,
       provider: flags.provider || null,
       profile: flags.profile || null,
       concurrency: flags.concurrency === undefined ? 10 : Number(flags.concurrency),
+      evaluateConcurrency: flags['eval-concurrency'] === undefined ? 3 : Number(flags['eval-concurrency']),
       acknowledgeQuota: flags['acknowledge-quota'] === true,
+      maxAgeDays: flags['max-age-days'] === undefined ? 21 : Number(flags['max-age-days']),
+      allowSenior: flags['allow-senior'] === true,
+      forceProvider: flags['force-provider'] === true,
+      livenessCache: flags['no-liveness-cache'] !== true,
+      refreshLiveness: flags['refresh-liveness'] === true,
+      livenessTtlHours: flags['liveness-ttl-hours'] === undefined ? 12 : Number(flags['liveness-ttl-hours']),
       onProgress(progress) {
-        process.stderr.write(`${JSON.stringify({ event: 'evaluate_progress', ...progress })}\n`);
+        if (!progressTty) {
+          process.stderr.write(`${JSON.stringify({ event: 'evaluate_progress', ...progress })}\n`);
+          return;
+        }
+        if (lastProgressStage && lastProgressStage !== progress.stage) {
+          process.stderr.write('\n');
+          lastProgressAt = 0;
+        }
+        lastProgressStage = progress.stage;
+        const done = Number(progress.done || 0);
+        const total = Number(progress.total || 0);
+        const isFinal = total > 0 && done >= total;
+        // Throttle mid-stage redraws so Cursor's terminal does not smear wraps.
+        if (!isFinal && done - lastProgressAt < 3 && done !== 1) return;
+        lastProgressAt = done;
+        process.stderr.write(formatEvaluateProgress(progress, {
+          tty: true,
+          columns: process.stderr.columns,
+        }));
+        if (isFinal) process.stderr.write('\n');
       },
     });
-    output(result, flags.out);
+    if (progressTty && lastProgressStage) process.stderr.write('\n');
+    if (human) {
+      // Evaluate plans/results are rerun artifacts; allow replacing --out.
+      if (flags.out) output(result, flags.out, { overwrite: true });
+      process.stdout.write(formatEvaluateSummary(result, { colorize: Boolean(process.stdout.isTTY) }));
+    } else {
+      output(result, flags.out, { overwrite: Boolean(flags.out) });
+    }
     if (result.failed) process.exitCode = 1;
     return;
   }
@@ -729,6 +794,17 @@ async function main() {
     if (!flags.apply) throw new Error('cleanup deletes expired local retention files and requires --apply');
     authorizeMutation(flags);
     output(record('CleanupResultV1', cleanupRetention(target)));
+    return;
+  }
+  if (command === 'ui') {
+    await serveCareerOpsApp({
+      target,
+      repoRoot,
+      configPath: flags.config ? resolve(flags.config) : null,
+      port: flags.port === undefined ? 8790 : Number(flags.port),
+    });
+    // Keep the process alive for the HTTP server.
+    await new Promise(() => {});
     return;
   }
   throw new Error(`Unknown command: ${[command, subcommand].filter(Boolean).join(' ')}`);

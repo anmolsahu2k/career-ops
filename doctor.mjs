@@ -5,6 +5,7 @@
  * Checks all prerequisites and prints a pass/fail checklist.
  */
 
+import './lib/runtime/playwright-preload.mjs';
 import { existsSync, mkdirSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -43,6 +44,8 @@ function checkDependencies() {
 
 async function checkPlaywright() {
   try {
+    const { sanitizePlaywrightBrowsersEnv } = await import('./lib/runtime/playwright-browser.mjs');
+    sanitizePlaywrightBrowsersEnv();
     const { chromium } = await import('playwright');
     const execPath = chromium.executablePath();
     if (existsSync(execPath)) {

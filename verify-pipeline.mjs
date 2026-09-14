@@ -303,6 +303,21 @@ if (existsSync(portalsPath)) {
 }
 if (aliasViolations === 0) ok('No brand-alias slug violations');
 
+// --- Check 12: Evaluated 4.0+ rows need an explicit APPLY token for the applier ---
+let missingApplyToken = 0;
+for (const e of entries) {
+  const status = e.status.replace(/\*\*/g, '').replace(/\s+\d{4}-\d{2}-\d{2}.*$/, '').trim();
+  if (status !== 'Evaluated') continue;
+  const scoreMatch = String(e.score || '').replace(/\*+/g, '').match(/(\d+(?:\.\d+)?)\s*\/\s*5/);
+  const score = scoreMatch ? Number(scoreMatch[1]) : NaN;
+  if (!(score >= 4)) continue;
+  if (/\bDO\s+NOT\s+APPLY\b/i.test(e.notes || '')) continue;
+  if (/\bAPPLY\b/i.test(e.notes || '')) continue;
+  warn(`#${e.num} ${e.company}: Evaluated ${e.score} missing APPLY token in Notes (applier will not enqueue)`);
+  missingApplyToken++;
+}
+if (missingApplyToken === 0) ok('All Evaluated 4.0+ rows carry an APPLY token (or are DO NOT APPLY)');
+
 // --- Summary ---
 console.log('\n' + '='.repeat(50));
 console.log(`📊 Pipeline Health: ${errors} errors, ${warnings} warnings`);

@@ -83,6 +83,20 @@ resource_pools:
     remaining_ratio: 0
     minimum_reserve_ratio: 0.20
     emergency_reserve_ratio: 0.05
+  cerebras-free:
+    schema: ResourcePoolV1
+    schema_version: 1
+    quota_state: UNKNOWN
+    remaining_ratio: 0
+    minimum_reserve_ratio: 0.20
+    emergency_reserve_ratio: 0.05
+  groq-free:
+    schema: ResourcePoolV1
+    schema_version: 1
+    quota_state: UNKNOWN
+    remaining_ratio: 0
+    minimum_reserve_ratio: 0.20
+    emergency_reserve_ratio: 0.05
   provider-api:
     schema: ResourcePoolV1
     schema_version: 1
@@ -290,6 +304,25 @@ providers:
     capability_class: STANDARD
     capabilities: [structured_output, evidence_citations]
     risk_ceiling: HIGH
+  # Canonical medium id (preferred over antigravity-gemini-flash).
+  antigravity-gemini-flash-medium:
+    type: antigravity_cli
+    enabled: false
+    command: [agy, --model, gemini-3.8-flash-medium, --effort, medium, --sandbox, --disable-slash-commands, --output-format, json, --print-timeout, 2m]
+    input_mode: stdin_text
+    output_mode: response_json_envelope
+    isolated_workspace: true
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    model_vendor: google
+    model_family: gemini-3.8-flash
+    model_snapshot: gemini-3.8-flash-medium
+    execution_surface: antigravity-cli
+    resource_pool: google-gemini
+    # Explicit evaluate/opt-in path: consequential A-G judgment via Antigravity.
+    capability_class: CONSEQUENTIAL
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: CONSEQUENTIAL
   antigravity-gemini-flash-high:
     type: antigravity_cli
     enabled: false
@@ -305,6 +338,48 @@ providers:
     execution_surface: antigravity-cli
     resource_pool: google-gemini
     # Explicit evaluate/opt-in path: consequential A-G judgment via Antigravity.
+    capability_class: CONSEQUENTIAL
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: CONSEQUENTIAL
+  # Zero-cost OpenAI-compatible endpoint for high-volume evaluate passes.
+  # `free_tier: true` declares the key incurs no charges, so this does not need
+  # the global `api_billing` switch. Run `career-ops qualify` before trusting it
+  # for consequential judgment; until then evaluate reports it as never_qualified.
+  cerebras-gpt-oss-120b:
+    type: openai_compatible
+    enabled: false
+    free_tier: true
+    base_url: https://api.cerebras.ai/v1
+    api_key_env: CEREBRAS_API_KEY
+    api_style: openai_chat
+    max_output_tokens: 8000
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    model_vendor: openai
+    model_family: gpt-oss
+    model_snapshot: gpt-oss-120b
+    execution_surface: cerebras-api
+    resource_pool: cerebras-free
+    capability_class: CONSEQUENTIAL
+    capabilities: [structured_output, evidence_citations]
+    risk_ceiling: CONSEQUENTIAL
+  groq-llama-70b:
+    type: openai_compatible
+    enabled: false
+    free_tier: true
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+    api_style: openai_chat
+    timeout_ms: 90000
+    temperature: 0
+    max_output_tokens: 8000
+    json_schema_file: schemas/runtime/provider-response.v1.schema.json
+    shadow_json_schema_file: schemas/runtime/qualification-batch-response.v1.schema.json
+    model_vendor: meta
+    model_family: llama-3.3
+    model_snapshot: llama-3.3-70b-versatile
+    execution_surface: groq-api
+    resource_pool: groq-free
     capability_class: CONSEQUENTIAL
     capabilities: [structured_output, evidence_citations]
     risk_ceiling: CONSEQUENTIAL
