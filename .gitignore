@@ -100,3 +100,8 @@ weekly-job-internship-email/
 ft/output/
 ft/batch/dropped-dupes-*/
 templates/internship-completion-letter*.docx
+
+# Local build / evaluate artifacts
+*.exe
+plan.json
+dashboard/dashboard.exe
