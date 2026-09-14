@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * apply-board.mjs — Interactive "apply board" for the scanned job pipeline
+ * apply-board.mjs — Scan-history checklist (NOT ApplicationAttempt state)
  *
  * Reads data/scan-history.tsv (all scanned jobs) and renders a self-contained
  * HTML board with search, source-filter chips, sortable columns, clickable
  * Apply links, and per-job "applied" checkboxes.
+ * For autonomous attempt state use: node bin/career-ops.mjs apply serve
  *
  * Applied state is persisted to a FILE: data/applied.tsv.
  *   - `--serve` mode runs a tiny local server so each checkbox writes straight

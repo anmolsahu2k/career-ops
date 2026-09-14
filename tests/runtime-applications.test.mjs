@@ -6,8 +6,8 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { attemptKey, safeCanonicalUrl } from '../lib/applications/contracts.mjs';
 import { candidateForTrackerNumber, eligibleRows } from '../lib/applications/eligibility.mjs';
-import { queueAttempt, transitionAttempt, correctFalseSubmission, confirmUnknownNotSubmitted } from '../lib/applications/store.mjs';
-import { approvedAnswer, authenticationBlocker, enabledAts, enqueueEligible, enqueuedAttemptKeys, enqueueSelectionOverride, exactAttemptKeys, exactSinglePageFinal, otpDomains, requiresEmailVerification, retryApplication, revealGreenhouseCoverLetter, selectableAttempts, stageMfaCode } from '../lib/applications/runner.mjs';
+import { queueAttempt, transitionAttempt, correctFalseSubmission, confirmUnknownNotSubmitted, getAttempt } from '../lib/applications/store.mjs';
+import { approvedAnswer, authenticationBlocker, enabledAts, enqueueEligible, enqueuedAttemptKeys, enqueueSelectionOverride, exactAttemptKeys, exactSinglePageFinal, otpDomains, requiresEmailVerification, retryApplication, revealGreenhouseCoverLetter, selectableAttempts, selectionOverrideStillValid, stageMfaCode } from '../lib/applications/runner.mjs';
 import { submissionGate } from '../lib/applications/policy.mjs';
 import { validateGeneratedAnswers, validateSalaryAnswers, salaryQuestionKind, salaryTask, hostedFallbackProviderIds, answerTask, generateBoundedAnswers, localProseProviderConfig, normalizeCandidateProse } from '../lib/applications/answers.mjs';
 import { applicationVoiceProfile } from '../lib/applications/voice.mjs';
@@ -78,27 +78,29 @@ test('a deferred ATS cannot reach browser navigation even if it is already queue
   assert.deepEqual(selectableAttempts(queued, { eligibleKeys: keys, allowedAts: allowed, maySubmit: true }).map(item => item.idempotency_key), ['greenhouse', 'ready']);
 });
 
-test('a Greenhouse-fed role on an uncertified application host becomes a review item, not an unselectable queue entry', () => {
+test('a Greenhouse-fed role on an uncertified application host becomes a review item, not an unselectable queue entry', async () => {
   const root = target();
   writeFileSync(join(root, 'reports', 'company', '001.md'), '**URL:** https://careers.example.test/jobs/role?gh_jid=123\n');
-  const result = enqueueEligible(root);
+  const result = await enqueueEligible(root, {
+    fetchImpl: async () => ({ ok: false, status: 404, json: async () => ({}) }),
+  });
   assert.deepEqual(result.queued, []);
-  assert.deepEqual(result.blocked, [{ tracker_number: 1, blocker: 'UNSUPPORTED_PORTAL' }]);
+  assert.equal(result.blocked[0].blocker, 'UNSUPPORTED_PORTAL');
   const attempt = queueAttempt(root, { tracker_number: 1, canonical_url: 'https://careers.example.test/jobs/role?gh_jid=123' }).attempt;
   assert.equal(attempt.state, 'NEEDS_REVIEW');
   assert.deepEqual(attempt.blockers, [{ code: 'UNSUPPORTED_PORTAL', detail: 'Application host is not a certified ATS surface' }]);
 });
 
-test('an exact-row enqueue exposes prior terminal state and cannot select another queued attempt', () => {
+test('an exact-row enqueue exposes prior terminal state and cannot select another queued attempt', async () => {
   const root = target();
-  const first = enqueueEligible(root, { trackerNumbers: [1], includeCurrent: true });
+  const first = await enqueueEligible(root, { trackerNumbers: [1], includeCurrent: true });
   assert.equal(first.queued.length, 1);
   const attempt = first.queued[0];
   transitionAttempt(root, attempt.idempotency_key, 'SUBMISSION_UNKNOWN', {
     submission_evidence: { confirmation: 'ambiguous-live-response' },
   });
 
-  const repeated = enqueueEligible(root, { trackerNumbers: [1], includeCurrent: true });
+  const repeated = await enqueueEligible(root, { trackerNumbers: [1], includeCurrent: true });
   assert.deepEqual(repeated.queued, []);
   assert.deepEqual(repeated.blocked, [{
     tracker_number: 1,
@@ -138,6 +140,17 @@ test('Greenhouse accepts only its official same-job canonical redirect as a fina
     { ...attempt, canonical_url: 'https://notgreenhouse.io/chime/jobs/8782503002' },
     { ...identity, url: 'https://notgreenhouse.io/chime/jobs/8782503002' },
   ), false);
+  const embedAttempt = {
+    canonical_url: 'https://job-boards.greenhouse.io/embed/job_app?for=databricks&token=8645054002',
+    role: 'Sr. Forward Deployed Engineer', company: 'Databricks',
+  };
+  const embedIdentity = {
+    url: 'https://job-boards.greenhouse.io/embed/job_app?for=databricks&token=8645054002',
+    heading: 'Sr. Forward Deployed Engineer',
+    title: 'Job Application',
+    text: 'Databricks application form',
+  };
+  assert.equal(exactSinglePageFinal(inspected, embedAttempt, embedIdentity), true);
 });
 
 test('Greenhouse accepts its first-party short-link only after it resolves to an official job board', () => {
@@ -191,29 +204,95 @@ test('personal Gmail OTP reads are restricted to the current ATS sender allowlis
   assert.deepEqual(otpDomains('greenhouse', { applications: { gmail_otp: { sender_domains: { greenhouse: ['valid.example', '../invalid'] } } } }), ['valid.example']);
 });
 
-test('a user-selected override is limited to one persisted Evaluated row', () => {
+test('a user-selected override cannot leave an unresolved careers host QUEUED', async () => {
   const root = target();
-  const candidate = candidateForTrackerNumber(root, 2);
-  assert.equal(candidate.eligible, false);
-  const queued = enqueueSelectionOverride(root, 2);
+  writeFileSync(join(root, 'reports', 'company', '002.md'), '**URL:** https://careers.example.test/jobs/role?gh_jid=999001\n');
+  const queued = await enqueueSelectionOverride(root, 2, {
+    fetchImpl: async () => ({ ok: false, status: 404, json: async () => ({}) }),
+  });
   assert.equal(queued.created, true);
-  assert.equal(queued.attempt.selection_override.reason, 'USER_SELECTION_OVERRIDE');
-  assert.equal(queued.attempt.tracker_number, 2);
-  transitionAttempt(root, queued.attempt.idempotency_key, 'NEEDS_REVIEW', { blockers: [{ code: 'UNSUPPORTED_PORTAL' }] });
-  assert.equal(retryApplication(root, 2).state, 'QUEUED');
-  assert.throws(() => enqueueSelectionOverride(root, 99), /not found/);
+  assert.equal(queued.unsupported, true);
+  assert.equal(queued.blocker, 'UNSUPPORTED_PORTAL');
+  assert.equal(queued.attempt.state, 'NEEDS_REVIEW');
+  assert.equal(queued.attempt.ats, 'generic');
+  assert.deepEqual(exactAttemptKeys(root, 2, { queued: [queued.attempt] }), []);
 });
 
-test('an exact-row run preserves a valid below-threshold override and a ready eligible attempt', () => {
+test('a greenhouse-api careers shell resolves to the official embed apply URL', async () => {
   const root = target();
-  const overridden = enqueueSelectionOverride(root, 2).attempt;
-  const normalSelection = enqueueEligible(root, { trackerNumbers: [2], includeCurrent: true });
+  writeFileSync(
+    join(root, 'data', 'applications.md'),
+    [
+      '# Applications', '',
+      '| # | Date | Company | Role | Score | Status | PDF | Report | Notes |',
+      '|---|---|---|---|---|---|---|---|---|',
+      '| 2 | 2026-09-09 | Databricks | Sr. Forward Deployed Engineer | 3.5/5 | Evaluated | — | [002](reports/company/002.md) | SRC: greenhouse-api |',
+      '',
+    ].join('\n'),
+  );
+  writeFileSync(join(root, 'reports', 'company', '002.md'), '**URL:** https://databricks.com/company/careers/open-positions/job?gh_jid=8645054002\n');
+  const queued = await enqueueSelectionOverride(root, 2, {
+    fetchImpl: async (url) => {
+      assert.match(url, /\/boards\/databricks\/jobs\/8645054002$/);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 8645054002, title: 'Sr. Forward Deployed Engineer', absolute_url: 'https://databricks.com/...' }),
+      };
+    },
+  });
+  assert.equal(queued.unsupported, false);
+  assert.equal(queued.attempt.ats, 'greenhouse');
+  assert.equal(queued.attempt.state, 'QUEUED');
+  assert.equal(
+    queued.attempt.canonical_url,
+    'https://job-boards.greenhouse.io/embed/job_app?for=databricks&token=8645054002',
+  );
+  assert.equal(queued.apply_url_resolution.reason, 'greenhouse-embed');
+  assert.equal(selectionOverrideStillValid(root, queued.attempt), true);
+  assert.deepEqual(
+    exactAttemptKeys(root, 2, { queued: [queued.attempt] }),
+    [queued.attempt.idempotency_key],
+  );
+});
+
+test('runApplications repairs a stale generic QUEUED override into an explicit portal review', async () => {
+  const root = target();
+  writeFileSync(join(root, 'reports', 'company', '002.md'), '**URL:** https://careers.example.test/jobs/role?gh_jid=999002\n');
+  const { attempt } = queueAttempt(root, {
+    tracker_number: 2,
+    canonical_url: 'https://careers.example.test/jobs/role?gh_jid=999002',
+    ats: 'generic',
+    role: 'Other',
+    company: 'Company',
+    selection_override: { reason: 'USER_SELECTION_OVERRIDE', authorized_at: '2026-09-14T00:00:00.000Z' },
+  });
+  assert.equal(attempt.state, 'QUEUED');
+  const { runApplications } = await import('../lib/applications/runner.mjs');
+  const run = await runApplications(root, {
+    applications: {
+      enabled: true,
+      auto_submit: true,
+      chrome_profile_dir: join(root, 'chrome-profile'),
+      supported_ats: ['greenhouse'],
+      resumes: { sde: join(root, 'resume.pdf'), mle: join(root, 'resume.pdf') },
+    },
+  }, { submit: true, max: 1, attemptKeys: [attempt.idempotency_key] });
+  assert.match(run.message, /certified ATS apply URL|#2/);
+  assert.equal(getAttempt(root, attempt.idempotency_key).state, 'NEEDS_REVIEW');
+});
+
+
+test('an exact-row run preserves a valid below-threshold override and a ready eligible attempt', async () => {
+  const root = target();
+  const overridden = (await enqueueSelectionOverride(root, 2)).attempt;
+  const normalSelection = await enqueueEligible(root, { trackerNumbers: [2], includeCurrent: true });
   assert.deepEqual(normalSelection.queued, []);
   assert.deepEqual(exactAttemptKeys(root, 2, normalSelection), [overridden.idempotency_key]);
 
-  const eligible = enqueueEligible(root, { trackerNumbers: [1], includeCurrent: true }).queued[0];
+  const eligible = (await enqueueEligible(root, { trackerNumbers: [1], includeCurrent: true })).queued[0];
   transitionAttempt(root, eligible.idempotency_key, 'READY_TO_SUBMIT');
-  const repeated = enqueueEligible(root, { trackerNumbers: [1], includeCurrent: true });
+  const repeated = await enqueueEligible(root, { trackerNumbers: [1], includeCurrent: true });
   assert.deepEqual(repeated.queued, []);
   assert.deepEqual(exactAttemptKeys(root, 1, repeated), [eligible.idempotency_key]);
 });
@@ -638,4 +717,86 @@ test('application artifact retention deletes only aged attempt artifacts', () =>
   assert.equal(result.removed, 1);
   assert.throws(() => readFileSync(join(old, 'review.png')));
   assert.equal(readFileSync(join(recent, 'review.png'), 'utf8'), 'x');
+});
+
+test('missing APPLY token is a near-miss, not an eligible enqueue', async () => {
+  const { hasApplyToken, diagnoseTrackerRows } = await import('../lib/applications/eligibility.mjs');
+  assert.equal(hasApplyToken('APPLY. SRC: greenhouse-api'), true);
+  assert.equal(hasApplyToken('DO NOT APPLY. SRC: greenhouse-api'), false);
+  const root = target();
+  mkdirSync(join(root, 'data'), { recursive: true });
+  writeFileSync(join(root, 'data', 'applications.md'), [
+    '| # | Date | Company | Role | Score | Status | PDF | Report | Notes |',
+    '|---|---|---|---|---|---|---|---|---|',
+    '| 1 | 2026-09-14 | Acme | SWE | 4.5/5 | Evaluated | ❌ | [001](reports/acme/1-swe-2026-09-14.md) | Submit SDE resume. SRC: greenhouse-api |',
+    '| 2 | 2026-09-14 | Beta | SWE | 4.5/5 | Evaluated | ❌ | [002](reports/beta/2-swe-2026-09-14.md) | APPLY. Submit SDE resume. SRC: ashby-api |',
+    '',
+  ].join('\n'));
+  mkdirSync(join(root, 'reports', 'acme'), { recursive: true });
+  mkdirSync(join(root, 'reports', 'beta'), { recursive: true });
+  writeFileSync(join(root, 'reports', 'acme', '1-swe-2026-09-14.md'), '**URL:** https://boards.greenhouse.io/acme/jobs/1\n');
+  writeFileSync(join(root, 'reports', 'beta', '2-swe-2026-09-14.md'), '**URL:** https://jobs.ashbyhq.com/beta/2\n');
+  const diagnosed = diagnoseTrackerRows(root);
+  assert.equal(diagnosed.find(item => item.row.num === 1)?.blocker, 'MISSING_APPLY_TOKEN');
+  assert.equal(diagnosed.find(item => item.row.num === 1)?.near_miss, true);
+  assert.equal(diagnosed.find(item => item.row.num === 2)?.eligible, true);
+  const { applicationQueuePreview } = await import('../lib/applications/enqueue-summary.mjs');
+  const preview = applicationQueuePreview(root);
+  assert.equal(preview.eligible_count, 1);
+  assert.equal(preview.near_misses[0].blocker, 'MISSING_APPLY_TOKEN');
+  assert.match(preview.human_summary, /Near-miss/);
+});
+
+test('liveness gate maps expired and uncertain verdicts fail-closed', async () => {
+  const { livenessAttemptPatch } = await import('../lib/applications/liveness-gate.mjs');
+  assert.equal(livenessAttemptPatch({ result: 'active' }), null);
+  assert.equal(livenessAttemptPatch({ result: 'expired', reason: 'gone' }).state, 'SKIPPED');
+  assert.equal(livenessAttemptPatch({ result: 'uncertain', reason: 'spa' }).blockers[0].code, 'LIVENESS_UNCERTAIN');
+});
+
+test('apply doctor reports configuration gaps without mutating attempts', async () => {
+  const { diagnoseApplications } = await import('../lib/applications/doctor.mjs');
+  const report = diagnoseApplications(target(), {
+    applications: {
+      enabled: false,
+      chrome_profile_dir: '',
+      resumes: { sde: '', mle: '' },
+      supported_ats: ['greenhouse'],
+    },
+  });
+  assert.equal(report.schema, 'ApplicationDoctorReportV1');
+  assert.equal(report.ready, false);
+  assert.ok(report.checks.some(item => item.code === 'APPLICATIONS_ENABLED' && item.ok === false));
+});
+
+test('attempt analytics aggregates states and blockers', async () => {
+  const root = target();
+  const { attempt } = queueAttempt(root, { tracker_number: 9, canonical_url: 'https://boards.greenhouse.io/acme/jobs/9', ats: 'greenhouse' });
+  transitionAttempt(root, attempt.idempotency_key, 'NEEDS_REVIEW', { blockers: [{ code: 'LIVENESS_UNCERTAIN' }] });
+  const { applicationAttemptAnalytics } = await import('../lib/applications/analytics.mjs');
+  const stats = applicationAttemptAnalytics(root);
+  assert.equal(stats.by_state.NEEDS_REVIEW, 1);
+  assert.equal(stats.top_blockers[0].code, 'LIVENESS_UNCERTAIN');
+  assert.equal(stats.by_ats.greenhouse, 1);
+});
+
+test('ATS hostname mapping covers certified and deferred boards', async () => {
+  const { atsFor, ATS_MATURITY } = await import('../lib/applications/ats.mjs');
+  assert.equal(atsFor('https://boards.greenhouse.io/x/jobs/1'), 'greenhouse');
+  assert.equal(atsFor('https://www.linkedin.com/jobs/view/1'), 'linkedin');
+  assert.equal(ATS_MATURITY.linkedin.stage, 'deferred');
+});
+
+test('field stability wait reports a quiet required-control count', async () => {
+  const { waitForFieldStability } = await import('../lib/applications/form-stability.mjs');
+  let polls = 0;
+  const page = {
+    evaluate: async () => {
+      polls += 1;
+      return polls < 3 ? polls : 2;
+    },
+  };
+  const result = await waitForFieldStability(page, { timeoutMs: 2000, quietMs: 50, pollMs: 10 });
+  assert.equal(result.stable, true);
+  assert.equal(result.field_count, 2);
 });

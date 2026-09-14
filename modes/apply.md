@@ -4,6 +4,28 @@ Interactive mode for when the candidate is filling out an application form in Ch
 
 > **Data-dir note:** `reports/` and `applications.md` paths here resolve under `$CAREER_OPS_DATA_DIR`, default `ft/` (the live FT funnel). `reports/` means `ft/reports/`, `applications.md` means `ft/data/applications.md`.
 
+## Two apply surfaces (do not conflate)
+
+| Surface | Purpose | Entry |
+|---|---|---|
+| **This mode (agent assist)** | Candidate fills the form; agent drafts copy-paste answers from the report | `/career-ops apply` |
+| **Autonomous applier** | Playwright + Job Autofill + fail-closed submit gate | `node bin/career-ops.mjs apply …` |
+
+| Board | Purpose |
+|---|---|
+| **Apply Attempts** (`career-ops apply serve`) | `ApplicationAttemptV1` state machine |
+| **Scan checklist** (`node apply-board.mjs`) | scan-history convenience view — not attempt state |
+
+Before assisting, bind to any existing attempt:
+
+1. Resolve tracker `#NN` from the company/role match (or ask the candidate).
+2. If `ft/.career-ops-runtime/applications/attempts.json` has that tracker number, read its `state`, `blockers`, and answer provenance (lengths only — never paste stored secrets into chat unless the candidate asks).
+3. Prefer `career-ops apply doctor --config config/runtime.local.yml` when diagnosing why the autonomous path will not open a row.
+4. Prefer `career-ops apply acknowledge --tracker-number NN --config … --apply` when the candidate confirms a **manual** submission outside the runner (never for `SUBMISSION_UNKNOWN`).
+5. After an interrupted submit click, if state is `SUBMISSION_UNKNOWN`, tell the candidate to check the employer/ATS email before `apply retry --confirm-not-submitted`.
+
+Agent-drafted answers remain advisory. They do not authorize Submit; only the deterministic runner gate may click Submit when locally enabled.
+
 ## Requirements
 
 - **Best with Playwright in visible mode**: In visible mode, the candidate sees the browser and Codex can inspect the page.
