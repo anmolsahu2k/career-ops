@@ -455,7 +455,6 @@ func ComputeMetrics(apps []model.CareerApplication) model.PipelineMetrics {
 		if app.HasPDF {
 			m.WithPDF++
 		}
-		if status != "skip" && status != "rejected" && status != "discarded" {
 		if status != "skip" && status != "rejected" && status != "discarded" && status != "purged" {
 			m.Actionable++
 		}
@@ -808,7 +807,6 @@ func ComputeProgressMetrics(apps []model.CareerApplication) model.ProgressMetric
 		if norm == "offer" {
 			pm.TotalOffers++
 		}
-		if norm != "skip" && norm != "rejected" && norm != "discarded" {
 		if norm != "skip" && norm != "rejected" && norm != "discarded" && norm != "purged" {
 			pm.ActiveApps++
 		}

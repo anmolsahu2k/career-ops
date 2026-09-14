@@ -490,12 +490,10 @@ func (m *PipelineModel) applyFilterAndSort() {
 		norm := data.NormalizeStatus(app.Status)
 		switch currentFilter {
 		case filterAll:
-			filtered = append(filtered, app)
 			if norm != "purged" {
 				filtered = append(filtered, app)
 			}
 		case filterTop:
-			if app.Score >= 4.0 && norm != "skip" {
 			if app.Score >= 4.0 && norm != "skip" && norm != "purged" {
 				filtered = append(filtered, app)
 			}
@@ -696,12 +694,10 @@ func (m PipelineModel) countForFilter(filter string) int {
 		norm := data.NormalizeStatus(app.Status)
 		switch filter {
 		case filterAll:
-			count++
 			if norm != "purged" {
 				count++
 			}
 		case filterTop:
-			if app.Score >= 4.0 && norm != "skip" {
 			if app.Score >= 4.0 && norm != "skip" && norm != "purged" {
 				count++
 			}
