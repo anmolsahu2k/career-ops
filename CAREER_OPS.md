@@ -81,7 +81,7 @@ G Legitimacy
 Recommendation
 ```
 
-Use canonical statuses from `templates/states.yml`. A model verdict against applying uses `Rejected-at-eval`; mechanical expiry uses `Purged`; only the candidate may choose `Discarded`. Every tracker row carries one canonical `SRC:` token. Review information is coalesced in Notes without altering the schema.
+Use canonical statuses from `templates/states.yml`. A model verdict against applying uses `Rejected-at-eval`; mechanical expiry uses `Purged`; only the candidate may choose `Discarded`. Every tracker row carries one canonical `SRC:` token. Review information is coalesced in Notes without altering the schema. Every report ends with `## Recommendation` whose first line starts with `Apply`, `Consider`, or `Do not apply`; Evaluated ≥4.0 Notes also carry `APPLY.` or `CONSIDER.` so the applier can enqueue.
 
 **Tracker rows require evaluation.** Unevaluated discovery may stay in `data/scan-results-*.tsv` triage (or an explicit scan-only handoff). Never merge `reports/pending.md` placeholders, `Triaged` status, or "not yet evaluated" stubs into `applications.md`. Only a completed A-G report may create or update a tracker row. The single command for that triage pass is `npm run evaluate` (`career-ops evaluate`): liveness → JD fetch → prepare/respond/commit.
 

@@ -1,8 +1,44 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import ashby from '../content/adapters/ashby.js';
 import { searchQuery } from '../content/filler.js';
 import { matchOption, normalizeKey } from '../content/matcher.js';
+
+function fakeControl({ id = '', name = '', type = 'checkbox', label = 'I agree' } = {}) {
+  return {
+    id,
+    name,
+    getAttribute(key) {
+      if (key === 'type') return type;
+      if (key === 'name') return name;
+      if (key === 'id') return id;
+      return null;
+    },
+    closest() { return null; },
+    labels: [{ textContent: label }],
+  };
+}
+
+test('Ashby data-consent system field maps to Affirmation / privacy ack', () => {
+  const el = fakeControl({
+    id: '3f8016f2-2294-44d9-922b-521b6dcca4cd__systemfield_data_consent_ack-labeled-checkbox-0',
+    name: 'I agree',
+  });
+  assert.equal(ashby.labelOverride(el), 'Affirmation');
+  assert.equal(ashby.canonicalAttr(el), 'application.acknowledgements.requiredPrivacyPolicy');
+});
+
+test('Ashby labelOverride leaves ordinary checkboxes alone when no entry', () => {
+  const el = fakeControl({
+    id: 'other-labeled-checkbox-0',
+    name: 'newsletter',
+    label: 'Keep me informed',
+  });
+  assert.equal(ashby.labelOverride(el), null);
+  assert.equal(ashby.canonicalAttr(el), null);
+});
+
 
 // Ashby's location and country fields are type-to-search: the backend matches a
 // prefix, so the full formatted answer finds nothing.

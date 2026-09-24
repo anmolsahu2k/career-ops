@@ -99,3 +99,16 @@ test('apply_row job is refused when applications.enabled is false', async () => 
     assert.equal(body.code, 'APPLICATIONS_DISABLED');
   });
 });
+
+test('apply_retry job is refused when applications.enabled is false', async () => {
+  await withApp(false, async ({ app, base }) => {
+    const res = await fetch(`${base}/api/jobs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-csrf-token': app.csrfToken },
+      body: JSON.stringify({ action: 'apply_retry', args: { key: 'attempt-1' }, csrf: app.csrfToken }),
+    });
+    assert.equal(res.status, 403);
+    const body = await res.json();
+    assert.equal(body.code, 'APPLICATIONS_DISABLED');
+  });
+});

@@ -9,6 +9,7 @@ application runner's one-purpose verification-code lookup.
 import argparse
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -51,6 +52,7 @@ def main():
         "scope": " ".join(credentials.scopes or SCOPES),
         "token_uri": credentials.token_uri,
         "expiry": credentials.expiry.isoformat() if credentials.expiry else None,
+        "authorized_at": datetime.now(timezone.utc).isoformat(),
     }
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f".{destination.name}.{os.getpid()}.tmp")

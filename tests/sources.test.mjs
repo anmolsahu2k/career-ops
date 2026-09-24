@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeSource, sourceFromUrl, normalizeUrlKey, readSrcToken, withSrcToken,
+  readApplyUrlToken, readApplyHostToken, withApplyUrlToken,
   groupOf, CANONICAL_SOURCES,
 } from '../lib/sources.mjs';
 
@@ -91,6 +92,17 @@ test('SRC token appends cleanly to unpunctuated and empty notes', () => {
   assert.equal(withSrcToken('no trailing period', 'manual'), 'no trailing period. SRC: manual.');
   assert.equal(withSrcToken('', 'manual'), 'SRC: manual.');
   assert.equal(withSrcToken(null, 'unknown'), 'SRC: unknown.');
+});
+
+test('APPLY-URL token records Handshake Apply Externally without dropping SRC', () => {
+  const notes = 'TRUE-AGE: unknown. Submit SDE resume. APPLY. SRC: handshake.';
+  const once = withApplyUrlToken(notes, 'https://careers.cruitical.com/jobs/full-stack');
+  assert.equal(readSrcToken(once), 'handshake');
+  assert.equal(readApplyUrlToken(once), 'https://careers.cruitical.com/jobs/full-stack');
+  assert.equal(readApplyHostToken(once), 'careers.cruitical.com');
+  const twice = withApplyUrlToken(once, 'https://jobs.ashbyhq.com/cruitical/1', 'jobs.ashbyhq.com');
+  assert.equal(twice.match(/APPLY-URL:/g).length, 1);
+  assert.equal(readApplyUrlToken(twice), 'https://jobs.ashbyhq.com/cruitical/1');
 });
 
 test('every canonical source has a group', () => {

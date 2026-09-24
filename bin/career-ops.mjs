@@ -34,6 +34,7 @@ import { serveApplyBoard } from '../lib/applications/board.mjs';
 import { acknowledgeManualSubmission } from '../lib/applications/acknowledge.mjs';
 import { runLocalApplicationProseQualification } from '../lib/applications/local-prose-qualification.mjs';
 import { diagnoseApplications } from '../lib/applications/doctor.mjs';
+import { diagnoseHandshake, runHandshakeJob, runHandshakeSession } from '../lib/handshake/session.mjs';
 import { applicationQueuePreview } from '../lib/applications/enqueue-summary.mjs';
 import { applicationAttemptAnalytics } from '../lib/applications/analytics.mjs';
 import { evaluateScanResults } from '../lib/runtime/evaluate-scan.mjs';
@@ -144,7 +145,7 @@ async function autoApplyCommittedRows(target, config, trackerNumbers) {
   if (policy?.enabled !== true || policy.auto_after_scan !== true) return null;
   const numbers = [...new Set((trackerNumbers || []).map(Number).filter(Number.isFinite))];
   if (!numbers.length) return null;
-  const queued = await enqueueEligible(target, { trackerNumbers: numbers, includeCurrent: true });
+  const queued = await enqueueEligible(target, { trackerNumbers: numbers, includeCurrent: true, config });
   const run = await runApplications(target, config, {
     // This is intentionally configuration-gated rather than inherited from a
     // generic commit flag. The user enables application submission locally;
@@ -174,7 +175,7 @@ async function main() {
   const { positional, flags } = argsOf(process.argv.slice(2));
   const [command, subcommand] = positional;
   if (!command || command === 'help') {
-    process.stdout.write('Usage: career-ops <apply|baseline|prepare|respond|validate|commit|batch|evaluate|ui|shadow|route-shadow|hardware-qualify|canary-certify|recover|route|qualify|qualify-bundle|doctor|quota|cleanup> [options]\n');
+    process.stdout.write('Usage: career-ops <apply|handshake|baseline|prepare|respond|validate|commit|batch|evaluate|ui|shadow|route-shadow|hardware-qualify|canary-certify|recover|route|qualify|qualify-bundle|doctor|quota|cleanup> [options]\n');
     return;
   }
   const target = targetFrom(flags);
@@ -210,14 +211,18 @@ async function main() {
       return;
     }
     if (subcommand === 'enqueue') {
+      const config = flags.config ? loadRuntimeConfig(flags.config) : null;
       if (!flags.apply) {
-        const preview = applicationQueuePreview(target);
+        const preview = applicationQueuePreview(target, { config });
         output(preview, flags.out);
         if (flags.human) process.stdout.write(`${preview.human_summary}\n`);
         return;
       }
-      authorizeMutation(flags);
-      output(record('ApplicationEnqueueResultV1', await enqueueEligible(target, { includeCurrent: flags['include-current'] === true })));
+      authorizeMutation(flags, config);
+      output(record('ApplicationEnqueueResultV1', await enqueueEligible(target, {
+        includeCurrent: flags['include-current'] === true,
+        config,
+      })));
       return;
     }
     if (subcommand === 'run') {
@@ -229,7 +234,7 @@ async function main() {
         throw new Error('apply run --tracker-number requires a positive integer');
       }
       const selected = selectedTrackerNumber === null ? null
-        : await enqueueEligible(target, { trackerNumbers: [selectedTrackerNumber], includeCurrent: true });
+        : await enqueueEligible(target, { trackerNumbers: [selectedTrackerNumber], includeCurrent: true, config });
       output(record('ApplicationRunResultV1', await runApplications(target, config, {
         submit: flags.submit === true,
         max: flags.max || 1,
@@ -250,8 +255,8 @@ async function main() {
       if (!flags.apply || !flags.config || !flags['tracker-number']) {
         throw new Error('apply override requires --tracker-number, --config, and --apply');
       }
-      authorizeMutation(flags);
-      output(record('ApplicationSelectionOverrideV1', await enqueueSelectionOverride(target, Number(flags['tracker-number']))));
+      const config = authorizeMutation(flags);
+      output(record('ApplicationSelectionOverrideV1', await enqueueSelectionOverride(target, Number(flags['tracker-number']), { config })));
       return;
     }
     if (subcommand === 'retry') {
@@ -270,7 +275,7 @@ async function main() {
       const config = mergeRuntimeState(authorizeMutation(flags), readState(target));
       if (config.applications?.auto_after_scan !== true) throw new Error('applications.auto_after_scan must be true for apply after-scan');
       const trackerNumbers = String(flags['tracker-numbers']).split(',').map(Number).filter(Number.isFinite);
-      const queued = await enqueueEligible(target, { trackerNumbers, includeCurrent: true });
+      const queued = await enqueueEligible(target, { trackerNumbers, includeCurrent: true, config });
       output(record('PostScanApplicationResultV1', {
         queued,
         run: await runApplications(target, config, {
@@ -795,6 +800,45 @@ async function main() {
     authorizeMutation(flags);
     output(record('CleanupResultV1', cleanupRetention(target)));
     return;
+  }
+  if (command === 'handshake') {
+    if (!flags.config) throw new Error('handshake requires --config');
+    if (subcommand === 'doctor') {
+      const config = loadRuntimeConfig(flags.config);
+      const report = await diagnoseHandshake(target, config);
+      output(report, flags.out);
+      if (flags.human) process.stdout.write(`${report.summary}\n`);
+      if (!report.ready) process.exitCode = 2;
+      return;
+    }
+    if (subcommand === 'job' || subcommand === 'session') {
+      if (!flags.apply) throw new Error(`handshake ${subcommand} changes tracker/attempt state and requires --apply`);
+      const config = mergeRuntimeState(authorizeMutation(flags), readState(target));
+      if (config.applications?.enabled !== true) {
+        throw new Error('applications.enabled must be true for handshake job/session');
+      }
+      if (subcommand === 'session' && flags.max === undefined) {
+        throw new Error('handshake session requires --max');
+      }
+      const progress = (event) => {
+        process.stderr.write(`${JSON.stringify({ event: 'handshake_progress', ...event })}\n`);
+      };
+      const shared = {
+        target,
+        config,
+        repoRoot,
+        submit: flags.submit === true,
+        acknowledgeQuota: true,
+        forceProvider: flags['force-provider'] === true,
+        onProgress: progress,
+      };
+      const result = subcommand === 'job'
+        ? await runHandshakeJob(shared)
+        : await runHandshakeSession({ ...shared, max: Number(flags.max) });
+      output(result, flags.out);
+      return;
+    }
+    throw new Error('Usage: career-ops handshake <doctor|job|session>');
   }
   if (command === 'ui') {
     await serveCareerOpsApp({

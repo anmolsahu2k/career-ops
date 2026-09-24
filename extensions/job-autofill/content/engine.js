@@ -118,18 +118,44 @@ function isStyledUpload(el) {
 
 export const UPLOAD_SHELL_PATTERN = /\b(drop files|select files?|upload a file|choose file|browse|attach)\b/i;
 
+/**
+ * Greenhouse react-select (and Workday multiselect) collapse the native input
+ * to opacity 0 after a value is committed. The rendered single-value / chips
+ * stay in the visible control. Treat that shell as the field, or inspect and
+ * salary readback lose the question the moment it is answered.
+ */
+function isStyledCombobox(el) {
+  if (!el || el.tagName !== 'INPUT') return false;
+  const className = typeof el.className === 'string' ? el.className : '';
+  const isCombo = el.getAttribute('role') === 'combobox'
+    || el.getAttribute('aria-autocomplete') === 'list'
+    || el.getAttribute('aria-haspopup') === 'listbox'
+    || /select__input/.test(className)
+    || Boolean(el.closest?.('[class*="select__control"]'))
+    || Boolean(el.closest?.('[data-automation-id="multiselectInputContainer"]'));
+  if (!isCombo) return false;
+  const shell = el.closest('[class*="select__control"]')
+    || el.closest('[data-automation-id="multiselectInputContainer"]');
+  if (!shell || shell === el) return false;
+  const style = getComputedStyle(shell);
+  if (style.visibility === 'hidden' || style.display === 'none') return false;
+  const rect = shell.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
 export function isVisible(el) {
   if (!el || !el.isConnected) return false;
   if (el.disabled) return false;
   if (isHoneypot(el)) return false;
-  if (el.getAttribute('aria-hidden') === 'true') return false;
-  if (el.closest('[aria-hidden="true"]')) return false;
+  // Three widget shapes hide the native control and put a styled stand-in
+  // where the user looks: opacity-0 radios, file inputs behind a drop zone,
+  // and committed react-select inputs. Judge those by the stand-in instead.
+  const hasVisibleProxy = isStyledChoice(el) || isStyledUpload(el) || isStyledCombobox(el);
+  if (!hasVisibleProxy) {
+    if (el.getAttribute('aria-hidden') === 'true') return false;
+    if (el.closest('[aria-hidden="true"]')) return false;
+  }
   const style = getComputedStyle(el);
-  // Two widget shapes deliberately hide the control the browser submits and put
-  // a styled stand-in where the user looks: a radio or checkbox at opacity 0
-  // under a custom box (Ashby's EEO block), and a file input behind a drop zone
-  // (Workday's Resume/CV). Both are judged by that stand-in instead.
-  const hasVisibleProxy = isStyledChoice(el) || isStyledUpload(el);
   if ((style.visibility === 'hidden' || style.display === 'none') && !hasVisibleProxy) return false;
   if (style.opacity === '0' && !hasVisibleProxy) return false;
   const rect = el.getBoundingClientRect();
@@ -251,6 +277,19 @@ function textOf(el) {
  * Ordered so the most explicit association wins; the DOM-proximity fallbacks
  * only run when the page gave us no accessible name at all.
  */
+/**
+ * Greenhouse (and similar) put the picker verb ("Attach") in label[for=…] while
+ * the real slot name ("Resume/CV", "Cover Letter") sits in a sibling heading.
+ * Treating that verb as the question made Needs-you list a bare "Attach" after
+ * a successful resume upload — the leftover control is Cover Letter.
+ */
+function isUploadChromeLabel(text) {
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!t) return false;
+  // Exact chrome only. "Attach your transcript" is a real question.
+  return /^(attach|dropbox|browse|choose file|select files?|upload a file|enter manually)(?:\s*[….]*)?$/i.test(t);
+}
+
 export function resolveLabel(el, adapter) {
   const override = adapter?.labelOverride?.(el);
   if (override) return { text: cleanText(override), source: 'adapter' };
@@ -259,7 +298,8 @@ export function resolveLabel(el, adapter) {
   if (id) {
     const forLabel = document.querySelector(`label[for="${CSS.escape(id)}"]`);
     const t = textOf(forLabel);
-    if (t) return { text: t, source: 'label-for' };
+    // Skip picker-chrome labels so the Resume/CV / Cover Letter heading wins.
+    if (t && !isUploadChromeLabel(t)) return { text: t, source: 'label-for' };
   }
 
   const wrapping = el.closest('label');
@@ -274,7 +314,7 @@ export function resolveLabel(el, adapter) {
     // A dedicated label element inside it is the question; the rest is chrome.
     const inner = labelWithinContainer(wrapping, [el], () => false, LABELISH_TAGS);
     const t = inner || textOf(wrapping);
-    if (t) return { text: t, source: 'wrapping-label' };
+    if (t && !isUploadChromeLabel(t)) return { text: t, source: 'wrapping-label' };
   }
 
   const labelledBy = el.getAttribute('aria-labelledby');

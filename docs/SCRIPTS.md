@@ -103,8 +103,10 @@ npm run ui
 # Opens http://127.0.0.1:8790/
 ```
 
-Covers Discovery (`scan:all`), Evaluate (plan / judge / sweep / overflow), Tracker
-(read-only), Apply (composed Apply Board; enqueue / run use submit=true;
+Covers Discovery (`scan:all` plus a Handshake live card that is **not** scan:all),
+Evaluate (plan / judge / sweep / overflow), Tracker
+(read-only plus Handshake doctor; dedicated enqueue 4.0 vs Handshake live 3.5),
+Apply (composed Apply Board; enqueue / run use submit=true;
 `submissionGate` still gates the Submit click), and Hygiene (verify / normalize /
 dedup / merge with dry-run default).
 Binds `127.0.0.1` only. Writer-host mismatch → read-only banner. Go TUI dashboard
@@ -465,6 +467,12 @@ node bin/career-ops.mjs apply enqueue --config config/runtime.local.yml --apply
 node bin/career-ops.mjs apply run --config config/runtime.local.yml --apply
 node bin/career-ops.mjs apply serve
 node bin/career-ops.mjs apply analytics
+
+# Handshake live eval/apply (already-open signed-in Chrome; not scan:all)
+# Enable chrome://inspect/#remote-debugging and click Allow when Chrome asks.
+node bin/career-ops.mjs handshake doctor --config config/runtime.local.yml
+node bin/career-ops.mjs handshake job --config config/runtime.local.yml --apply
+node bin/career-ops.mjs handshake session --config config/runtime.local.yml --apply --max 10
 ```
 
 `apply serve` opens the **Apply Attempts** board (`ApplicationAttemptV1`). The

@@ -8,6 +8,8 @@
  * cross world boundaries so React re-reads the node and accepts the value.
  */
 
+import { readValue } from './engine.js';
+
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 export function setNativeValue(el, value) {
@@ -146,11 +148,61 @@ export function fillCheckbox(field, option, checked = true) {
  * conjure the bytes, which is why the resume is stored first and rebuilt here.
  *
  * A board that already holds an upload gets it cleared first, or Workday ends
- * up with the same resume attached twice.
+ * up with the same resume attached twice. Modern Greenhouse job-boards are
+ * skipped here: their S3 uploader is created only by the Attach file chooser,
+ * and a synthetic change event renders `uploadFile` as a Resume-slot error.
  *
  * @param {{control: Element}} field
  * @param {{name: string, type: string, base64: string}} resume
  */
+export function fillFileInput(field, resume) {
+  // job-boards.greenhouse.io owns an S3 uploader that is created only after
+  // the visible Attach control opens the file chooser. Assigning `.files` and
+  // dispatching `change` from the isolated world calls that handler before the
+  // uploader exists, and Greenhouse renders
+  // `Cannot read properties of undefined (reading 'uploadFile')` on the Resume
+  // slot. The headed runner attaches through that Attach chooser instead.
+  if (isModernGreenhouseHost()) return false;
+
+  const el = field.control;
+  if (typeof DataTransfer === 'undefined') return false;
+
+  const file = fileFromBase64(resume);
+  if (!file) return false;
+
+  try {
+    for (const remove of existingUploadRemovers(el)) remove.click();
+
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    el.files = dt.files;
+    el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+
+    return el.files?.length === 1 && el.files[0].name === resume.name;
+  } catch {
+    return false;
+  }
+}
+
+function isModernGreenhouseHost() {
+  try {
+    return /^job-boards\.greenhouse\.io$/i.test(location.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** Buttons a board offers for discarding the file it already has. */
+function existingUploadRemovers(el) {
+  const scope = el.closest('.file-upload, .field-wrapper, [data-automation-id]')
+    || el.parentElement
+    || document;
+  return [...scope.querySelectorAll(
+    '[data-automation-id="delete-file"], .dz-remove[data-dz-remove]'
+  )];
+}
+
 /**
  * Words that name the upload slot a stored resume belongs in, and the ones that
  * name a slot it must never be dropped into.
@@ -209,34 +261,6 @@ export function isResumeInput(el, resolvedLabel = '') {
     if (RESUME_SLOT.test(text)) return true;
   }
   return false;
-}
-
-export function fillFileInput(field, resume) {
-  const el = field.control;
-  if (typeof DataTransfer === 'undefined') return false;
-
-  const file = fileFromBase64(resume);
-  if (!file) return false;
-
-  for (const remove of existingUploadRemovers(el)) remove.click();
-
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  el.files = dt.files;
-  // `composed` so the event escapes a shadow root on boards that mount the
-  // upload widget inside one.
-  el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-
-  return el.files?.length === 1 && el.files[0].name === resume.name;
-}
-
-/** Buttons a board offers for discarding the file it already has. */
-function existingUploadRemovers(el) {
-  const scope = el.closest('[data-automation-id], form, fieldset') || document;
-  return [...scope.querySelectorAll(
-    '[data-automation-id="delete-file"], .dz-remove[data-dz-remove]'
-  )];
 }
 
 function fileFromBase64({ base64, name, type }) {
@@ -380,17 +404,75 @@ export function alreadySelected(chips, value) {
  * Close the menu and take focus off the widget.
  *
  * Workday leaves its popup open after a commit, so without this the search
- * results sat over the rest of the form — on the Rocket page the skills menu
- * covered the Resume/CV box entirely. Escape closes it; the click moves focus
- * somewhere harmless, which is what Simplify does with //main.
+ * results sat over the rest of the form. Escape closes it. Click-away is
+ * Workday-only (`applyFlowPage`); Greenhouse `main` clicks can collapse
+ * custom questions and clear committed react-select values.
  */
-function dismissPopup(el) {
+function dismissPopup(el, { clickAway = true } = {}) {
   el.dispatchEvent(new KeyboardEvent('keydown', {
     key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true, cancelable: true,
   }));
   el.blur?.();
-  const away = document.querySelector('#mainContent, main, [data-automation-id="applyFlowPage"]');
+  if (!clickAway) return;
+  // Workday needs a click outside the listbox to close it. Never click
+  // Greenhouse `main` / #mainContent: that click can collapse custom
+  // questions and clear committed react-select values.
+  const away = document.querySelector('[data-automation-id="applyFlowPage"]');
   if (away) fireMouse(away);
+}
+
+export const REQUIRED_COMBOBOX_SNAPSHOT_LIMIT = 12;
+
+export function shouldSnapshotRequiredCombobox(adapter, field, read = readValue) {
+  if (adapter?.id !== 'greenhouse' || adapter.needsInspectOptionSnapshot?.(field) !== true) return false;
+  // Opening a filled react-select and sending Escape clears the committed
+  // option. Inspect only needs options on still-empty widgets.
+  if (!field?.control) return true;
+  try {
+    if (read(field)) return false;
+  } catch { /* Snapshot the empty widget anyway. */ }
+  return true;
+}
+
+/**
+ * Open a required Greenhouse react-select, copy visible options, dismiss.
+ * Never clicks an option and never types a filter, so inspect cannot commit
+ * an answer. Optional comboboxes stay lazy until fill.
+ */
+export async function snapshotComboboxOptions(field, { timeout = 1200 } = {}) {
+  const el = field?.control;
+  if (!el) return [];
+  const preexisting = optionSnapshot();
+  const control = el.closest('[class*="select__control"]')
+    || el.closest('[data-automation-id="multiselectInputContainer"]')
+    || el.parentElement?.parentElement
+    || el;
+  const beforeValue = el.value;
+  el.focus();
+  fireMouse(control);
+  if (control !== el) fireMouse(el);
+  const options = await waitForOptions(el, timeout, preexisting);
+  dismissPopup(el, { clickAway: false });
+  if (el.value !== beforeValue) setNativeValue(el, beforeValue);
+  return options.map(option => ({
+    text: option.text,
+    value: option.value || option.text,
+  }));
+}
+
+export async function attachRequiredComboboxOptions(fields, adapter, snapshot = snapshotComboboxOptions) {
+  if (!Array.isArray(fields) || adapter?.id !== 'greenhouse') return fields;
+  let used = 0;
+  for (const field of fields) {
+    if (used >= REQUIRED_COMBOBOX_SNAPSHOT_LIMIT) break;
+    if (!shouldSnapshotRequiredCombobox(adapter, field)) continue;
+    used += 1;
+    try {
+      const options = await snapshot(field, { timeout: 1200 });
+      if (options.length) field.options = options;
+    } catch { /* Keep inspecting the rest of the form. */ }
+  }
+  return fields;
 }
 
 /**

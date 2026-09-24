@@ -6,7 +6,7 @@ import { advanceLifecycle, aggregateQualificationResults, composeQualificationEv
 import { effectiveReserveRatio, routeProfileTask, routeTask } from '../lib/runtime/router.mjs';
 import { makeTask, NOW } from './runtime-fixtures.mjs';
 import { createProvider } from '../lib/runtime/providers/index.mjs';
-import { allowedEnvironment, resolveSchemaPath } from '../lib/runtime/providers/command.mjs';
+import { allowedEnvironment, CommandProvider, resolveCommandTimeoutMs, resolveSchemaPath } from '../lib/runtime/providers/command.mjs';
 import { evaluateShadowPreflight, expandQualificationSet, runShadowQualification } from '../lib/runtime/shadow.mjs';
 import { record } from '../lib/runtime/util.mjs';
 import { makeResponse } from './runtime-fixtures.mjs';
@@ -303,6 +303,60 @@ test('command adapter supports path-based schema flags for Codex-style CLIs', ()
   assert.equal(
     resolveSchemaPath('/D:/Create/career-ops/schemas/runtime/provider-response.v1.schema.json', 'win32'),
     'D:\\Create\\career-ops\\schemas\\runtime\\provider-response.v1.schema.json',
+  );
+});
+
+test('command adapter inserts JSON schema before Antigravity --print', () => {
+  const schemaPath = fileURLToPath(new URL('../schemas/runtime/application-answer-response.v1.schema.json', import.meta.url));
+  const adapter = createProvider('agy-print', {
+    type: 'antigravity_cli',
+    command: ['agy', '--output-format', 'json', '--print'],
+    json_schema_file: schemaPath, json_schema_mode: 'path',
+    model_vendor: 'google', model_family: 'gemini', model_snapshot: 'test',
+    capability_class: 'CONSEQUENTIAL', execution_surface: 'antigravity-cli',
+  }, {});
+  const printIdx = adapter.command.lastIndexOf('--print');
+  const schemaIdx = adapter.command.lastIndexOf('--json-schema');
+  assert.ok(schemaIdx >= 0 && printIdx > schemaIdx);
+  assert.equal(adapter.command[schemaIdx + 1], schemaPath);
+  assert.equal(adapter.command.at(-1), '--print');
+});
+
+test('command timeout is at least print-timeout plus a buffer', () => {
+  assert.equal(resolveCommandTimeoutMs({ timeout_ms: 120_000 }), 120_000);
+  assert.equal(
+    resolveCommandTimeoutMs({
+      timeout_ms: 120_000,
+      command: ['agy', '--print-timeout', '2m'],
+    }),
+    150_000,
+  );
+  assert.equal(
+    resolveCommandTimeoutMs({
+      command: ['agy', '--print-timeout', '5m'],
+    }),
+    330_000,
+  );
+});
+
+test('CommandProvider rejects after the command deadline', async () => {
+  const provider = new CommandProvider({
+    provider_id: 'slow',
+    command: [process.execPath, '-e', 'setTimeout(() => {}, 5000)'],
+    timeout_ms: 80,
+    input_mode: 'stdin_text',
+    model_vendor: 'local',
+    model_family: 'test',
+    model_snapshot: 'test-1',
+    execution_surface: 'test',
+    resource_pool: 'test',
+    capability_class: 'STANDARD',
+    capabilities: ['structured_output'],
+    risk_ceiling: 'LOW',
+  });
+  await assert.rejects(
+    () => provider.complete({ task: { task_id: 't1' }, instruction: 'ping', evidence: {} }),
+    error => error.code === 'PROVIDER_TIMEOUT' && /deadline/.test(error.message),
   );
 });
 

@@ -13,6 +13,7 @@
     "https://jobs.ashbyhq.com/*",
     "https://jobs.lever.co/*",
     "https://www.linkedin.com/jobs/*",
+    "https://*.joinhandshake.com/*",
     "https://*.successfactors.com/*",
     "https://*.successfactors.eu/*",
     "http://localhost/*"
@@ -29,6 +30,7 @@
         "https://jobs.lever.co/*",
         "https://jobs.eu.lever.co/*",
         "https://www.linkedin.com/jobs/*",
+        "https://*.joinhandshake.com/*",
         "https://*.successfactors.com/*",
         "https://*.successfactors.eu/*",
         "https://*.sapsf.com/*",
@@ -42,7 +44,8 @@
     }
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "action": {
     "default_popup": "popup/popup.html",

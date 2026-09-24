@@ -77,3 +77,55 @@ test('rejects a successful ATS response whose title does not match the approved 
   assert.equal(entry.complete, false);
   assert.equal(entry.error_code, 'TITLE_MISMATCH');
 });
+
+test('Greenhouse careers shells probe the company board instead of the first path segment', async () => {
+  const requested = [];
+  const entry = await captureHistoricalEvidence({
+    caseId: 'HIST-051',
+    sourceUrl: 'https://www.stepstonegroup.com/current-opportunities/?gh_jid=8171272',
+    expectedTitle: 'Junior Analyst',
+    company: 'StepStone Group',
+    now: NOW,
+    fetchImpl: async url => {
+      requested.push(url);
+      assert.match(url, /boards-api\.greenhouse\.io\/v1\/boards\/stepstonegroup\/jobs\/8171272/);
+      assert.doesNotMatch(url, /current-opportunities/);
+      return jsonResponse(200, {
+        id: 8171272,
+        title: 'Junior Analyst',
+        content: `<p>${'Build reliable services. '.repeat(20)}</p>`,
+      });
+    },
+  });
+  assert.equal(entry.complete, true);
+  assert.equal(entry.source_type, 'greenhouse');
+  assert.equal(requested.length, 1);
+});
+
+test('EU Greenhouse board hosts use the public jobs API', async () => {
+  const entry = await captureHistoricalEvidence({
+    caseId: 'HIST-052',
+    sourceUrl: 'https://job-boards.eu.greenhouse.io/lodestarspace/jobs/4969756101',
+    expectedTitle: 'Software Engineer',
+    now: NOW,
+    fetchImpl: async url => {
+      assert.match(url, /boards-api\.greenhouse\.io\/v1\/boards\/lodestarspace\/jobs\/4969756101/);
+      return jsonResponse(200, {
+        title: 'Software Engineer',
+        content: `<p>${'Build reliable services. '.repeat(20)}</p>`,
+      });
+    },
+  });
+  assert.equal(entry.complete, true);
+});
+
+test('iCIMS-style /jobs/{id} paths are not treated as Greenhouse', async () => {
+  const entry = await captureHistoricalEvidence({
+    caseId: 'HIST-053',
+    sourceUrl: 'https://careers.garmin.com/jobs/16587?icims=1',
+    expectedTitle: 'Software Engineer',
+    now: NOW,
+  });
+  assert.equal(entry.complete, false);
+  assert.equal(entry.error_code, 'AMBIGUOUS_OR_UNSUPPORTED_SOURCE');
+});

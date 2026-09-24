@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildGreenhouseEmbedUrl,
+  certifiedGreenhouseApiEndpoint,
   greenhouseJobId,
   guessGreenhouseBoardTokens,
   looksLikeResolvableGreenhouseShell,
@@ -45,4 +46,36 @@ test('resolveCertifiedApplyUrl stays unresolved when no Greenhouse board accepts
   );
   assert.equal(resolved.resolved, false);
   assert.equal(resolved.reason, 'greenhouse-board-unresolved');
+});
+
+test('path /jobs/{digits} is a Greenhouse id only on greenhouse.io hosts', () => {
+  assert.equal(greenhouseJobId('https://job-boards.greenhouse.io/oneimaging/jobs/4403125009'), '4403125009');
+  assert.equal(greenhouseJobId('https://job-boards.eu.greenhouse.io/lodestarspace/jobs/4969756101'), '4969756101');
+  assert.equal(
+    certifiedGreenhouseApiEndpoint('https://job-boards.eu.greenhouse.io/lodestarspace/jobs/4969756101'),
+    'https://boards-api.greenhouse.io/v1/boards/lodestarspace/jobs/4969756101?content=true',
+  );
+  assert.equal(greenhouseJobId('https://careers.garmin.com/jobs/16587?icims=1'), null);
+  assert.equal(greenhouseJobId('https://www.workatastartup.com/jobs/81444'), null);
+  assert.equal(looksLikeResolvableGreenhouseShell('https://careers.garmin.com/jobs/16587?icims=1'), false);
+  assert.equal(looksLikeResolvableGreenhouseShell('https://www.workatastartup.com/jobs/81444'), false);
+  assert.equal(
+    looksLikeResolvableGreenhouseShell('https://www.stepstonegroup.com/current-opportunities/?gh_jid=8171272'),
+    true,
+  );
+  assert.equal(
+    certifiedGreenhouseApiEndpoint('https://www.stepstonegroup.com/current-opportunities/?gh_jid=8171272'),
+    null,
+  );
+  assert.ok(guessGreenhouseBoardTokens(
+    'https://www.stepstonegroup.com/current-opportunities/?gh_jid=8171272',
+    { company: 'StepStone Group' },
+  ).includes('stepstonegroup'));
+  assert.equal(
+    guessGreenhouseBoardTokens(
+      'https://www.stepstonegroup.com/current-opportunities/?gh_jid=8171272',
+      { company: 'StepStone Group' },
+    ).includes('current-opportunities'),
+    false,
+  );
 });

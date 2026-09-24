@@ -20,31 +20,45 @@ applications:
   time_zone: America/New_York
   chrome_profile_dir: ''
   chrome_channel: chrome
-  # LinkedIn and Handshake may later attach to the already signed-in main
-  # Chrome only through an explicit loopback DevTools endpoint. It never
-  # copies, opens, or modifies the live profile directory directly.
+  # LinkedIn and Handshake attach to the already signed-in main Chrome.
+  # Chrome 136+ ignores --remote-debugging-port on the daily profile.
+  # Enable chrome://inspect/#remote-debugging and click Allow. Optional
+  # user_data_dir overrides auto-detect of the live Chrome profile path
+  # (DevToolsActivePort only; never copies User Data).
   main_profile:
     enabled: false
     cdp_url: 'http://127.0.0.1:9222'
     ats: [linkedin, handshake]
+    apply_score_minimum: 3.5
+    handshake:
+      search_url: 'https://cmu.joinhandshake.com/stu/postings'
+      job_types: [Full-Time]
+      locations: [United States]
+      include_remote: true
+      posted_within_days: 21
+      hide_applied: true
+      keyword_source: target_roles
   resumes:
     sde: ''
     mle: ''
   supported_ats: [workday, greenhouse, ashby, lever, successfactors]
   max_steps: 8
   hosted_calls_per_application: 2
-  # Local prose/salary generation is always tried first. If it is unavailable
-  # or fails validation, only a qualified Antigravity provider may be used.
-  # An empty list disables hosted fallback rather than spending Codex quota.
-  hosted_fallback_providers: [antigravity-gemini-pro-review, antigravity-claude-opus-review, antigravity-claude-audit]
+  # Bounded application prose (additional information, cover letters, and
+  # prospective salary preference) uses this Antigravity list when local_prose
+  # is disabled. An empty list disables hosted drafting. Prefer a single
+  # Gemini 3.8 Flash Medium entry for production apply prose.
+  hosted_fallback_providers: [antigravity-gemini-flash-medium]
   answer_evidence_files: []
-  # Optional loopback-only prose canary. It may fill a form for review but can
-  # never submit an application; keep disabled in the checked-in example.
+  # Optional loopback-only prose canary. Keep disabled unless you explicitly
+  # want a local Ollama model for review-only drafting. When enabled and
+  # qualified, local salary/prose is tried before hosted_fallback_providers.
   local_prose:
     enabled: false
     canary_only: true
-    # Explicit user opt-in. On Greenhouse, reveal the cover-letter textarea
-    # and generate body-only prose locally. Never falls back to a hosted model.
+    # When true with local_prose.enabled, qualified local prose drafts cover
+    # letters first. When false (recommended), hosted_fallback_providers drafts
+    # the body. File-upload slots stay empty.
     cover_letters: false
     # Set true only after the application-prose qualification benchmark passes.
     qualified: false
@@ -54,7 +68,7 @@ applications:
   gmail_otp:
     enabled: false
     python_command: python
-    timeout_seconds: 90
+    timeout_seconds: 180
     sender_domains:
       greenhouse: [greenhouse.io, greenhouse-mail.io]
       ashby: [ashbyhq.com]
@@ -326,7 +340,8 @@ providers:
   antigravity-gemini-flash-high:
     type: antigravity_cli
     enabled: false
-    command: [agy, --model, gemini-3.8-flash-high, --effort, high, --sandbox, --disable-slash-commands, --output-format, json, --print-timeout, 2m]
+    command: [agy, --model, gemini-3.8-flash-high, --effort, high, --sandbox, --disable-slash-commands, --output-format, json, --print-timeout, 5m]
+    timeout_ms: 330000
     input_mode: stdin_text
     output_mode: response_json_envelope
     isolated_workspace: true

@@ -47,7 +47,9 @@ Claude Code registrations are not automatically available to Codex. In the ChatG
 
 ## Token expiry (re-auth every 7 days)
 
-Because the GCP app is in Testing status, the OAuth refresh tokens expire every 7 days. When a sweep or MCP call fails with `invalid_grant`, re-run only the `auth` step for the affected account (the command from step 2). No Cloud Console changes are needed; the shared client stays as is.
+Because the GCP app is in Testing status, the OAuth refresh tokens expire every 7 days. The OTP reader now fails closed on that expiry instead of treating Gmail as empty: `scripts/stage-ats-otp.py --auth-status` and live reads report `token_expired`, and the apply UI chip turns broken. Re-run only the `auth` step for the affected account (the command from step 2). No Cloud Console changes are needed; the shared client stays as is.
+
+To drop the 7-day cutoff, publish the same OAuth client to **In production** in Google Cloud Console (APIs & Services → OAuth consent screen). Production refresh tokens no longer expire every 7 days. They still end if you revoke access, change the Google password, or leave the token unused for 6 months. `gmail.readonly` is a sensitive scope, so an unverified production app shows a warning screen and stays capped at 100 users, which is enough for this personal desktop client.
 
 ## Codex connection
 

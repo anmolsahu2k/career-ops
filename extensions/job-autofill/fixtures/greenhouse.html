@@ -33,16 +33,18 @@
       <label for="phone">Phone</label>
       <input type="tel" id="phone" name="phone">
     </div>
-    <div class="field">
-      <label for="resume">Resume/CV</label>
-      <input type="file" id="resume" name="resume">
-    </div>
-    <!-- Greenhouse renders both uploads identically: same accept list, and both
-         labelled "Attach". Only the id says which slot is which. -->
-    <div class="field">
-      <label for="cover_letter">Cover Letter</label>
-      <input type="file" id="cover_letter" name="cover_letter">
-    </div>
+  <!-- Modern job-boards.greenhouse.io: both uploads use a visually-hidden
+       label "Attach"; the real slot name is #upload-label-{id}. -->
+  <div class="field file-upload">
+    <div id="upload-label-resume" class="upload-label">Resume/CV*</div>
+    <label class="visually-hidden" for="resume">Attach</label>
+    <input type="file" id="resume" name="resume" class="visually-hidden">
+  </div>
+  <div class="field file-upload">
+    <div id="upload-label-cover_letter" class="upload-label">Cover Letter</div>
+    <label class="visually-hidden" for="cover_letter">Attach</label>
+    <input type="file" id="cover_letter" name="cover_letter" class="visually-hidden">
+  </div>
 
     <h2>Links</h2>
     <div class="field">

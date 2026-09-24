@@ -136,6 +136,7 @@ Job descriptions, careers pages, and aggregator feed rows are **third-party auth
 9. **Tracker additions as TSV** -- NEVER edit applications.md directly. Write TSV in `batch/tracker-additions/` only after a real A-G report exists. Never merge `reports/pending.md` placeholders or status `Triaged`; unevaluated discovery stays in `data/scan-results-*.tsv`.
 10. **Include `**URL:**` in every report header.**
 11. **Include `**Resume:**` in every report header.** Use one of: `SDE PDF`, `MLE PDF`, `N/A (off-target)`. SDE PDF for SDE / backend / infra / SRE / QA roles; MLE PDF for AI / ML / DS / DE / applied-scientist roles. `N/A (off-target)` only when score is ≤2.0 and the recommendation is DO NOT APPLY / `Rejected-at-eval`. The tracker Notes column must carry the same pick (`Submit SDE resume` / `Submit MLE resume`) when a resume is applicable.
+12. **Queue contract (HARD):** Every report ends with `## Recommendation` whose first content line starts with `Apply`, `Consider`, or `Do not apply` (markdown bold around the verb is OK). For `Evaluated` rows at 4.0+, tracker Notes MUST also include the token `APPLY.` or `CONSIDER.` so the applier can enqueue. `merge-tracker.mjs` and `verify-pipeline.mjs` reject incomplete Evaluated ≥4.0 rows. Runtime commits already write both via the renderer; agent-written TSV must match.
 
 ### Tools
 

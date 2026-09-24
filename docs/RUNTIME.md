@@ -279,14 +279,39 @@ verification.
 for a deferred ATS remain queued and visible on the Apply Board, but the runner
 does not open, fill, navigate, or submit them until that ATS is added locally.
 
-The dedicated profile remains the default. LinkedIn and Handshake may use the
-already signed-in main Chrome only after their adapters are certified and an
-explicit `applications.main_profile` configuration points to a loopback Chrome
-DevTools endpoint. The runner must attach through that endpoint; it never
-copies, launches, or reads the live Chrome profile directory. Existing tabs are
-left untouched and a dedicated application tab is created for each attempt.
-The LinkedIn extension adapter is intentionally job-view-only during this
-development stage and is not an active ATS allowlist entry yet.
+The dedicated profile remains the default for Greenhouse, Ashby, Lever, Workday,
+and SuccessFactors. Handshake live apply is a separate, user-triggered path:
+attach to already-logged-in main Chrome (`applications.main_profile.enabled`,
+`cdp_url`, `ats: [handshake]`). Chrome 136+ ignores `--remote-debugging-port`
+on the daily profile. Enable Remote Debugging at
+`chrome://inspect/#remote-debugging` and click Allow when Chrome asks.
+Career-Ops reads only `DevToolsActivePort` from the live profile path (or
+HTTP CDP as a fallback). It never copies or launches the live Chrome
+user-data directory, never closes tabs it did not open, and never calls
+`browser.close()` on a CDP session.
+
+Handshake uses the existing A-G evaluate judge (same provider as the web
+Evaluate tab). Native Quick Apply fills the Handshake dialog. Apply Externally
+opens that dialog, attaches the configured resume, then clicks External
+Application. That click opens the employer tab in the same Chrome session.
+Follow-through continues only on a certified ATS. The Handshake live apply floor
+is `applications.main_profile.apply_score_minimum` (default **3.5** inclusive).
+Dedicated-profile enqueue stays at **4.0**. PolicyEngine `DO_NOT_APPLY` still
+blocks. Submit remains fail-closed: `applications.enabled` +
+`applications.auto_submit` + `--submit` / web confirm, then `submissionGate`.
+
+Handshake is not part of `scan:all`. LinkedIn Easy Apply stays deferred.
+
+```powershell
+# Handshake CDP / login / filter snapshot. Does not apply.
+node bin/career-ops.mjs handshake doctor --config config/runtime.local.yml
+
+# Evaluate the open Handshake job tab; apply if score >= 3.5.
+node bin/career-ops.mjs handshake job --config config/runtime.local.yml --apply [--submit]
+
+# Open Handshake search, apply Career-Ops filters, walk listings. --max is required.
+node bin/career-ops.mjs handshake session --config config/runtime.local.yml --apply --max 10 [--submit]
+```
 
 ```powershell
 # Read-only list of live Evaluated / APPLY / >=4.0 rows.
@@ -314,9 +339,11 @@ node bin/career-ops.mjs apply run --config config/runtime.local.yml --apply
 # Run only one exact queued row. This cannot fall through to another attempt.
 node bin/career-ops.mjs apply run --tracker-number 5237 --config config/runtime.local.yml --apply
 
-# Optional, candidate-present authentication handoff. Keeps only the
-# dedicated-profile page open for a bounded period after an ATS asks for a
-# login or one-time code; it never reads email or enters the code.
+# Optional, candidate-present authentication handoff. Greenhouse post-submit
+# email MFA keeps the dedicated Chrome page open and polls personal Gmail
+# (allowlisted sender domains only) until a 6-12 character code arrives or
+# the candidate types it. `--pause-for-auth` also waits for a typed code on
+# login screens that are not Gmail OTP.
 node bin/career-ops.mjs apply run --config config/runtime.local.yml --apply --submit --pause-for-auth
 
 # Review local blockers and terminal outcomes (Apply Attempts board).
@@ -344,31 +371,45 @@ stay `Evaluated` and are shown in the local Apply Attempts board at
 If a process dies after the submit click (`SUBMISSION_UNKNOWN`), check the
 employer confirmation email before confirming non-submission and retrying.
 
-Local prose remains canary-only until it passes a separate application-prose
-qualification benchmark; hardware residency alone never grants it submission
-authority. A qualified local provider may then propose one bounded batch of
-job-specific prose. Hosted fallback remains available only after normal
-qualification and quota routing; every generated answer must cite supplied
-evidence and pass deterministic claim validation. A generated-content
-disclosure is never auto-answered "No" when any generated prose was used.
+Local prose remains optional and off by default. When `local_prose.enabled` is
+false, all application prose (additional information, cover letters, and
+prospective salary preference) uses `applications.hosted_fallback_providers`
+only. A qualified local provider may still draft when explicitly enabled and
+qualified; hardware residency alone never grants submission authority. Hosted
+fallback remains available only for configured Antigravity providers; every
+generated answer must cite supplied evidence and pass deterministic claim
+validation. A generated-content disclosure is never auto-answered "No" when any
+generated prose was used.
 
-Greenhouse cover-letter text is separately opt-in through
-`applications.local_prose.cover_letters: true`. When enabled, the runner uses
-Greenhouse's exact `cover_letter-text` control to reveal the manual textarea,
-then requests a body-only, job-specific letter from the qualified local prose
-provider. It preserves paragraph breaks, enforces the 200-word template limit,
-requires both current-job and candidate-profile evidence, and never falls back
-to a hosted provider. File-upload cover-letter slots remain untouched.
+Greenhouse cover-letter text is always attempted on certified Greenhouse
+forms. The runner uses Greenhouse's exact `cover_letter-text` control to
+reveal the manual textarea, then requests a body-only, job-specific letter.
+Qualified local prose is used only when `local_prose.enabled` and
+`local_prose.cover_letters` are true. Otherwise only a configured Antigravity
+hosted fallback is eligible. It preserves paragraph breaks, enforces the
+200-word template limit, and requires both current-job and candidate-profile
+evidence. File-upload cover-letter slots remain untouched.
+
+Greenhouse may ask for an 8-character email security code after Submit.
+That is `WAITING_LOGIN` / `MFA_REQUIRED`, not a failed fill. If the OTP
+UI is still on the page, resume that attempt with an exact attempt key;
+do not requeue it to `QUEUED`. If Chrome closed and reopen shows a blank
+form (`OTP_UI_MISSING`), a new fill and Submit is required to request a
+fresh code. The runner keeps headed Chrome open, polls personal Gmail
+through `scripts/stage-ats-otp.py` for Greenhouse sender domains, accepts
+a code the candidate types, then clicks Submit. It fails closed only after
+`authentication_handoff_timeout_ms`.
 
 Compensation intent is separate from candidate prose. The runner leaves current or
 previous salary, total compensation, bonus, and equity blank. For an expected,
 minimum, range, total-compensation, bonus, or dollar-denominated equity question,
-it may ask the qualified local provider for a job-scoped prospective annual
-preference using the current report and trusted local context. The answer must be
-a bounded dollar number or ascending range, fit the field constraint, and carry
-`local-salary-preference` provenance. Share-count and equity-percentage questions
-remain review-only. If local generation cannot produce that shape, only a
-configured qualified Antigravity fallback is eligible; Codex subscription providers
+it may ask a configured provider for a job-scoped prospective annual preference
+using the current report and trusted local context. When `local_prose.enabled` is
+true and qualified, local generation is tried first; otherwise only
+`hosted_fallback_providers` is eligible. The answer must be a bounded dollar
+number or ascending range, fit the field constraint, and carry
+`local-salary-preference` or `hosted-salary-preference` provenance. Share-count
+and equity-percentage questions remain review-only. Codex subscription providers
 are not an implicit fallback. Optional
 marketing, talent-community, job-alert, and future-opportunity consent controls
 are always left unselected.

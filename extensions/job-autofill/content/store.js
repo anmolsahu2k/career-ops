@@ -3,7 +3,7 @@
  * export/import JSON are the same shape (see README).
  */
 
-import { normalizeKey, isSensitiveQuestion, readPath, looksOpaqueId } from './matcher.js';
+import { normalizeKey, isSensitiveQuestion, looksOpaqueId, readPath, isEphemeralApplicationQuestion, isEphemeralAnswerEntry, dropEphemeralAnswers } from './matcher.js';
 
 export const SCHEMA_VERSION = 1;
 
@@ -46,14 +46,35 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+async function persistAnswersIfDropped(storedAnswers) {
+  const answers = dropEphemeralAnswers(storedAnswers || {});
+  if (Object.keys(answers).length !== Object.keys(storedAnswers || {}).length) {
+    await chrome.storage.local.set({ answers });
+  }
+  return answers;
+}
+
+async function persistJobAnswersIfDropped() {
+  const { jobAnswers } = await chrome.storage.local.get('jobAnswers');
+  if (!jobAnswers || typeof jobAnswers !== 'object') return;
+  const next = Object.fromEntries(
+    Object.entries(jobAnswers).filter(([, entry]) => !isEphemeralAnswerEntry(entry)),
+  );
+  if (Object.keys(next).length !== Object.keys(jobAnswers).length) {
+    await chrome.storage.local.set({ jobAnswers: next });
+  }
+}
+
 export async function loadAll() {
   const stored = await chrome.storage.local.get(null);
+  const answers = await persistAnswersIfDropped(stored.answers || {});
+  await persistJobAnswersIfDropped();
   return {
     ...DEFAULTS,
     ...stored,
     profile: { ...DEFAULTS.profile, ...(stored.profile || {}) },
     settings: { ...DEFAULTS.settings, ...(stored.settings || {}) },
-    answers: stored.answers || {},
+    answers,
   };
 }
 
@@ -125,6 +146,7 @@ export async function getProfileValue(path) {
 export async function upsertAnswer({ rawQuestion, answer, answerType, board, source = 'captured', origin = null }) {
   const key = normalizeKey(rawQuestion);
   if (!key || !answer || !String(answer).trim()) return null;
+  if (isEphemeralApplicationQuestion(rawQuestion) || isEphemeralApplicationQuestion(key)) return null;
   // An opaque widget id is never a usable answer.
   if (looksOpaqueId(answer)) return null;
 
@@ -175,6 +197,7 @@ export async function upsertAnswer({ rawQuestion, answer, answerType, board, sou
  * Promotion to the global answer bank remains an explicit options-page action. */
 export async function upsertJobScopedAnswer({ rawQuestion, answer, answerType = 'textarea', board, origin = null, source = 'manual' }) {
   if (!origin?.url) return null;
+  if (isEphemeralApplicationQuestion(rawQuestion)) return null;
   const key = `${origin.url.split('#')[0]}::${normalizeKey(rawQuestion)}`;
   const { jobAnswers = {} } = await chrome.storage.local.get('jobAnswers');
   const entry = {
@@ -217,9 +240,10 @@ export async function importData(json, { replaceAll = false } = {}) {
       ...json,
       profile: { ...DEFAULTS.profile, ...(json.profile || {}) },
       settings: { ...DEFAULTS.settings, ...(json.settings || {}) },
-      answers: json.answers || {},
+      answers: dropEphemeralAnswers(json.answers || {}),
     };
     await saveAll(merged);
+    await persistJobAnswersIfDropped();
     return { answers: Object.keys(merged.answers).length, replaced: true };
   }
 
@@ -229,7 +253,7 @@ export async function importData(json, { replaceAll = false } = {}) {
 
   let added = 0;
   let updated = 0;
-  for (const [key, incoming] of Object.entries(json.answers || {})) {
+  for (const [key, incoming] of Object.entries(dropEphemeralAnswers(json.answers || {}))) {
     const existing = data.answers[key];
     if (!existing) {
       data.answers[key] = incoming;
@@ -244,8 +268,19 @@ export async function importData(json, { replaceAll = false } = {}) {
       updated++;
     }
   }
+  data.answers = dropEphemeralAnswers(data.answers || {});
   await saveAll(data);
+  await persistJobAnswersIfDropped();
   return { added, updated, replaced: false };
+}
+
+/** Drop rotating codes, salary prompts, and other one-shot answers from local storage. */
+export async function purgeEphemeralStoredAnswers() {
+  const data = await loadAll();
+  data.answers = dropEphemeralAnswers(data.answers || {});
+  await saveAll(data);
+  await persistJobAnswersIfDropped();
+  return { answers: Object.keys(data.answers).length };
 }
 
 export async function exportData() {

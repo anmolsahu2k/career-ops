@@ -19,6 +19,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { dropEphemeralAnswers, isEphemeralApplicationQuestion } from '../extensions/job-autofill/content/matcher.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -327,13 +328,41 @@ const SEED_ANSWERS = [
   { q: 'Will you now or in the future require sponsorship for employment visa status?', a: 'Yes', type: 'select' },
   { q: 'Do you require sponsorship now or in the future?', a: 'Yes', type: 'select' },
   { q: 'Are you a U.S. citizen or permanent resident?', a: 'No', type: 'select' },
+  { q: 'EXPORT COMPLIANCE', a: 'I am not a U.S. Person', type: 'select' },
+  { q: 'Are you currently on an F1 OPT/CPT status?', a: 'No', type: 'select' },
 
   // § "Pittsburgh / on-site / relocation"
   { q: 'When can you start?', a: 'Available January 2027', type: 'text' },
   { q: 'Earliest start date', a: 'Available January 2027', type: 'text' },
   { q: 'What is your availability?', a: 'Available January 2027', type: 'text' },
+  { q: 'How soon are you able to start a new role?', a: 'Available January 2027', type: 'text' },
   { q: 'Are you willing to relocate?', a: 'Yes', type: 'select' },
+  { q: 'Are you open to relocation?', a: 'Yes', type: 'select' },
   { q: 'Are you willing to work on-site?', a: 'Yes', type: 'select' },
+  { q: 'Are you able and willing to report to the office location listed in the job description, in a hybrid capacity?', a: 'Yes', type: 'select' },
+  { q: 'Do you currently live within commuting distance of one of these locations, or are you willing to relocate?', a: 'Yes', type: 'select' },
+  { q: 'Are you graduating Summer of 2027', a: 'No', type: 'select' },
+  { q: 'When is your expected graduation date?', a: 'Fall 2026', type: 'select' },
+  { q: 'What is your expected graduation date?', a: 'December 2026', type: 'text' },
+  { q: 'GPA (Undergraduate)', a: '3.87', type: 'select' },
+  { q: 'GPA (Graduate)', a: '3.75', type: 'select' },
+  { q: 'GPA (Doctorate)', a: 'Not applicable/Do not recall', type: 'select' },
+  { q: 'SAT Score', a: 'Did not take/Do not recall', type: 'select' },
+  { q: 'ACT Score', a: 'Did not take/Do not recall', type: 'select' },
+  { q: 'GRE Score', a: 'Did not take/Do not recall', type: 'select' },
+  { q: 'Active Security Clearance(s)', a: 'Never held a clearance', type: 'select' },
+  { q: 'Do you hold a security clearance?', a: 'None', type: 'select' },
+  { q: 'Will you be serving as enlisted personnel in either the Reserves or the National Guard while working for this employer?', a: 'No', type: 'select' },
+  { q: 'Will you be serving as enlisted personnel in either the Reserves or the National Guard while working for AFS?', a: 'No', type: 'select' },
+  { q: 'Were you an employee of the U.S. Government (including U.S. Congress or military) or any state or local government within the past 10 years?', a: 'No', type: 'select' },
+  { q: 'Are you a current employee of the U.S. Government (including U.S. Congress or military) or any state or local government?', a: 'No', type: 'select' },
+  { q: 'Affirmation', a: 'I agree', type: 'select' },
+  { q: 'Can you perform all of the essential functions of this role with or without reasonable accommodations?', a: 'Yes', type: 'select' },
+  { q: 'If (f) Other, please explain:', a: 'India citizen, F-1 student visa', type: 'text' },
+  { q: 'What is your cumulative GPA?', a: '3.75', type: 'text' },
+  { q: 'Are you interested in working out of our Miami HQ?', a: 'Yes', type: 'select' },
+  { q: 'Who did you meet at the career fair?', a: 'N/A', type: 'select' },
+  { q: 'Who did you meet at our career fair?', a: 'N/A', type: 'text' },
   { q: 'Where are you currently located?', a: 'Pittsburgh, PA', type: 'text' },
   { q: 'What is your current city?', a: 'Pittsburgh, PA', type: 'text' },
 
@@ -341,14 +370,18 @@ const SEED_ANSWERS = [
   { q: 'Are you currently employed?', a: 'No', type: 'select' },
   { q: 'Are you 18 years of age or older?', a: 'Yes', type: 'select' },
 
-  // § "What is your expected salary?"
-  { q: 'What are your salary expectations?', a: 'Open to standard new-grad base for this role and location', type: 'text' },
-  { q: 'Expected salary', a: 'Open to standard new-grad base for this role and location', type: 'text' },
-  { q: 'What are your total compensation expectations?', a: 'Open to discussion based on role scope and total compensation structure.', type: 'text' },
-
   // § "How did you hear about this role?"
-  { q: 'How did you hear about this role?', a: 'LinkedIn job search', type: 'select' },
-  { q: 'How did you hear about us?', a: 'LinkedIn job search', type: 'select' },
+  { q: 'How did you hear about this role?', a: 'LinkedIn', type: 'select' },
+  { q: 'How did you hear about us?', a: 'LinkedIn', type: 'select' },
+  { q: 'How did you hear about this job?', a: 'LinkedIn', type: 'text' },
+  { q: 'How did you first hear about this job? Please list the site, event, or person that referred you.', a: 'LinkedIn', type: 'text' },
+  { q: 'U.S. Export Control Requirements - Are you a citizen, national, or resident of Cuba, Iran, North Korea, Syria, or the Crimea region of Ukraine?', a: 'No', type: 'select' },
+  { q: 'Please confirm whether any of the below applies to you. Select all that apply. Note: This information will only be used to ensure compliance with U.S. sanctions and export controls.', a: 'No', type: 'select' },
+  { q: 'Do you have an agreement between you and your current or former employer that may restrict your ability to accept this offer of employment?', a: 'No', type: 'select' },
+  { q: 'Do you have any relatives or family members currently employed at this company?', a: 'No', type: 'select' },
+  { q: 'Do you have any relatives employed by this organization?', a: 'No', type: 'select' },
+  { q: 'Do you have any family members or people you have close relationships with who work for this company?', a: 'No', type: 'select' },
+  { q: 'Do you have any family members or people you have close relationships with who work for Accenture Federal Services?', a: 'No', type: 'select' },
 
   // Recurring questions met on live Greenhouse postings that no section of
   // application-tactics.md covers yet.
@@ -357,10 +390,29 @@ const SEED_ANSWERS = [
   { q: 'Which cloud platform do you have the most professional experience with?', a: 'AWS', type: 'select' },
   { q: 'Who is submitting this application?', a: 'Myself', type: 'select' },
   { q: 'If selected as a finalist, could you travel for an in-person interview with two weeks notice?', a: 'Yes', type: 'select' },
+  { q: 'What percentage of the time are you willing to travel?', a: '75%+', type: 'select' },
+  { q: 'Would you like to receive information via text message/SMS?', a: 'Yes', type: 'select' },
+  { q: 'If selected for hire, would you like to receive information regarding your first day via text message/SMS?', a: 'Yes', type: 'select' },
   { q: 'Please provide links to any public technical work (GitHub, blog, conference talks, open-source projects, personal projects, etc.).', a: 'https://github.com/anmolsahu2k and https://anmolsahu2k.github.io/', type: 'text' },
 
   // § "Did you use AI tools to prepare this application?"
   { q: 'Did you use AI tools to prepare this application?', a: 'Yes. I used Claude to help structure my responses; the experience and judgment in the content are mine.', type: 'text' },
+
+  // Recurring Greenhouse legal/history questions, candidate-authorized.
+  { q: 'Do you currently or have you previously worked for Databricks in the past?', a: 'No', type: 'select' },
+  { q: 'Have you previously worked at or consulted for GitLab?', a: 'No', type: 'select' },
+  { q: 'Are you currently a Twitch employee?', a: 'No', type: 'select' },
+  { q: 'Are you a current employee with Amazon or any Amazon subsidiary (outside of Twitch)?', a: 'No', type: 'select' },
+  { q: 'Have you previously applied to Amazon or any Amazon subsidiary?', a: 'Yes', type: 'select' },
+  { q: 'Are you subject to a non-competition agreement or other agreement that would preclude or restrict your employment at Amazon?', a: 'No', type: 'select' },
+  { q: 'Have you held H-1B status, or had an H-1B petition approved on your behalf, within the preceding 6 years for an employer?', a: 'No', type: 'select' },
+  { q: 'In which country/region do you have citizenship?', a: 'India', type: 'select' },
+  { q: 'Since obtaining your most recent citizenship, did you afterwards become a permanent resident in any other country/region?', a: 'No', type: 'select' },
+  { q: 'For the sole purpose of determining export licensing requirements, please provide your country of citizenship or legal permanent residence', a: 'India', type: 'select' },
+  { q: 'How would you describe your experience with Twitch? (Select one)', a: 'None', type: 'select' },
+  { q: 'How many years have you been active on the platform?', a: 'None', type: 'select' },
+  { q: 'Do you have experience in the Creator Economy beyond Twitch?', a: 'None', type: 'select' },
+  { q: 'Would you like to be considered for future opportunities at Twitch when you apply?', a: 'No', type: 'select' },
 ];
 
 // CLAUDE.md rule 1: no em-dashes or en-dashes in candidate-facing text.
@@ -382,6 +434,7 @@ function buildAnswers(curatedAnswers = []) {
     }
     const key = normalizeKey(q);
     if (!key || !answer) return;
+    if (isEphemeralApplicationQuestion(q) || isEphemeralApplicationQuestion(key)) return;
     const sensitive = EEO_RE.test(q);
     if (sensitive) sensitiveCount++;
     answers[key] = {
@@ -406,7 +459,7 @@ function buildAnswers(curatedAnswers = []) {
   if (scrubbed.length) {
     console.log(`  Scrubbed em/en dashes from ${scrubbed.length} answer(s): ${scrubbed.join('; ')}`);
   }
-  return { answers, sensitiveCount };
+  return { answers: dropEphemeralAnswers(answers), sensitiveCount };
 }
 
 /** Mirror of the extension's matcher.normalizeKey. Keep the two in step. */
@@ -459,6 +512,24 @@ const profile = {
   emails: { personal: identity.email, ...(extras.emails || {}) },
   links: { ...identity.links, ...(extras.links || {}) },
   location: { ...identity.location, ...(extras.location || {}) },
+  identity: { ...(extras.identity || {}), citizenship: 'India' },
+  application: {
+    ...(extras.application || {}),
+    previouslyWorkedHere: 'No',
+    previouslyWorkedAtGitLab: 'No',
+    currentCompanyEmployee: 'No',
+    previouslyAppliedAmazon: 'Yes',
+    h1bPetitionLastSixYears: 'No',
+    laterPermanentResident: 'No',
+    twitchExperience: 'None',
+    twitchYearsActive: 'None',
+    creatorEconomyBeyondTwitch: 'None',
+    heardAbout: 'LinkedIn',
+    employmentRestrictions: 'No',
+    relativesAtEmployer: 'No',
+    currentlyOnF1OptCpt: 'No',
+    usPerson: 'No',
+  },
   education,
   work,
 };

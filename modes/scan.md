@@ -43,6 +43,11 @@ must resolve the real apply URL from the LinkedIn page before scoring and stamp
 `LINKEDIN-MIRROR` in Notes. The zero-exposure alternative is `node linkedin-hiring-searches.mjs`,
 which only generates search URLs for the user to click.
 
+**Handshake is not a scan source.** Live Handshake eval/apply is user-triggered
+only (`career-ops handshake` or the Discovery Handshake card). It attaches to
+already-logged-in Chrome (`chrome://inspect/#remote-debugging`) and is never invoked by
+`/career-ops scan` or `npm run scan:all`.
+
 ## Recommended execution
 
 **Discovery-only (manual, zero tokens):** run `npm run scan:all` (or

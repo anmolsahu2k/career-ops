@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir, hostname } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -110,6 +110,39 @@ test('evaluateScanResults dry-run plans without writing the tracker', async () =
   assert.equal(result.queue.length, 2);
   assert.equal(existsSync(join(dir, 'data', 'applications.md')), false);
   assert.equal(loadScanResults([file]).length, 2);
+});
+
+test('evaluateScanResults can plan a single triage URL', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'career-ops-evaluate-url-'));
+  const dataDir = join(dir, 'data');
+  mkdirSync(dataDir, { recursive: true });
+  const file = join(dataDir, 'scan-results-2026-09-12.tsv');
+  writeScanResultsTsv(file, [{
+    url: 'https://jobs.example.com/keep',
+    company: 'Example',
+    title: 'Software Engineer',
+    location: 'Remote',
+    source: 'manual',
+  }, {
+    url: 'https://jobs.example.com/skip',
+    company: 'Example',
+    title: 'Backend Engineer',
+    location: 'NYC',
+    source: 'manual',
+  }]);
+
+  const result = await evaluateScanResults({
+    target: dir,
+    files: [file],
+    apply: false,
+    skipLiveness: true,
+    urls: ['https://jobs.example.com/keep'],
+  });
+
+  assert.equal(result.status, 'PLAN');
+  assert.equal(result.candidate_count, 1);
+  assert.equal(result.queue.length, 1);
+  assert.equal(result.queue[0].url, 'https://jobs.example.com/keep');
 });
 
 test('evaluateScanResults plan prunes geography and level rejects from triage', async () => {
@@ -418,4 +451,56 @@ test('career-ops evaluate help lists the command and dry-runs against an isolate
   assert.equal(output.status, 'PLAN');
   assert.equal(output.candidate_count, 1);
   assert.equal(output.queue[0].company, 'CLI Co');
+});
+
+test('evaluateScanResults records provider errors in the failure ledger', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'career-ops-evaluate-fail-'));
+  const dataDir = join(dir, 'data');
+  mkdirSync(dataDir, { recursive: true });
+  const file = join(dataDir, 'scan-results-2026-09-12.tsv');
+  writeScanResultsTsv(file, [{
+    url: 'https://jobs.example.com/fail-me',
+    company: 'Timeout Co',
+    title: 'Software Engineer',
+    location: 'Remote',
+    source: 'manual',
+  }]);
+
+  const longJd = `${'Requirements: build APIs with Node.js and ship reliable services. '.repeat(12)}Apply now.`;
+  const result = await evaluateScanResults({
+    target: dir,
+    config: stubConfig(),
+    files: [file],
+    apply: true,
+    skipLiveness: true,
+    provider: 'test-provider',
+    acknowledgeQuota: true,
+    providerHandle: {
+      async complete() {
+        throw Object.assign(new Error('agy exceeded the 120000ms command deadline'), {
+          code: 'PROVIDER_TIMEOUT',
+        });
+      },
+    },
+    fetchEvidence: async () => ({
+      ok: true,
+      source_type: 'manual',
+      content: longJd,
+      title: 'Software Engineer',
+      liveness_state: 'YES',
+      method: 'test',
+    }),
+  });
+
+  assert.equal(result.committed, 0);
+  assert.equal(result.failed, 1);
+  assert.equal(result.results[0].status, 'FAILED');
+  assert.equal(result.results[0].code, 'PROVIDER_TIMEOUT');
+  assert.match(result.results[0].error, /command deadline/);
+  const ledgerName = readdirSync(dataDir).find(name => name.startsWith('evaluate-failures-'));
+  assert.ok(ledgerName, 'failure ledger should be written');
+  const ledger = readFileSync(join(dataDir, ledgerName), 'utf8');
+  assert.match(ledger, /PROVIDER_TIMEOUT/);
+  assert.match(ledger, /command deadline/);
+  assert.equal(existsSync(file), true);
 });

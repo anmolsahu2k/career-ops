@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isSearchControl, isGenericLabel, isPlaceholderValue, selectedButton } from '../content/engine.js';
+import { isSearchControl, isGenericLabel, isPlaceholderValue, selectedButton, isVisible } from '../content/engine.js';
 import { canonicalFieldFor, fitsKind, joinMulti, splitMulti } from '../content/matcher.js';
 
 /** Minimal stand-in for an element: these guards read attributes only. */
@@ -244,5 +244,56 @@ test('ordinary prose is not an upload shell', async () => {
   for (const text of ['Please list your most recent work experience.',
                       'Add any relevant websites.', 'Language Skills']) {
     assert.ok(!UPLOAD_SHELL_PATTERN.test(text), `${text} should NOT read as an upload shell`);
+  }
+});
+
+test('a committed react-select input stays visible via its control shell', () => {
+  const shell = {
+    getBoundingClientRect: () => ({ width: 320, height: 38, left: 10, top: 10 }),
+  };
+  const input = {
+    tagName: 'INPUT',
+    isConnected: true,
+    disabled: false,
+    className: 'select__input',
+    offsetParent: shell,
+    getAttribute: name => (name === 'role' ? 'combobox' : null),
+    closest: sel => (String(sel).includes('select__control') ? shell : null),
+    getBoundingClientRect: () => ({ width: 2, height: 16, left: 12, top: 18 }),
+  };
+  const previousStyle = globalThis.getComputedStyle;
+  const previousWindow = globalThis.window;
+  globalThis.window = { scrollX: 0, scrollY: 0 };
+  globalThis.getComputedStyle = node => (node === input
+    ? { visibility: 'visible', display: 'block', opacity: '0' }
+    : { visibility: 'visible', display: 'block', opacity: '1' });
+  try {
+    assert.equal(isVisible(input), true);
+  } finally {
+    globalThis.getComputedStyle = previousStyle;
+    globalThis.window = previousWindow;
+  }
+});
+
+test('an opacity-0 text input with no combobox shell stays hidden', () => {
+  const input = {
+    tagName: 'INPUT',
+    isConnected: true,
+    disabled: false,
+    className: '',
+    offsetParent: {},
+    getAttribute: () => null,
+    closest: () => null,
+    getBoundingClientRect: () => ({ width: 2, height: 16, left: 12, top: 18 }),
+  };
+  const previousStyle = globalThis.getComputedStyle;
+  const previousWindow = globalThis.window;
+  globalThis.window = { scrollX: 0, scrollY: 0 };
+  globalThis.getComputedStyle = () => ({ visibility: 'visible', display: 'block', opacity: '0' });
+  try {
+    assert.equal(isVisible(input), false);
+  } finally {
+    globalThis.getComputedStyle = previousStyle;
+    globalThis.window = previousWindow;
   }
 });

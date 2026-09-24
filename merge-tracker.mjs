@@ -19,9 +19,10 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, renameSync, existsSync } from 'fs';
-import { join, basename } from 'path';
+import { join, basename, resolve } from 'path';
 import { execFileSync } from 'child_process';
 import { resolvePaths } from './lib/paths.mjs';
+import { evaluatedQueueContract } from './lib/applications/eligibility.mjs';
 
 const P = resolvePaths(import.meta.url);
 const CAREER_OPS = P.root;          // portals.yml read via join(CAREER_OPS,'portals.yml') stays root — correct
@@ -455,6 +456,31 @@ for (const file of tsvFiles) {
     console.warn(`⚠️  Skipping ${file}: Triaged is not a tracker status; evaluate first`);
     skipped++;
     continue;
+  }
+
+  // Fail-closed: Evaluated ≥4.0 must carry APPLY./CONSIDER. in Notes or a
+  // ## Recommendation that starts with Apply/Consider. Incomplete agent
+  // reports otherwise land as permanent MISSING_APPLY_TOKEN near-misses.
+  {
+    const link = String(addition.report || '').match(/\]\(([^)]+)\)/)?.[1];
+    let reportBody = '';
+    if (link && !/^https?:/i.test(link)) {
+      const abs = resolve(P.target, link);
+      if (existsSync(abs)) {
+        try { reportBody = readFileSync(abs, 'utf8'); } catch { reportBody = ''; }
+      }
+    }
+    const contract = evaluatedQueueContract({
+      status: addition.status,
+      score: addition.score,
+      notes: addition.notes,
+      report: reportBody,
+    });
+    if (!contract.ok) {
+      console.warn(`⚠️  Skipping ${file}: ${contract.reason}`);
+      skipped++;
+      continue;
+    }
   }
 
   // Check for duplicate by (in order):

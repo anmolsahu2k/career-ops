@@ -35,6 +35,27 @@ export function educationPath(attr) {
   return key ? `education[${m[2]}].${key}` : null;
 }
 
+/**
+ * Modern Greenhouse labels both Resume/CV and Cover Letter uploads with a
+ * visually-hidden <label for="…">Attach</label>. The real slot name lives on
+ * #upload-label-resume / #upload-label-cover_letter. Without this override the
+ * panel reports bare "Attach" under Needs you after the resume is filled, which
+ * looks like a resume failure when the leftover control is only Cover Letter.
+ */
+export function uploadSlotLabel(el, doc = document) {
+  if (!el || el.tagName !== 'INPUT') return '';
+  if ((el.getAttribute('type') || '').toLowerCase() !== 'file') return '';
+  const id = el.getAttribute('id') || '';
+  if (id) {
+    const dedicated = doc.getElementById(`upload-label-${id}`);
+    const text = dedicated?.textContent?.replace(/\s+/g, ' ').trim() || '';
+    if (text) return text;
+  }
+  const wrap = el.closest?.('.file-upload, .field-wrapper');
+  const nearby = wrap?.querySelector?.('.upload-label, [id^="upload-label-"]');
+  return nearby?.textContent?.replace(/\s+/g, ' ').trim() || '';
+}
+
 export default {
   id: 'greenhouse',
   label: 'Greenhouse',
@@ -46,6 +67,17 @@ export default {
   },
   isMultiStep: false,
   canonicalMap: ID_MAP,
+
+  /**
+   * Modern Greenhouse mounts react-select options only after the menu opens.
+   * Inspect/readback snapshots required empty comboboxes so the runner sees
+   * Yes/No and country choices instead of `options: []`.
+   */
+  needsInspectOptionSnapshot(field) {
+    return field?.required === true
+      && (field.kind === 'combobox-input' || field.kind === 'combobox')
+      && !(Array.isArray(field.options) && field.options.length > 0);
+  },
 
   /**
    * The board's job list, not an application.
@@ -62,6 +94,10 @@ export default {
     // Embedded application forms live at /embed/job_app.
     if (/\/embed\/job_app/.test(pathname)) return false;
     return true;
+  },
+
+  labelOverride(el) {
+    return uploadSlotLabel(el) || null;
   },
 
   canonicalAttr(el) {

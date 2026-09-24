@@ -10,7 +10,7 @@ import {
   detectFields, resolveLabel, resolveFieldLabel, isHoneypot, groupIndexOf, isCredentialScreen,
   isSearchControl, isGenericLabel, isPlaceholderValue, readValue, groupMembers, datePartOf,
 } from './engine.js';
-import { normalizeKey, canonicalFieldFor, looksOpaqueId, joinMulti } from './matcher.js';
+import { normalizeKey, canonicalFieldFor, looksOpaqueId, joinMulti, isEphemeralApplicationQuestion } from './matcher.js';
 import { upsertAnswer, upsertJobScopedAnswer } from './store.js';
 import { detectCompany } from './adapters/index.js';
 
@@ -200,6 +200,7 @@ async function captureRendered({ adapter, weWrote, onLearned, onProfileField, wa
     // and the next form would get whichever was written last.
     const normKey = normalizeKey(field.rawLabel || '');
     if (!normKey || isGenericLabel(field.rawLabel)) continue;
+    if (isEphemeralApplicationQuestion(field.rawLabel) || isEphemeralApplicationQuestion(normKey)) continue;
 
     const shown = displayValue(field);
     const previous = shownValues.get(normKey);
@@ -250,6 +251,7 @@ async function captureFrom(el, { adapter, weWrote, onLearned, onProfileField, wa
 
   const normKey = normalizeKey(rawLabel);
   if (!normKey) return;
+  if (isEphemeralApplicationQuestion(rawLabel) || isEphemeralApplicationQuestion(normKey)) return;
   // "Start typing" is the widget describing itself. resolveLabel keeps a
   // placeholder as a last resort so the field is still fillable, but storing an
   // answer under that key would merge every such control on the page.

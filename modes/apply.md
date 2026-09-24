@@ -10,6 +10,9 @@ Interactive mode for when the candidate is filling out an application form in Ch
 |---|---|---|
 | **This mode (agent assist)** | Candidate fills the form; agent drafts copy-paste answers from the report | `/career-ops apply` |
 | **Autonomous applier** | Playwright + Job Autofill + fail-closed submit gate | `node bin/career-ops.mjs apply …` |
+| **Handshake live** | Attach to the already-open signed-in Chrome (`chrome://inspect/#remote-debugging`); evaluate with the existing A-G judge; apply at 3.5+ | `career-ops handshake …` or Discovery Handshake card |
+
+Dedicated enqueue stays at **4.0**. Handshake live apply uses floor **3.5** and is not part of `/career-ops scan` or `npm run scan:all`. Career-Ops attaches to the already-open Chrome after you enable `chrome://inspect/#remote-debugging`. It never copies the live Chrome profile and never closes tabs it did not create. Apply Externally attaches the configured resume in the Handshake overlay, then clicks External Application, which opens the employer tab.
 
 | Board | Purpose |
 |---|---|
@@ -94,19 +97,20 @@ For each question, generate the response following:
 
 ### Greenhouse manual cover letters
 
-When the user has explicitly enabled `applications.local_prose.cover_letters`
-in ignored local runtime configuration, the autonomous applier may use
-Greenhouse's exact `cover_letter-text` control to open the **Enter manually**
-textarea. Generate the body locally from the current report, `cv.md`, and
-`modes/_profile.md`, then fill only that exact textarea. Apply the canonical
+The autonomous applier may use Greenhouse's exact `cover_letter-text` control
+to open the **Enter manually** textarea. When `applications.local_prose.cover_letters`
+is true in ignored local runtime configuration, generate the body from the
+qualified local provider first using the current report, `cv.md`, and
+`modes/_profile.md`. Otherwise only a configured Antigravity hosted fallback
+is eligible. Fill only that exact textarea. Apply the canonical
 `templates/cover-letter.md` contract: body only, 200 words maximum, no greeting,
 sign-off, contact block, visa explanation, or availability statement.
 
-This path never uploads a document and never falls back to a hosted provider.
-Every candidate claim must pass deterministic evidence validation; unsupported
-sentences may only be removed, never rewritten into new claims. If fewer than
-four valid sentences remain, if an AI-use disclosure is present, or if the
-generated text does not survive exact readback, stop for review.
+This path never uploads a document. Every candidate claim must pass
+deterministic evidence validation; unsupported sentences may only be removed,
+never rewritten into new claims. If fewer than four valid sentences remain, if
+an AI-use disclosure is present, or if the generated text does not survive
+exact readback, stop for review.
 
 **Output format:**
 

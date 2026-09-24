@@ -121,6 +121,8 @@ test('unresolved consequential UNKNOWN downgrades APPLY and coalesces one review
     reportRelativePath: 'reports/example/001-role-2026-09-05.md', date: '2026-09-05',
   });
   assert.equal((row.match(/REVIEW:/g) || []).length, 1);
+  assert.match(row, /\bCONSIDER\./);
+  assert.equal(/\bAPPLY\./.test(row), false);
   assert.equal(row.split('|').length, 11);
 });
 

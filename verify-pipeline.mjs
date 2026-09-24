@@ -15,9 +15,10 @@
  */
 
 import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { resolvePaths } from './lib/paths.mjs';
 import { isCanonicalStatus, loadStateContract } from './lib/states.mjs';
+import { evaluatedQueueContract } from './lib/applications/eligibility.mjs';
 const P = resolvePaths(import.meta.url);
 const REPO_ROOT = P.root;       // shared config (portals.yml, templates/states.yml)
 const TARGET_ROOT = P.target;   // report-link resolution base
@@ -303,20 +304,28 @@ if (existsSync(portalsPath)) {
 }
 if (aliasViolations === 0) ok('No brand-alias slug violations');
 
-// --- Check 12: Evaluated 4.0+ rows need an explicit APPLY token for the applier ---
+// --- Check 12: Evaluated 4.0+ rows need enqueue authority (Notes or Recommendation) ---
 let missingApplyToken = 0;
 for (const e of entries) {
-  const status = e.status.replace(/\*\*/g, '').replace(/\s+\d{4}-\d{2}-\d{2}.*$/, '').trim();
-  if (status !== 'Evaluated') continue;
-  const scoreMatch = String(e.score || '').replace(/\*+/g, '').match(/(\d+(?:\.\d+)?)\s*\/\s*5/);
-  const score = scoreMatch ? Number(scoreMatch[1]) : NaN;
-  if (!(score >= 4)) continue;
-  if (/\bDO\s+NOT\s+APPLY\b/i.test(e.notes || '')) continue;
-  if (/\bAPPLY\b/i.test(e.notes || '')) continue;
-  warn(`#${e.num} ${e.company}: Evaluated ${e.score} missing APPLY token in Notes (applier will not enqueue)`);
+  const link = String(e.report || '').match(/\]\(([^)]+)\)/)?.[1];
+  let reportBody = '';
+  if (link && !/^https?:/i.test(link)) {
+    const abs = resolve(TARGET_ROOT, link);
+    if (existsSync(abs)) {
+      try { reportBody = readFileSync(abs, 'utf8'); } catch { reportBody = ''; }
+    }
+  }
+  const contract = evaluatedQueueContract({
+    status: e.status,
+    score: e.score,
+    notes: e.notes,
+    report: reportBody,
+  });
+  if (contract.ok) continue;
+  error(`#${e.num} ${e.company}: ${contract.reason} (applier near-miss MISSING_APPLY_TOKEN)`);
   missingApplyToken++;
 }
-if (missingApplyToken === 0) ok('All Evaluated 4.0+ rows carry an APPLY token (or are DO NOT APPLY)');
+if (missingApplyToken === 0) ok('All Evaluated 4.0+ rows carry APPLY/CONSIDER (Notes or ## Recommendation)');
 
 // --- Summary ---
 console.log('\n' + '='.repeat(50));

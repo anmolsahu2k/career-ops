@@ -1,8 +1,12 @@
 /**
- * background.js — service worker. Deliberately minimal: badge feedback plus a
- * MAIN-world escape hatch for any widget the isolated-world native setter
- * cannot move.
+ * background.js — module service worker. Badge feedback, MAIN-world escape
+ * hatch, and a store handle for the headed runner so it can seed answers
+ * without opening the options tab (dynamic import() is illegal in workers).
  */
+
+import { setResume, getResumeFor, importData, purgeEphemeralStoredAnswers } from './content/store.js';
+
+self.careerOpsStore = { setResume, getResumeFor, importData, purgeEphemeralStoredAnswers };
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.type === 'contentReady') return false;

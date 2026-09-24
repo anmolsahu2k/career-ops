@@ -55,7 +55,19 @@ export default {
   matches(url) { return new URL(url).hostname.endsWith('ashbyhq.com'); },
   isMultiStep: false,
   canonicalMap: {},
-  canonicalAttr: null,
+  /**
+   * Ashby's applicant data-processing consent is a system field whose visible
+   * label is only "I agree". Map it onto the seeded Affirmation acknowledgement
+   * so ordinary privacy/data consent can be checked without guessing marketing
+   * opt-ins that share the same short wording.
+   */
+  canonicalAttr(el) {
+    const tip = `${el?.id || ''} ${el?.name || ''} ${el?.getAttribute?.('name') || ''}`;
+    if (/_systemfield_data_consent_ack\b/i.test(tip)) {
+      return 'application.acknowledgements.requiredPrivacyPolicy';
+    }
+    return null;
+  },
 
   /**
    * One field entry is one question, so every choice inside it is one field.
@@ -98,6 +110,8 @@ export default {
     // usable legend, so label resolution called the gender group "Male" and
     // gave the race group the entire gender block as its question. Ashby names
     // these system fields semantically, which is the dependable hook.
+    const tip = `${el.getAttribute?.('name') || ''} ${el.id || ''}`;
+    if (/_systemfield_data_consent_ack\b/i.test(tip)) return 'Affirmation';
     const eeoc = EEOC_FIELD.exec(el.getAttribute?.('name') || el.id || '');
     if (eeoc && EEOC_LABELS[eeoc[1]]) return EEOC_LABELS[eeoc[1]];
 

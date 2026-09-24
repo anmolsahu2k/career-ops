@@ -52,7 +52,7 @@ Three workstream needs collide in the report header:
 ## Block G, Legitimacy
 ...
 ## Recommendation
-...
+{first line MUST start with Apply | Consider | Do not apply}
 ```
 
 ## Field semantics
@@ -67,6 +67,7 @@ Three workstream needs collide in the report header:
 | `**Level strategy:**` | `New-grad-only`, `New-grad + experienced`, `Mixed` | Whether the JD or job family covers other levels. Mixed = posting groups multiple seniorities. |
 | `**Comp research:**` | salary range with source, or `unknown` | Prefer Levels.fyi annual new-grad band, then Glassdoor, then peer-company triangulation. Note source in parens. |
 | `**Sponsorship flag:**` | `Y`, `N`, `Unknown` | Y if JD is sponsorship-friendly OR the company has H-1B filing history. N if explicit "no sponsorship / no visa support" or citizen-only. Unknown otherwise. Optionally tag the driver in Notes: `VISA-SPONSORSHIP`, `CITIZEN-ONLY`, `H1B-HISTORY`. |
+| `## Recommendation` first line | starts with `Apply`, `Consider`, or `Do not apply` | Required on every report. Markdown bold around the verb is OK (`**Apply within 48 hours.**`). Tracker Notes for APPLY/CONSIDER must also carry `APPLY.` or `CONSIDER.` so the applier can enqueue. |
 
 ## Sponsorship flag heuristics
 
@@ -115,7 +116,7 @@ Greenhouse, active. Nuro is well-funded (Series D+). **High confidence.**
 
 ## Recommendation
 
-**Apply within 48 hours.** Submit SDE resume. Lead with Cloudify (agent orchestration) plus Byju's microservices (production scale). ML Platform infra is a great fit for the production-engineering-at-scale narrative. Sponsorship-safe: H-1B filing history on record.
+Apply within 48 hours. Submit SDE resume. Lead with Cloudify (agent orchestration) plus Byju's microservices (production scale). ML Platform infra is a great fit for the production-engineering-at-scale narrative. Sponsorship-safe: H-1B filing history on record.
 ```
 
 ## Verification

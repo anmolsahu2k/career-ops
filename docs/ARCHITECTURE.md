@@ -293,8 +293,8 @@ Application attempts are disabled by default and are not scheduled. They use
 the existing Job Autofill extension plus the application modules under
 `lib/applications/`.
 
-The normal queue accepts only an `Evaluated` row with an explicit `APPLY`
-recommendation, a score of at least 4.0, and a valid canonical URL. A separately
+The normal queue accepts an `Evaluated` row with an explicit `APPLY` or
+`CONSIDER` recommendation, a score of at least 4.0, and a valid canonical URL. A separately
 audited user-selected override can queue one row outside that gate. Attempts
 are keyed by tracker number plus canonical URL and persist under
 `ft/.career-ops-runtime/applications/`.

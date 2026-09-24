@@ -5,8 +5,9 @@ import ashby from './ashby.js';
 import lever from './lever.js';
 import successfactors from './successfactors.js';
 import linkedin from './linkedin.js';
+import handshake from './handshake.js';
 
-const ADAPTERS = [workday, greenhouse, ashby, lever, successfactors, linkedin];
+const ADAPTERS = [workday, greenhouse, ashby, lever, successfactors, linkedin, handshake];
 
 export function detectBoard(url = location.href) {
   for (const adapter of ADAPTERS) {

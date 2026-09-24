@@ -7,14 +7,16 @@ import test from 'node:test';
 import { attemptKey, safeCanonicalUrl } from '../lib/applications/contracts.mjs';
 import { candidateForTrackerNumber, eligibleRows } from '../lib/applications/eligibility.mjs';
 import { queueAttempt, transitionAttempt, correctFalseSubmission, confirmUnknownNotSubmitted, getAttempt } from '../lib/applications/store.mjs';
-import { approvedAnswer, authenticationBlocker, enabledAts, enqueueEligible, enqueuedAttemptKeys, enqueueSelectionOverride, exactAttemptKeys, exactSinglePageFinal, otpDomains, requiresEmailVerification, retryApplication, revealGreenhouseCoverLetter, selectableAttempts, selectionOverrideStillValid, stageMfaCode } from '../lib/applications/runner.mjs';
-import { submissionGate } from '../lib/applications/policy.mjs';
-import { validateGeneratedAnswers, validateSalaryAnswers, salaryQuestionKind, salaryTask, hostedFallbackProviderIds, answerTask, generateBoundedAnswers, localProseProviderConfig, normalizeCandidateProse } from '../lib/applications/answers.mjs';
+import { applicationTabFromList, applyPostOtpEmailVerificationFlag, approvedAnswer, attachCertifiedResume, authenticationBlocker, enabledAts, enqueueEligible, enqueuedAttemptKeys, enqueueSelectionOverride, exactAttemptKeys, exactSinglePageFinal, gmailOtpMissDetail, greenhouseResumeUploadFailed, greenhouseSubmissionSuccessText, isMfaOnlyResume, isOtpOnlySurface, otpChangedFromBaseline, otpDomains, otpFieldsLookComplete, otpLooksCharacterDoubled, otpSlotValuesMatch, redundantNativeChoiceError, requiresEmailVerification, retryApplication, reusableGeneratedAnswers, revealGreenhouseCoverLetter, selectableAttempts, selectionOverrideStillValid, stageMfaCode } from '../lib/applications/runner.mjs';
+import { mapSanctionsChoice, restrictedCountryStoredAnswer } from '../extensions/job-autofill/content/matcher.js';
+import { submissionGate, generatedAnswerLabel } from '../lib/applications/policy.mjs';
+import { publicAttempt } from '../lib/applications/board.mjs';
+import { validateGeneratedAnswers, validateSalaryAnswers, salaryQuestionKind, salaryTask, hostedFallbackProviderIds, selectHostedFallbackProvider, answerTask, generateBoundedAnswers, localProseAllowedForQuestions, localProseProviderConfig, normalizeCandidateProse, completeCoverLetterEvidenceIds } from '../lib/applications/answers.mjs';
 import { applicationVoiceProfile } from '../lib/applications/voice.mjs';
 import { acknowledgeManualSubmission } from '../lib/applications/acknowledge.mjs';
 import { serveApplyBoard } from '../lib/applications/board.mjs';
 import { cleanupApplicationArtifacts } from '../lib/applications/retention.mjs';
-import { calendarDate, markApplied, recordAppliedArtifacts, revertFalseApplied } from '../lib/applications/tracker.mjs';
+import { calendarDate, markApplied, recordAppliedArtifacts, revertFalseApplied, discardTrackerRow, markTrackerApplied } from '../lib/applications/tracker.mjs';
 import { buildApplicationProseCases, runLocalApplicationProseQualification } from '../lib/applications/local-prose-qualification.mjs';
 import { loadRuntimeConfig } from '../lib/runtime/config.mjs';
 
@@ -58,12 +60,90 @@ test('approved restricted-country answer survives equivalent Greenhouse wording'
     'Please indicate whether you are either a citizen or resident of any of the following countries: Cuba, Iran, North Korea, Syria or Crimea Region of Ukraine.',
     answers,
   ), 'No');
+  assert.equal(restrictedCountryStoredAnswer(answers)?.answer, 'No');
+  assert.equal(mapSanctionsChoice(
+    'Please confirm whether any of the below applies to you. Select all that apply. Note: This information will only be used to ensure compliance with U.S. sanctions and export controls.',
+    ['Citizen or permanent resident of Cuba, Iran, North Korea, or Syria', 'None of the above'],
+    'No',
+  ), 'None of the above');
+  assert.equal(mapSanctionsChoice(
+    'If you selected a response to the prior question other than “none of the above,” please confirm whether any of the following also applies to you. Select all that apply.',
+    ['U.S. citizen', 'Not applicable (i.e., I selected “none of the above” for the prior question)'],
+    'No',
+  ), 'Not applicable (i.e., I selected “none of the above” for the prior question)');
+  assert.equal(mapSanctionsChoice(
+    'Please confirm whether any of the below applies to you. Select all that apply. Note: This information will only be used to ensure compliance with U.S. sanctions and export controls.',
+    ['Citizen or permanent resident of Cuba, Iran, North Korea, or Syria', 'None of the above'],
+    'Yes',
+  ), null);
+});
+
+test('previously generated prose is reused by field id or question text', () => {
+  const stored = [
+    { field_id: 'cover', question: 'Cover letter', text: 'I want this role because I built the matching pipeline.', provenance: 'hosted-generated', claims_validated: true },
+    { field_id: 'old-salary', question: 'What are your salary expectations?', text: '165000', provenance: 'hosted-generated', salary_validated: true, claims_validated: true },
+    { field_id: 'empty', question: 'Why us?', text: '   ', claims_validated: true },
+    { field_id: 'stale-local', question: 'Additional Information', text: 'Old unvalidated local prose.', provenance: 'local-generated', claims_validated: false },
+  ];
+  const reused = reusableGeneratedAnswers(stored, [
+    { field_id: 'cover', question: 'Cover letter' },
+    { field_id: 'salary-new', question: 'What are your salary expectations?' },
+    { field_id: 'empty', question: 'Why us?' },
+    { field_id: 'filled', question: 'Cover letter', current_value: 'already there' },
+    { field_id: 'new-why', question: 'Tell us something new' },
+    { field_id: 'stale-local', question: 'Additional Information' },
+  ]);
+  assert.deepEqual(reused.map(item => item.field_id), ['cover', 'salary-new']);
+  assert.equal(reused[0].text, 'I want this role because I built the matching pipeline.');
+  assert.equal(reused[1].text, '165000');
+  assert.equal(reused[1].salary_validated, true);
+});
+
+test('native option-level checkbox errors are ignored when the group is filled', () => {
+  const fields = [{
+    type: 'checkbox',
+    value: 'None of the above',
+    options: ['Citizen or permanent resident of Cuba, Iran, North Korea, or Syria', 'None of the above'],
+  }];
+  assert.equal(redundantNativeChoiceError(fields, 'Citizen or permanent resident of Cuba, Iran, North Korea, or Syria'), true);
+  assert.equal(redundantNativeChoiceError(fields, 'U.S. citizen'), false);
+  assert.equal(redundantNativeChoiceError(fields, ''), true);
+});
+
+test('native choice-label errors are ignored even when the parent question is still empty', () => {
+  const fields = [{
+    question: 'Do you have experience in the Creator Economy beyond Twitch?',
+    type: 'checkbox',
+    value: '',
+    options: ['TikTok', 'Meta / Instagram / Facebook', 'WhatNot', 'YouTube', 'Other', 'None'],
+  }, {
+    question: 'Are you currently a Twitch employee?',
+    type: 'combobox-input',
+    value: '',
+    options: ['Yes', 'No'],
+  }];
+  assert.equal(redundantNativeChoiceError(fields, 'TikTok'), true);
+  assert.equal(redundantNativeChoiceError(fields, 'Yes'), true);
+  assert.equal(redundantNativeChoiceError(fields, 'Do you have experience in the Creator Economy beyond Twitch?'), false);
+  assert.equal(redundantNativeChoiceError(fields, 'Are you currently a Twitch employee?'), false);
 });
 
 test('the active ATS list is enforced separately from the extension capability list', () => {
   assert.deepEqual([...enabledAts({ applications: { supported_ats: ['greenhouse', 'ashby', 'lever', 'workday', 'not-a-board'] } })], ['greenhouse', 'ashby', 'lever', 'workday']);
   assert.deepEqual([...enabledAts({ applications: { supported_ats: ['greenhouse', 'ashby', 'lever'] } })], ['greenhouse', 'ashby', 'lever']);
   assert.deepEqual([...enabledAts({ applications: {} })], []);
+  assert.ok(enabledAts({
+    applications: {
+      supported_ats: ['greenhouse'],
+      main_profile: { enabled: true, ats: ['handshake'] },
+    },
+  }).has('handshake'));
+  assert.equal(enabledAts({
+    applications: {
+      supported_ats: ['greenhouse'],
+      main_profile: { enabled: false, ats: ['handshake'] },
+    },
+  }).has('handshake'), false);
 });
 
 test('a deferred ATS cannot reach browser navigation even if it is already queued', () => {
@@ -76,6 +156,12 @@ test('a deferred ATS cannot reach browser navigation even if it is already queue
   const keys = new Set(queued.map(item => item.idempotency_key));
   assert.deepEqual(selectableAttempts(queued, { eligibleKeys: keys, allowedAts: allowed }).map(item => item.idempotency_key), ['greenhouse']);
   assert.deepEqual(selectableAttempts(queued, { eligibleKeys: keys, allowedAts: allowed, maySubmit: true }).map(item => item.idempotency_key), ['greenhouse', 'ready']);
+  const mfa = { idempotency_key: 'mfa', ats: 'greenhouse', state: 'WAITING_LOGIN', blockers: [{ code: 'MFA_REQUIRED' }] };
+  assert.equal(isMfaOnlyResume(mfa), true);
+  assert.deepEqual(selectableAttempts([mfa], { eligibleKeys: new Set(['mfa']), allowedAts: allowed, maySubmit: true }).map(item => item.idempotency_key), []);
+  assert.deepEqual(selectableAttempts([mfa], {
+    eligibleKeys: new Set(['mfa']), allowedAts: allowed, maySubmit: true, selectedKeys: new Set(['mfa']),
+  }).map(item => item.idempotency_key), ['mfa']);
 });
 
 test('a Greenhouse-fed role on an uncertified application host becomes a review item, not an unselectable queue entry', async () => {
@@ -151,6 +237,52 @@ test('Greenhouse accepts only its official same-job canonical redirect as a fina
     text: 'Databricks application form',
   };
   assert.equal(exactSinglePageFinal(inspected, embedAttempt, embedIdentity), true);
+  const chromeHeading = {
+    url: 'https://job-boards.greenhouse.io/embed/job_app?for=databricks&token=8645054002',
+    heading: 'Apply for this job',
+    title: 'Job Application for Sr. Forward Deployed Engineer at Databricks',
+    text: 'Databricks application form',
+  };
+  assert.equal(exactSinglePageFinal(inspected, embedAttempt, chromeHeading), true);
+  assert.equal(exactSinglePageFinal(inspected, embedAttempt, {
+    ...chromeHeading, title: 'Job Application', text: 'Databricks application form',
+  }), false);
+  assert.equal(exactSinglePageFinal(inspected, embedAttempt, {
+    ...chromeHeading, title: 'Job Application for Sr. Forward Deployed Engineer at Acme', text: '',
+  }), false);
+  assert.equal(exactSinglePageFinal(inspected, attempt, {
+    ...identity, heading: 'Apply for this job', title: 'Job Application for Software Engineer, Growth at Chime Financial, Inc',
+  }), true);
+  const relativity = {
+    canonical_url: 'https://job-boards.greenhouse.io/relativity/jobs/8633353002?gh_jid=8633353002',
+    role: 'Software Engineer (all levels) Full-time',
+    company: 'Relativity Space',
+  };
+  const relativityPage = {
+    url: 'https://job-boards.greenhouse.io/relativity/jobs/8633353002?gh_jid=8633353002',
+    heading: 'Senior Software Engineer, Full Stack',
+    title: 'Job Application for Senior Software Engineer, Full Stack at Relativity Space',
+    text: 'Relativity Space',
+  };
+  assert.equal(exactSinglePageFinal(inspected, relativity, relativityPage), true);
+  assert.equal(exactSinglePageFinal(inspected, relativity, {
+    ...relativityPage, heading: 'Apply for this job',
+  }), true);
+  const nisc = {
+    canonical_url: 'https://job-boards.greenhouse.io/testnisc/jobs/8180807',
+    role: 'Cloud Networking & Infrastructure Developer',
+    company: 'National Information Solutions Cooperative',
+  };
+  const niscPage = {
+    url: 'https://job-boards.greenhouse.io/testnisc/jobs/8180807',
+    heading: 'Cloud Networking & Infrastructure Developer',
+    title: 'Job Application for Cloud Networking & Infrastructure Developer at NISC',
+    text: 'NISC application form',
+  };
+  assert.equal(exactSinglePageFinal(inspected, nisc, niscPage), true);
+  assert.equal(exactSinglePageFinal(inspected, nisc, {
+    ...niscPage, url: 'https://evil.example/testnisc/jobs/8180807', title: 'Cloud Networking at NISC',
+  }), false);
 });
 
 test('Greenhouse accepts its first-party short-link only after it resolves to an official job board', () => {
@@ -178,9 +310,58 @@ test('a post-submit verification-code page remains a resumable MFA handoff', () 
   assert.equal(authenticationBlocker({}), null);
 });
 
+test('OTP completeness ignores ordinary form fields such as phone', () => {
+  const phone = { visible: true, maxLength: 12, value: '4125550100', otp: false };
+  const emptySlots = Array.from({ length: 8 }, () => ({ visible: true, maxLength: 1, value: '', otp: false }));
+  const filledSlots = emptySlots.map((slot, index) => ({ ...slot, value: String(index) }));
+  assert.equal(otpFieldsLookComplete([phone]), false);
+  assert.equal(otpFieldsLookComplete(emptySlots), false);
+  assert.equal(otpFieldsLookComplete(filledSlots), true);
+  assert.equal(otpFieldsLookComplete([{ visible: true, maxLength: 8, value: 'Ab3DeF9G', otp: true }]), true);
+  assert.equal(otpChangedFromBaseline(filledSlots, filledSlots.map(slot => slot.value).join('')), false);
+  assert.equal(otpChangedFromBaseline(filledSlots, ''), true);
+});
+
+test('segmented OTP doubling is the first half of the code stored twice', () => {
+  const code = 'Ab12Cd34';
+  const doubled = ['A', 'A', 'b', 'b', '1', '1', '2', '2'];
+  assert.equal(otpLooksCharacterDoubled(doubled, code), true);
+  assert.equal(otpSlotValuesMatch(doubled, code), false);
+  assert.equal(otpSlotValuesMatch(code.split(''), code), true);
+  assert.equal(otpLooksCharacterDoubled(code.split(''), code), false);
+});
+
+test('an OTP-only surface is MFA without mixing in ordinary application fields', () => {
+  assert.equal(isOtpOnlySurface({
+    navigation: { mfa: true },
+    fields: [{ type: 'text', question: 'Security code' }],
+  }), true);
+  assert.equal(isOtpOnlySurface({
+    navigation: { mfa: true },
+    fields: [
+      { type: 'text', question: 'First name' },
+      { type: 'text', question: 'Security code' },
+    ],
+  }), false);
+});
+
+test('a Greenhouse thank-you page is not kept in MFA by an earlier 428', () => {
+  assert.equal(greenhouseSubmissionSuccessText('Thank you for applying to Databricks! Your application has been received.'), true);
+  assert.deepEqual(applyPostOtpEmailVerificationFlag({ mfa: true }, {
+    emailVerificationRequired: true,
+    remaining: null,
+    successVisible: true,
+  }), { mfa: false, success: true });
+  assert.equal(applyPostOtpEmailVerificationFlag({ mfa: true }, {
+    emailVerificationRequired: true,
+    remaining: { state: 'WAITING_LOGIN', blockers: [{ code: 'MFA_REQUIRED' }] },
+  }).mfa, true);
+});
+
 test('Greenhouse HTTP 428 enters email verification without treating unrelated responses as MFA', () => {
   const greenhouse = { ats: 'greenhouse' };
   assert.equal(requiresEmailVerification(greenhouse, [{ status: 428, url: 'https://boards.greenhouse.io/gitlab/jobs/8773006002' }]), true);
+  assert.equal(requiresEmailVerification(greenhouse, [{ status: 428, url: 'https://job-boards.greenhouse.io/embed/job_app?for=databricks&token=8721005002' }]), true);
   assert.equal(requiresEmailVerification(greenhouse, [{ status: 428, url: 'https://www.recaptcha.net/reload' }]), false);
   assert.equal(requiresEmailVerification(greenhouse, [{ status: 200, url: 'https://boards.greenhouse.io/gitlab/jobs/8773006002' }]), false);
   assert.equal(requiresEmailVerification({ ats: 'lever' }, [{ status: 428, url: 'https://boards.greenhouse.io/gitlab/jobs/8773006002' }]), false);
@@ -202,6 +383,21 @@ test('personal Gmail OTP reads are restricted to the current ATS sender allowlis
   assert.deepEqual(otpDomains('greenhouse', config), ['greenhouse.io', 'greenhouse-mail.io']);
   assert.deepEqual(otpDomains('workday', config), []);
   assert.deepEqual(otpDomains('greenhouse', { applications: { gmail_otp: { sender_domains: { greenhouse: ['valid.example', '../invalid'] } } } }), ['valid.example']);
+  assert.equal(gmailOtpMissDetail(null, 2), 'GMAIL_OTP_READER_EXIT_2');
+  assert.equal(gmailOtpMissDetail({ error: 'token_expired' }, 3), 'GMAIL_OTP_TOKEN_EXPIRED');
+  assert.equal(gmailOtpMissDetail({ listed: 3, allowlisted: 1, auth: { expired: true } }, 0), 'GMAIL_OTP_TOKEN_EXPIRED');
+  assert.equal(gmailOtpMissDetail({ listed: 0 }, 0), 'GMAIL_OTP_NO_MESSAGES');
+  assert.equal(gmailOtpMissDetail({ listed: 3, allowlisted: 0 }, 0), 'GMAIL_OTP_SENDER_NOT_ALLOWLISTED');
+  assert.equal(gmailOtpMissDetail({
+    listed: 5,
+    allowlisted: 0,
+    extracted: false,
+    hits: [
+      { allowlisted: true, too_old: true },
+      { allowlisted: true, too_old: true },
+    ],
+  }, 0), 'GMAIL_OTP_NO_FRESH_MESSAGES');
+  assert.equal(gmailOtpMissDetail({ listed: 2, allowlisted: 1, extracted: false }, 0), 'GMAIL_OTP_NO_EXTRACTABLE_CODE');
 });
 
 test('a user-selected override cannot leave an unresolved careers host QUEUED', async () => {
@@ -346,6 +542,59 @@ test('application tracker dates use the configured calendar time zone', async ()
   assert.match(readFileSync(join(root, 'data', 'applications.md'), 'utf8'), /\| 1 \| 2026-09-10 \|/);
 });
 
+test('candidate discard sets tracker Discarded and skips open attempts', async () => {
+  const root = target();
+  const { attempt } = queueAttempt(root, {
+    tracker_number: 1,
+    canonical_url: 'https://jobs.lever.co/company/1',
+    company: 'Company',
+    role: 'Engineer',
+  });
+  const first = await discardTrackerRow(root, 1);
+  assert.equal(first.tracker.changed, true);
+  assert.equal(first.skipped_count, 1);
+  assert.match(readFileSync(join(root, 'data', 'applications.md'), 'utf8'), /\| 1 \| 2026-09-09 \| Company \| Engineer \| 4.5\/5 \| Discarded \|/);
+  assert.equal(getAttempt(root, attempt.idempotency_key).state, 'SKIPPED');
+  const second = await discardTrackerRow(root, 1);
+  assert.equal(second.tracker.already, true);
+  assert.equal(second.skipped_count, 0);
+});
+
+test('candidate discard leaves submitted attempts terminal', async () => {
+  const root = target();
+  const { attempt } = queueAttempt(root, {
+    tracker_number: 1,
+    canonical_url: 'https://jobs.lever.co/company/1',
+    company: 'Company',
+    role: 'Engineer',
+  });
+  transitionAttempt(root, attempt.idempotency_key, 'SUBMITTED', {
+    submission_evidence: { confirmation: 'adapter-visible-thank-you' },
+  });
+  const result = await discardTrackerRow(root, 1);
+  assert.equal(result.skipped_count, 0);
+  assert.equal(getAttempt(root, attempt.idempotency_key).state, 'SUBMITTED');
+  assert.match(readFileSync(join(root, 'data', 'applications.md'), 'utf8'), /\| Discarded \|/);
+});
+
+test('manual Applied sets tracker status without submitting and skips open attempts', async () => {
+  const root = target();
+  const { attempt } = queueAttempt(root, {
+    tracker_number: 1,
+    canonical_url: 'https://jobs.lever.co/company/1',
+    company: 'Company',
+    role: 'Engineer',
+  });
+  const first = await markTrackerApplied(root, 1, new Date('2026-09-21T12:00:00Z'));
+  assert.equal(first.tracker.changed, true);
+  assert.equal(first.skipped_count, 1);
+  assert.match(readFileSync(join(root, 'data', 'applications.md'), 'utf8'), /\| Applied \|/);
+  assert.equal(getAttempt(root, attempt.idempotency_key).state, 'SKIPPED');
+  const second = await markTrackerApplied(root, 1);
+  assert.equal(second.tracker.already, true);
+  assert.equal(second.skipped_count, 0);
+});
+
 test('a submitted application updates its report and archives the apply-time JD', () => {
   const root = target();
   const attempt = {
@@ -410,6 +659,18 @@ test('an explicit portal rejection corrects a network-only false submission and 
   assert.doesNotMatch(tracker, new RegExp(`APP:${attempt.attempt_id}`));
 });
 
+test('an official Greenhouse form that is not the queued job is an identity portal block, not a missing ATS', () => {
+  const result = submissionGate({
+    page: { certified: true, exactReviewPage: false },
+    resume: { hash: 'a', expected_hash: 'a' },
+  });
+  assert.equal(result.permitted, false);
+  assert.deepEqual(result.blockers, [{
+    code: 'UNSUPPORTED_PORTAL',
+    question: 'Live page is not the exact queued application form',
+  }]);
+});
+
 test('submission gates fail closed on uncertain resume, sensitive, and incomplete fields', () => {
   const result = submissionGate({ page: { certified: true, exactReviewPage: true }, resume: { hash: 'a', expected_hash: 'b' }, fields: [
     { question: 'Expected salary', required: true, value: '100', provenance: 'deterministic' },
@@ -429,6 +690,14 @@ test('ordinary stored consents can submit, while credentials and unvalidated sal
   assert.equal(consent.permitted, true);
   const credential = submissionGate({ ...base, fields: [{ question: 'Do you hold a professional certification?', required: true, value: 'Yes', provenance: 'deterministic' }] });
   assert.deepEqual(credential.blockers.map(item => item.code), ['CERTIFICATION_CHANGED']);
+  const neverHeld = submissionGate({ ...base, fields: [{ question: 'Active Security Clearance(s)', required: true, value: 'Never held a clearance', provenance: 'deterministic' }] });
+  assert.equal(neverHeld.permitted, true);
+  const neverHeldAsked = submissionGate({ ...base, fields: [{ question: 'Active Security Clearance(s)?', required: true, value: 'Never held a clearance', provenance: 'deterministic' }] });
+  assert.equal(neverHeldAsked.permitted, true);
+  const noneClearance = submissionGate({ ...base, fields: [{ question: 'Do you hold a security clearance?', required: true, value: 'None', provenance: 'deterministic' }] });
+  assert.equal(noneClearance.permitted, true);
+  const redactedClearance = submissionGate({ ...base, fields: [{ question: 'Active Security Clearance(s)', required: true, value: '[present]', provenance: 'deterministic' }] });
+  assert.deepEqual(redactedClearance.blockers.map(item => item.code), ['CERTIFICATION_CHANGED']);
   const salary = submissionGate({ ...base, fields: [{ question: 'Expected salary', required: true, value: '150000', provenance: 'deterministic' }] });
   assert.deepEqual(salary.blockers.map(item => item.code), ['SALARY_QUESTION']);
   const localSalary = submissionGate({ ...base, fields: [{ question: 'Expected salary', required: true, value: '$150,000', provenance: 'local-salary-preference', salary_validated: true }] });
@@ -441,6 +710,8 @@ test('optional marketing and future-opportunity consent is never eligible for au
   assert.equal(blank.permitted, true);
   const selected = submissionGate({ ...base, fields: [{ question: 'Contact me about future opportunities', required: false, value: 'Yes', provenance: 'deterministic' }] });
   assert.deepEqual(selected.blockers.map(item => item.code), ['OPTIONAL_CONSENT']);
+  const declined = submissionGate({ ...base, fields: [{ question: 'Would you like to be considered for future opportunities at Twitch when you apply?', required: true, value: 'No', provenance: 'deterministic' }] });
+  assert.equal(declined.permitted, true);
 });
 
 test('AI disclosure blocks only when this application used generated prose', () => {
@@ -485,6 +756,71 @@ test('local prose canaries never receive submission authority from a model flag'
   assert.deepEqual(result.blockers.map(item => item.code), ['VALIDATION_ERROR']);
 });
 
+test('unvalidated generated answers keep a readable blocker label', () => {
+  assert.equal(generatedAnswerLabel({ field_id: 'cover letter:textarea:root:2', claims_validated: false }), 'cover letter');
+  const result = submissionGate({
+    page: { certified: true, exactReviewPage: true },
+    resume: { hash: 'a', expected_hash: 'a' },
+    generated: [{ field_id: 'cover letter:textarea:root:2', provenance: 'local-generated', claims_validated: false }],
+  });
+  assert.equal(result.permitted, false);
+  assert.equal(result.blockers[0].question, 'cover letter');
+});
+
+test('publicAttempt labels an empty VALIDATION_ERROR from unvalidated generated answers', () => {
+  const view = publicAttempt({
+    attempt_id: 'application-test',
+    idempotency_key: '1:https://example.com',
+    tracker_number: 1,
+    role: 'Engineer',
+    company: 'Acme',
+    canonical_url: 'https://example.com',
+    ats: 'greenhouse',
+    state: 'NEEDS_REVIEW',
+    step: 0,
+    blockers: [
+      { code: 'VALIDATION_ERROR', question: 'Are you currently attending or a recent graduate of Georgia Tech?' },
+      { code: 'VALIDATION_ERROR', question: '', detail: '' },
+    ],
+    answers: [{ field_id: 'cover letter:textarea:root:2', provenance: 'local-generated', claims_validated: false, length: 10 }],
+  });
+  assert.equal(view.blockers[1].question, 'cover letter');
+});
+
+test('publicAttempt surfaces Handshake Apply Externally host', () => {
+  const view = publicAttempt({
+    attempt_id: 'application-test',
+    idempotency_key: '6247:https://cmu.joinhandshake.com/jobs/11458140',
+    tracker_number: 6247,
+    role: 'Full-Stack Software Engineer',
+    company: 'Cruitical',
+    canonical_url: 'https://cmu.joinhandshake.com/jobs/11458140',
+    ats: 'handshake',
+    state: 'NEEDS_REVIEW',
+    step: 0,
+    external_host: 'careers.cruitical.com',
+    external_url: 'https://careers.cruitical.com/apply',
+    blockers: [{ code: 'UNSUPPORTED_PORTAL', detail: 'Apply externally: https://careers.cruitical.com/apply' }],
+    answers: [],
+  });
+  assert.equal(view.external_host, 'careers.cruitical.com');
+  assert.equal(view.external_url, 'https://careers.cruitical.com/apply');
+  const fromDetail = publicAttempt({
+    attempt_id: 'application-test',
+    idempotency_key: '6247:https://cmu.joinhandshake.com/jobs/11458140',
+    tracker_number: 6247,
+    role: 'Full-Stack Software Engineer',
+    company: 'Cruitical',
+    canonical_url: 'https://cmu.joinhandshake.com/jobs/11458140',
+    ats: 'handshake',
+    state: 'NEEDS_REVIEW',
+    step: 0,
+    blockers: [{ code: 'UNSUPPORTED_PORTAL', detail: 'Apply externally: jobs.ashbyhq.com' }],
+    answers: [],
+  });
+  assert.equal(fromDetail.external_host, 'jobs.ashbyhq.com');
+});
+
 test('hosted answers require requested field mapping, approved evidence, and validation', () => {
   const task = answerTask([{ field_id: 'q1', question: 'Why?', max_length: 100 }], [{ id: 'cv1', kind: 'cv', text: 'Built a service.' }]);
   assert.equal(validateGeneratedAnswers({ answers: [{ field_id: 'q1', text: 'I enjoy this work.', evidence_ids: ['cv1'], claims_validated: false }] }, task).length, 1);
@@ -514,6 +850,11 @@ test('cover-letter answers preserve body paragraphs and require job plus profile
   assert.throws(() => validateGeneratedAnswers({ answers: [{
     field_id: 'cover', text, evidence_ids: ['profile'], confidence: 0.9, claims_validated: false,
   }] }, task), /job-specific and candidate-profile evidence/);
+  const completed = completeCoverLetterEvidenceIds({ answers: [{
+    field_id: 'cover', text, evidence_ids: ['profile'], confidence: 0.9, claims_validated: false,
+  }] }, task);
+  assert.deepEqual(new Set(completed.answers[0].evidence_ids), new Set(['job', 'profile']));
+  assert.equal(validateGeneratedAnswers(completed, task).length, 1);
 });
 
 test('cover-letter validation removes only unsupported sentences and rechecks the result', () => {
@@ -536,7 +877,7 @@ test('cover-letter validation removes only unsupported sentences and rechecks th
   assert.equal(answer.text.split(/\n\n/).length, 4);
 });
 
-test('cover-letter generation never falls through to a hosted provider', async () => {
+test('requireLocal still blocks hosted fallback when the caller asks for local-only prose', async () => {
   const result = await generateBoundedAnswers({
     questions: [{ field_id: 'cover', question: 'Cover Letter' }],
     evidence: [{ id: 'job', kind: 'current-job-report', text: 'Role context.' }],
@@ -545,6 +886,76 @@ test('cover-letter generation never falls through to a hosted provider', async (
   });
   assert.equal(result.route.result, 'NO_ELIGIBLE_PROVIDER');
   assert.equal(result.route.reason, 'LOCAL_PROVIDER_UNAVAILABLE');
+});
+
+test('cover-letter generation may use configured hosted fallback when local prose is unavailable', async () => {
+  const result = await generateBoundedAnswers({
+    questions: [{ field_id: 'cover', question: 'Cover Letter' }],
+    evidence: [{ id: 'job', kind: 'current-job-report', text: 'Role context.' }],
+    runtimeConfig: { applications: { hosted_fallback_providers: ['antigravity-example'] }, providers: {} },
+  });
+  assert.equal(result.route.result, 'NO_ELIGIBLE_PROVIDER');
+  assert.notEqual(result.route.reason, 'LOCAL_PROVIDER_UNAVAILABLE');
+});
+
+test('cover letters skip local prose unless local_prose.cover_letters is true', async () => {
+  const localConfig = {
+    applications: {
+      local_prose: { enabled: true, canary_only: true, cover_letters: false, provider: 'local' },
+      hosted_fallback_providers: [],
+    },
+    providers: {
+      local: { enabled: true, local_only: true, type: 'openai_compatible', capabilities: ['structured_output'] },
+    },
+  };
+  assert.equal(localProseAllowedForQuestions([{ question: 'Cover Letter' }], localConfig), false);
+  assert.equal(localProseAllowedForQuestions([{ question: 'Additional information' }], localConfig), true);
+  assert.equal(localProseAllowedForQuestions([{ question: 'Cover Letter' }], {
+    ...localConfig,
+    applications: { ...localConfig.applications, local_prose: { ...localConfig.applications.local_prose, cover_letters: true } },
+  }), true);
+  const result = await generateBoundedAnswers({
+    questions: [{ field_id: 'cover', question: 'Cover Letter' }],
+    evidence: [{ id: 'job', kind: 'current-job-report', text: 'Role context.' }],
+    runtimeConfig: localConfig,
+  });
+  assert.equal(result.route.result, 'NO_ELIGIBLE_PROVIDER');
+  assert.equal(result.blocker, 'PROVIDER_UNAVAILABLE');
+});
+
+test('Greenhouse resume uploadFile crashes are not treated as an attached resume', () => {
+  assert.equal(greenhouseResumeUploadFailed("Cannot read properties of undefined (reading 'uploadFile')"), true);
+  assert.equal(greenhouseResumeUploadFailed('Resume/CV Anmol_Sahu_SDE.pdf'), false);
+});
+
+test('Greenhouse resume attach uses the Attach file chooser', async () => {
+  let files = null;
+  let clicked = 0;
+  const resumePath = join(process.cwd(), 'package.json');
+  const attach = {
+    isVisible: async () => true,
+    isEnabled: async () => true,
+    click: async () => { clicked++; },
+  };
+  const page = {
+    locator(selector) {
+      if (selector === 'button[data-testid="resume-file"]') {
+        return { count: async () => 1, first: () => attach };
+      }
+      return { count: async () => 0, first: () => attach };
+    },
+    waitForEvent: async type => {
+      assert.equal(type, 'filechooser');
+      return { setFiles: async path => { files = path; } };
+    },
+    waitForFunction: async () => {},
+    evaluate: async () => 'Resume/CV\npackage.json',
+  };
+  const attached = await attachCertifiedResume(page, { path: resumePath, hash: 'abc' }, 'greenhouse');
+  assert.equal(clicked, 1);
+  assert.equal(files, resumePath);
+  assert.equal(attached.hash, 'abc');
+  assert.equal(await attachCertifiedResume(page, { path: resumePath, hash: 'abc' }, 'ashby'), null);
 });
 
 test('Greenhouse cover-letter reveal targets its unique manual control only', async () => {
@@ -573,7 +984,7 @@ test('Greenhouse cover-letter reveal targets its unique manual control only', as
   assert.equal(waited, 2);
   assert.equal(await revealGreenhouseCoverLetter(page, { board: 'greenhouse' }, {
     applications: { local_prose: { cover_letters: false } },
-  }), false);
+  }), true);
 });
 
 test('salary handling skips current compensation and validates only bounded future preferences', () => {
@@ -585,6 +996,7 @@ test('salary handling skips current compensation and validates only bounded futu
   assert.equal(salaryQuestionKind('What annual bonus do you expect?'), 'BONUS_EXPECTATION');
   assert.equal(salaryQuestionKind('What annual equity grant do you expect?'), 'EQUITY_EXPECTATION');
   assert.equal(salaryQuestionKind('How many RSUs do you expect?'), 'EQUITY_UNSUPPORTED_UNIT');
+  assert.equal(salaryQuestionKind('Target Compensation'), 'DESIRED_EXPECTATION');
   const task = salaryTask([{ field_id: 'salary', question: 'What is your expected salary range?', constraints: { max_length: 30 } }], [{ id: 'report', kind: 'report', text: 'Role and location context.' }]);
   const valid = validateSalaryAnswers({ salaries: [{ field_id: 'salary', value: '$120,000-$140,000', evidence_ids: ['report'], confidence: 0.7 }] }, task);
   assert.equal(valid[0].salary_validated, true);
@@ -598,6 +1010,35 @@ test('salary handling skips current compensation and validates only bounded futu
 test('candidate prose hosted fallback is explicitly restricted to Antigravity providers', () => {
   assert.deepEqual(hostedFallbackProviderIds({ applications: { hosted_fallback_providers: ['codex-luna', 'antigravity-gemini-pro-review', 'antigravity-claude-opus-review'] } }), ['antigravity-gemini-pro-review', 'antigravity-claude-opus-review']);
   assert.deepEqual(hostedFallbackProviderIds({ applications: {} }), []);
+});
+
+test('hosted fallback may opt in a configured Antigravity provider without ordinary routing qualification', () => {
+  const selected = selectHostedFallbackProvider({
+    applications: { hosted_fallback_providers: ['antigravity-gemini-flash-high'] },
+    providers: {
+      'antigravity-gemini-flash-high': {
+        type: 'antigravity_cli',
+        enabled: true,
+        capabilities: ['structured_output', 'evidence_citations'],
+        command: ['agy', '--print'],
+      },
+    },
+  });
+  assert.equal(selected.id, 'antigravity-gemini-flash-high');
+  assert.equal(selected.config.enabled, true);
+  assert.ok(selected.gaps.includes('never_qualified'));
+  assert.ok(selected.gaps.includes('unobserved'));
+  assert.equal(selectHostedFallbackProvider({
+    applications: { hosted_fallback_providers: ['antigravity-gemini-flash-high'] },
+    providers: {
+      'antigravity-gemini-flash-high': {
+        type: 'antigravity_cli',
+        enabled: true,
+        capabilities: ['structured_output', 'evidence_citations'],
+        qualification: { qualified: false, lifecycle_state: 'retired' },
+      },
+    },
+  }), null);
 });
 
 test('example runtime config keeps the fallback list restricted to configured Antigravity providers', () => {
@@ -720,9 +1161,27 @@ test('application artifact retention deletes only aged attempt artifacts', () =>
 });
 
 test('missing APPLY token is a near-miss, not an eligible enqueue', async () => {
-  const { hasApplyToken, diagnoseTrackerRows } = await import('../lib/applications/eligibility.mjs');
+  const { hasApplyToken, reportQueueDecision, diagnoseTrackerRows, evaluatedQueueContract, hasEnqueueAuthority } = await import('../lib/applications/eligibility.mjs');
   assert.equal(hasApplyToken('APPLY. SRC: greenhouse-api'), true);
+  assert.equal(hasApplyToken('CONSIDER. SRC: greenhouse-api'), true);
   assert.equal(hasApplyToken('DO NOT APPLY. SRC: greenhouse-api'), false);
+  assert.equal(hasApplyToken('DO NOT APPLY. CONSIDER. SRC: greenhouse-api'), false);
+  assert.equal(reportQueueDecision('## Recommendation\n\nConsider after reviewing the unresolved consequential gates.\n'), 'CONSIDER');
+  assert.equal(reportQueueDecision('## Recommendation\n\nApply. The deterministic policy gates passed.\n'), 'APPLY');
+  assert.equal(reportQueueDecision('## Recommendation\n\nDo not apply. One or more deterministic hard gates failed.\n'), 'DO_NOT_APPLY');
+  assert.equal(reportQueueDecision('## Recommendation\n\n**Apply within 48 hours.** Submit SDE resume.\n'), 'APPLY');
+  assert.equal(reportQueueDecision('## Recommendation\n\n**Consider** after gate review.\n'), 'CONSIDER');
+  assert.equal(hasEnqueueAuthority('Submit SDE resume. SRC: x', '## Recommendation\n\n**Apply within 48 hours.**\n'), true);
+  assert.equal(evaluatedQueueContract({
+    status: 'Evaluated', score: '4.5/5', notes: 'Submit SDE resume. SRC: x', report: '',
+  }).ok, false);
+  assert.equal(evaluatedQueueContract({
+    status: 'Evaluated', score: '4.5/5', notes: 'APPLY. Submit SDE resume. SRC: x', report: '',
+  }).ok, true);
+  assert.equal(evaluatedQueueContract({
+    status: 'Evaluated', score: '4.5/5', notes: 'Submit SDE resume. SRC: x',
+    report: '## Recommendation\n\nConsider after reviewing the unresolved consequential gates.\n',
+  }).ok, true);
   const root = target();
   mkdirSync(join(root, 'data'), { recursive: true });
   writeFileSync(join(root, 'data', 'applications.md'), [
@@ -730,21 +1189,80 @@ test('missing APPLY token is a near-miss, not an eligible enqueue', async () => 
     '|---|---|---|---|---|---|---|---|---|',
     '| 1 | 2026-09-14 | Acme | SWE | 4.5/5 | Evaluated | ❌ | [001](reports/acme/1-swe-2026-09-14.md) | Submit SDE resume. SRC: greenhouse-api |',
     '| 2 | 2026-09-14 | Beta | SWE | 4.5/5 | Evaluated | ❌ | [002](reports/beta/2-swe-2026-09-14.md) | APPLY. Submit SDE resume. SRC: ashby-api |',
+    '| 3 | 2026-09-14 | Gamma | SWE | 4.0/5 | Evaluated | ❌ | [003](reports/gamma/3-swe-2026-09-14.md) | CONSIDER. Submit SDE resume. SRC: greenhouse-api |',
+    '| 4 | 2026-09-14 | Delta | SWE | 4.0/5 | Evaluated | ❌ | [004](reports/delta/4-swe-2026-09-14.md) | Submit SDE resume. SRC: greenhouse-api |',
     '',
   ].join('\n'));
   mkdirSync(join(root, 'reports', 'acme'), { recursive: true });
   mkdirSync(join(root, 'reports', 'beta'), { recursive: true });
+  mkdirSync(join(root, 'reports', 'gamma'), { recursive: true });
+  mkdirSync(join(root, 'reports', 'delta'), { recursive: true });
   writeFileSync(join(root, 'reports', 'acme', '1-swe-2026-09-14.md'), '**URL:** https://boards.greenhouse.io/acme/jobs/1\n');
   writeFileSync(join(root, 'reports', 'beta', '2-swe-2026-09-14.md'), '**URL:** https://jobs.ashbyhq.com/beta/2\n');
+  writeFileSync(join(root, 'reports', 'gamma', '3-swe-2026-09-14.md'), '**URL:** https://job-boards.greenhouse.io/gamma/jobs/3\n');
+  writeFileSync(join(root, 'reports', 'delta', '4-swe-2026-09-14.md'), [
+    '**URL:** https://job-boards.greenhouse.io/delta/jobs/4',
+    '',
+    '## Recommendation',
+    '',
+    'Consider after reviewing the unresolved consequential gates. Policy reasons: CONSEQUENTIAL_GATE_UNKNOWN.',
+    '',
+  ].join('\n'));
   const diagnosed = diagnoseTrackerRows(root);
   assert.equal(diagnosed.find(item => item.row.num === 1)?.blocker, 'MISSING_APPLY_TOKEN');
   assert.equal(diagnosed.find(item => item.row.num === 1)?.near_miss, true);
   assert.equal(diagnosed.find(item => item.row.num === 2)?.eligible, true);
+  assert.equal(diagnosed.find(item => item.row.num === 3)?.eligible, true);
+  assert.equal(diagnosed.find(item => item.row.num === 4)?.eligible, true);
   const { applicationQueuePreview } = await import('../lib/applications/enqueue-summary.mjs');
   const preview = applicationQueuePreview(root);
-  assert.equal(preview.eligible_count, 1);
+  assert.equal(preview.eligible_count, 3);
   assert.equal(preview.near_misses[0].blocker, 'MISSING_APPLY_TOKEN');
   assert.match(preview.human_summary, /Near-miss/);
+});
+
+test('a certified ATS outside the local allowlist is an unsupported near-miss', async () => {
+  const { diagnoseTrackerRows, eligibleRows, portalNearMiss } = await import('../lib/applications/eligibility.mjs');
+  const { rolloutAllowlist } = await import('../lib/applications/ats.mjs');
+  const { applicationQueuePreview } = await import('../lib/applications/enqueue-summary.mjs');
+  const allowedAts = rolloutAllowlist({ applications: { supported_ats: ['greenhouse'] } });
+  assert.equal(portalNearMiss('https://leidos.wd1.myworkdayjobs.com/en-US/External/job/Software-Engineer_R-1', allowedAts)?.blocker, 'UNSUPPORTED_PORTAL');
+  assert.equal(portalNearMiss('https://job-boards.greenhouse.io/acme/jobs/1', allowedAts), null);
+  const root = target();
+  writeFileSync(join(root, 'reports', 'company', '001.md'), '**URL:** https://leidos.wd1.myworkdayjobs.com/en-US/External/job/Software-Engineer_R-1\n');
+  const config = { applications: { supported_ats: ['greenhouse'] } };
+  const diagnosed = diagnoseTrackerRows(root, { allowedAts });
+  assert.equal(diagnosed[0].eligible, false);
+  assert.equal(diagnosed[0].near_miss, true);
+  assert.equal(diagnosed[0].blocker, 'UNSUPPORTED_PORTAL');
+  assert.equal(eligibleRows(root, { allowedAts }).length, 0);
+  assert.equal(eligibleRows(root).length, 1);
+  const preview = applicationQueuePreview(root, { config });
+  assert.equal(preview.eligible_count, 0);
+  assert.equal(preview.near_misses[0].blocker, 'UNSUPPORTED_PORTAL');
+  const queued = await enqueueEligible(root, { includeCurrent: true, config });
+  assert.deepEqual(queued.queued, []);
+  assert.equal(queued.eligible_count, 0);
+});
+
+test('an Ashby posting is eligible only after Ashby is in the local allowlist', async () => {
+  const { diagnoseTrackerRows, eligibleRows, portalNearMiss } = await import('../lib/applications/eligibility.mjs');
+  const { rolloutAllowlist } = await import('../lib/applications/ats.mjs');
+  const greenhouseOnly = rolloutAllowlist({ applications: { supported_ats: ['greenhouse'] } });
+  const withAshby = rolloutAllowlist({ applications: { supported_ats: ['greenhouse', 'ashby'] } });
+  const url = 'https://jobs.ashbyhq.com/acme/9fde8d03-9f47-44ac-bd14-53829722c06d';
+  assert.equal(portalNearMiss(url, greenhouseOnly)?.blocker, 'UNSUPPORTED_PORTAL');
+  assert.equal(portalNearMiss(url, withAshby), null);
+  const root = target();
+  writeFileSync(join(root, 'reports', 'company', '001.md'), `**URL:** ${url}\n`);
+  const blocked = diagnoseTrackerRows(root, { allowedAts: greenhouseOnly });
+  assert.equal(blocked.find(item => item.row.num === 1)?.eligible, false);
+  assert.equal(blocked.find(item => item.row.num === 1)?.near_miss, true);
+  assert.equal(blocked.find(item => item.row.num === 1)?.blocker, 'UNSUPPORTED_PORTAL');
+  const open = diagnoseTrackerRows(root, { allowedAts: withAshby });
+  assert.equal(open.find(item => item.row.num === 1)?.eligible, true);
+  assert.equal(eligibleRows(root, { allowedAts: withAshby }).some(item => item.row.num === 1), true);
+  assert.equal(eligibleRows(root, { allowedAts: greenhouseOnly }).some(item => item.row.num === 1), false);
 });
 
 test('liveness gate maps expired and uncertain verdicts fail-closed', async () => {
@@ -767,6 +1285,64 @@ test('apply doctor reports configuration gaps without mutating attempts', async 
   assert.equal(report.schema, 'ApplicationDoctorReportV1');
   assert.equal(report.ready, false);
   assert.ok(report.checks.some(item => item.code === 'APPLICATIONS_ENABLED' && item.ok === false));
+  const otp = report.checks.find(item => item.code === 'GMAIL_OTP');
+  assert.equal(otp.ok, true);
+  assert.match(otp.detail, /disabled/i);
+});
+
+test('apply doctor fails closed when Gmail OTP is on without a python command', async () => {
+  const { diagnoseApplications } = await import('../lib/applications/doctor.mjs');
+  const report = diagnoseApplications(target(), {
+    applications: {
+      enabled: false,
+      chrome_profile_dir: '',
+      resumes: { sde: '', mle: '' },
+      supported_ats: ['greenhouse'],
+      gmail_otp: { enabled: true, python_command: '', sender_domains: { greenhouse: ['greenhouse.io'] } },
+    },
+  });
+  const otp = report.checks.find(item => item.code === 'GMAIL_OTP');
+  assert.equal(otp.ok, false);
+  assert.match(otp.detail, /python_command/);
+});
+
+test('apply doctor fails closed when the Gmail OTP Testing-app token is older than 7 days', async () => {
+  const { diagnoseApplications, gmailOtpCredentialLifetime, formatGmailOtpRemaining } = await import('../lib/applications/doctor.mjs');
+  const issued = Date.parse('2026-09-18T04:30:13.000Z');
+  const fresh = gmailOtpCredentialLifetime({ authorized_at: '2026-09-18T04:30:13.000Z' }, { now: issued + 2 * 24 * 60 * 60 * 1000 });
+  const stale = gmailOtpCredentialLifetime({ authorized_at: '2026-09-18T04:30:13.000Z' }, { now: issued + 8 * 24 * 60 * 60 * 1000 });
+  assert.equal(fresh.expired, false);
+  assert.equal(formatGmailOtpRemaining(fresh.expires_in_seconds), '5d');
+  assert.equal(stale.expired, true);
+  assert.equal(stale.error, 'token_expired');
+  const root = target();
+  const creds = join(root, 'otp-creds.json');
+  const keys = join(root, 'otp-keys.json');
+  writeFileSync(creds, JSON.stringify({ authorized_at: '2026-01-01T00:00:00.000Z' }));
+  writeFileSync(keys, JSON.stringify({ installed: { client_id: 'test', client_secret: 'test' } }));
+  const previousCreds = process.env.CAREER_OPS_GMAIL_OTP_CREDS;
+  const previousKeys = process.env.CAREER_OPS_GMAIL_OTP_KEYS;
+  process.env.CAREER_OPS_GMAIL_OTP_CREDS = creds;
+  process.env.CAREER_OPS_GMAIL_OTP_KEYS = keys;
+  try {
+    const report = diagnoseApplications(root, {
+      applications: {
+        enabled: false,
+        chrome_profile_dir: '',
+        resumes: { sde: '', mle: '' },
+        supported_ats: ['greenhouse'],
+        gmail_otp: { enabled: true, python_command: 'python', sender_domains: { greenhouse: ['greenhouse.io'] } },
+      },
+    });
+    const otp = report.checks.find(item => item.code === 'GMAIL_OTP');
+    assert.equal(otp.ok, false);
+    assert.match(otp.detail, /expired after 7 days/);
+  } finally {
+    if (previousCreds === undefined) delete process.env.CAREER_OPS_GMAIL_OTP_CREDS;
+    else process.env.CAREER_OPS_GMAIL_OTP_CREDS = previousCreds;
+    if (previousKeys === undefined) delete process.env.CAREER_OPS_GMAIL_OTP_KEYS;
+    else process.env.CAREER_OPS_GMAIL_OTP_KEYS = previousKeys;
+  }
 });
 
 test('attempt analytics aggregates states and blockers', async () => {
@@ -784,7 +1360,9 @@ test('ATS hostname mapping covers certified and deferred boards', async () => {
   const { atsFor, ATS_MATURITY } = await import('../lib/applications/ats.mjs');
   assert.equal(atsFor('https://boards.greenhouse.io/x/jobs/1'), 'greenhouse');
   assert.equal(atsFor('https://www.linkedin.com/jobs/view/1'), 'linkedin');
+  assert.equal(atsFor('https://cmu.joinhandshake.com/stu/jobs/1'), 'handshake');
   assert.equal(ATS_MATURITY.linkedin.stage, 'deferred');
+  assert.equal(ATS_MATURITY.handshake.stage, 'main_profile');
 });
 
 test('field stability wait reports a quiet required-control count', async () => {
@@ -799,4 +1377,27 @@ test('field stability wait reports a quiet required-control count', async () => 
   const result = await waitForFieldStability(page, { timeoutMs: 2000, quietMs: 50, pollMs: 10 });
   assert.equal(result.stable, true);
   assert.equal(result.field_count, 2);
+});
+
+test('application runner seeds the extension worker without dynamic import()', () => {
+  const source = readFileSync(new URL('../lib/applications/runner.mjs', import.meta.url), 'utf8');
+  const manifest = JSON.parse(readFileSync(new URL('../extensions/job-autofill/manifest.json', import.meta.url), 'utf8'));
+  const worker = readFileSync(new URL('../extensions/job-autofill/background.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /import\(chrome\.runtime\.getURL/);
+  assert.equal(manifest.background.type, 'module');
+  assert.match(worker, /self\.careerOpsStore/);
+});
+
+test('application tab picker keeps only the job URL and ignores blank and extension pages', () => {
+  const job = { id: 3, url: 'https://job-boards.greenhouse.io/acme/jobs/1' };
+  const tabs = [
+    { id: 1, url: 'about:blank' },
+    { id: 2, url: 'chrome-extension://abc/options/options.html' },
+    job,
+  ];
+  assert.equal(applicationTabFromList(tabs, job.url), job);
+  assert.equal(applicationTabFromList(tabs, `${job.url}#apply`), job);
+  assert.equal(applicationTabFromList(tabs.slice(0, 2), job.url), null);
+  assert.equal(applicationTabFromList([job], ''), job);
+  assert.equal(applicationTabFromList([job, { id: 4, url: 'https://example.com/other' }], ''), null);
 });

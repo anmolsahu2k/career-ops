@@ -39,7 +39,7 @@ Run exactly as in `offer` mode (read `modes/offer.md` for the scored A-F blocks 
 
 ## Step 2: Save Report .md
 Save the full evaluation to `ft/reports/{company-slug}/{###}-{role-slug}-{YYYY-MM-DD}.md` (path resolves under `$CAREER_OPS_DATA_DIR`, default `ft/`; see format in `modes/offer.md`).
-Include Block G in the saved report. Add `**Legitimacy:** {tier}` to the report header, plus `**URL:**` and `**Resume:**`.
+Include Block G **and** `## Recommendation` (first line starts with Apply / Consider / Do not apply) in the saved report. Add `**Legitimacy:** {tier}` to the report header, plus `**URL:**` and `**Resume:**`.
 
 ## Step 3: Resume (do NOT generate PDF)
 **HARD OVERRIDE (CLAUDE.md Rule 2): do NOT generate a CV PDF.** The user submits their own resume PDF from `resumes/`. Do not run `modes/pdf.md` or `modes/latex.md`. Instead, record the resume pick in the tracker Notes column (Step 5): `Submit SDE resume` for SDE/backend/infra roles, `Submit MLE resume` for AI/ML/DS/DE roles. This matches the `**Resume:**` header value in the report.
@@ -91,5 +91,7 @@ installed.
 **Every row MUST end its Notes with a `SRC: {source}` token** naming the discovery source, so per-source funnel analytics stay computable from the tracker alone (`node source-analytics.mjs`). Take the value from the `source` column of `ft/data/scan-results-{date}.tsv` for scanned rows, or the `Discovery via {x}` clause of an aggregator placeholder row, **and map it to a canonical id before writing it** — a feed's own label is not a source id. The mappings that bite most often: `linkedin` -> `jobspy-linkedin`, `indeed` -> `jobspy-indeed`, `hnhiring` -> `hn-hiring`, `greenhouse`/`ashby`/`lever`/`workday` -> the `-api` suffixed form, `playwright-{provider}` -> `playwright-spa`. If the row came from a URL the user pasted directly, use `SRC: manual`. Canonical source ids live in [lib/sources.mjs](../lib/sources.mjs) — use one of those, never a company name or a free-text phrase.
 
 **Column 6 (Status), decided 2026-08-12.** Write `Evaluated` when the verdict is APPLY or CONSIDER. Write **`Rejected-at-eval`** when the verdict is DO NOT APPLY on the merits: no sponsorship, ITAR / export control / clearance, level mismatch, comp below the floor, wrong geo, off-target title. **Never write `Discarded`** — that bucket is reserved for roles the user personally rejects with the dashboard `d` key, and an agent writing into it is what made the Discarded tab meaningless before the split. `Purged` is likewise off limits: it belongs to the liveness and age sweeps. See the table in [modes/tracker.md](tracker.md).
+
+**Queue contract (HARD):** The report MUST end with `## Recommendation` whose first content line starts with `Apply`, `Consider`, or `Do not apply`. For APPLY/CONSIDER verdicts, Notes MUST include the token `APPLY.` or `CONSIDER.` (same as the runtime renderer). `merge-tracker.mjs` skips Evaluated ≥4.0 additions that omit both. Never leave a 4.0+ Evaluated row without a queue token — that creates a permanent `MISSING_APPLY_TOKEN` near-miss.
 
 **If any step fails**, continue with the remaining ones and note the failed step in the Notes column of the TSV line.

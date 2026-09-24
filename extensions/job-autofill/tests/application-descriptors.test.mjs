@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { fieldDescriptors, navigationState, riskCategory } from '../content/application-descriptors.js';
+import { fieldDescriptors, navigationState, riskCategory, mapFutureOpportunityChoice } from '../content/application-descriptors.js';
 
 test('application descriptor risk keeps legal fields deterministic and blocks risky prompts', () => {
   assert.equal(riskCategory('Are you authorized to work in the United States?'), 'DETERMINISTIC_ONLY');
@@ -11,24 +11,45 @@ test('application descriptor risk keeps legal fields deterministic and blocks ri
   assert.equal(riskCategory('What is your current annual bonus?'), 'CURRENT_COMPENSATION');
   assert.equal(riskCategory('What is your total compensation expectation?'), 'SALARY');
   assert.equal(riskCategory('What annual equity grant do you expect?'), 'SALARY');
+  assert.equal(riskCategory('Security code'), 'EPHEMERAL');
+  assert.equal(riskCategory('A verification code was sent. Enter the 8-character code to confirm you are a human.'), 'EPHEMERAL');
+  assert.equal(riskCategory('Cover letter'), 'CUSTOM_PROSE');
   assert.equal(riskCategory('I certify that the information I provided is accurate'), 'LOW');
   assert.equal(riskCategory('I agree to the terms and privacy policy'), 'LOW');
   assert.equal(riskCategory('Keep me informed about future job opportunities'), 'OPTIONAL_CONSENT');
   assert.equal(riskCategory('Did you use generative AI to complete this application?'), 'LOW');
   assert.equal(riskCategory('Describe a project you are proud of'), 'CUSTOM_PROSE');
   assert.equal(riskCategory('First name'), 'LOW');
+  assert.equal(riskCategory('Active Security Clearance(s)'), 'LOW');
+  assert.equal(riskCategory('Active Security Clearance(s)?'), 'LOW');
 });
 
-function page({ text = '', frames = [], controls = [], headings = [], password = false } = {}) {
+test('future-opportunity prompts map onto a single No option', () => {
+  assert.equal(mapFutureOpportunityChoice('Would you like to be considered for future opportunities at Twitch when you apply?', [
+    { text: 'Yes' }, { text: 'No' },
+  ]), 'No');
+  assert.equal(mapFutureOpportunityChoice('Keep me informed about future job opportunities', []), 'No');
+  assert.equal(mapFutureOpportunityChoice('First name', [{ text: 'No' }]), null);
+  assert.equal(mapFutureOpportunityChoice('Contact me about future opportunities', [
+    { text: 'Yes, keep me informed' },
+  ]), null);
+});
+
+function page({ text = '', frames = [], controls = [], headings = [], password = false, file = false, inputs = [] } = {}) {
   return {
     body: { innerText: text }, documentElement: { innerText: text },
     querySelectorAll(selector) {
       if (selector.startsWith('iframe')) return frames;
       if (selector.startsWith('button')) return controls;
       if (selector.startsWith('h1')) return headings;
+      if (selector.startsWith('input')) return inputs;
       return [];
     },
-    querySelector(selector) { return selector.includes('password') && password ? {} : null; },
+    querySelector(selector) {
+      if (selector.includes('password') && password) return {};
+      if (selector.includes('type="file"') && file) return {};
+      return null;
+    },
     defaultView: { getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) },
   };
 }
@@ -53,6 +74,15 @@ test('security-code prompts are treated as MFA, not a submission confirmation', 
   assert.equal(state.success, false);
 });
 
+test('an application form that includes a security code is not a dedicated MFA surface', () => {
+  const state = navigationState(page({
+    text: 'A verification code was sent. Enter the 8-character code. Security code. First name.',
+    file: true,
+    inputs: [{ type: 'text' }, { type: 'email' }, { type: 'file' }],
+  }));
+  assert.equal(state.mfa, false);
+});
+
 test('submission rejection is distinguished from a successful confirmation', () => {
   const rejected = navigationState(page({ text: "We couldn't submit your application. Your application submission was flagged as possible spam." }));
   assert.equal(rejected.submissionRejected, true);
@@ -61,6 +91,9 @@ test('submission rejection is distinguished from a successful confirmation', () 
 });
 
 test('a generic Greenhouse Attach label carries the locally resolved resume slot role', () => {
+  // Legacy path: even if the question text is still the picker verb "Attach",
+  // the input id must keep file_role=resume so the runner never treats a
+  // successful resume upload as missing.
   const control = {
     id: 'resume', name: '', value: '', required: true,
     getAttribute: name => ({ 'aria-label': null, 'data-automation-id': null, minlength: null, maxlength: null, pattern: null, accept: '.pdf' }[name] ?? null),
@@ -70,6 +103,28 @@ test('a generic Greenhouse Attach label carries the locally resolved resume slot
   assert.equal(descriptor.question, 'Attach');
   assert.equal(descriptor.file_role, 'resume');
   assert.equal(descriptor.constraints.accepts, '.pdf');
+});
+
+test('a resolved Resume/CV label keeps the resume file role', () => {
+  const control = {
+    id: 'resume', name: '', value: '', required: true,
+    getAttribute: name => ({ 'aria-label': null, 'data-automation-id': null, minlength: null, maxlength: null, pattern: null, accept: '.pdf' }[name] ?? null),
+    parentElement: { textContent: 'Resume/CV*', parentElement: null },
+  };
+  const [descriptor] = fieldDescriptors([{ control, kind: 'file', rawLabel: 'Resume/CV*', required: true, options: [] }]);
+  assert.equal(descriptor.question, 'Resume/CV*');
+  assert.equal(descriptor.file_role, 'resume');
+});
+
+test('a Cover Letter Attach leftover is never classified as the resume slot', () => {
+  const control = {
+    id: 'cover_letter', name: '', value: '', required: false,
+    getAttribute: name => ({ 'aria-label': null, 'data-automation-id': null, minlength: null, maxlength: null, pattern: null, accept: '.pdf' }[name] ?? null),
+    parentElement: { textContent: 'Cover Letter Attach', parentElement: null },
+  };
+  const [descriptor] = fieldDescriptors([{ control, kind: 'file', rawLabel: 'Cover Letter', required: false, options: [] }]);
+  assert.equal(descriptor.question, 'Cover Letter');
+  assert.equal(descriptor.file_role, 'other');
 });
 
 test('a select-one combobox is never treated as a free-prose prompt', () => {

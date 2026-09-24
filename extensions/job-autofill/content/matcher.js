@@ -24,6 +24,15 @@ const BOILERPLATE_PREFIXES = [
 /** Questions whose answers should never be reused across companies. */
 const VOLATILE_PATTERNS = /\b(why|company|role|position|team|product|us)\b/;
 
+/** Rotating email/SMS codes and human-verification prompts. Never store or bank-fill. */
+const OTP_VERIFICATION_QUESTION = /(?:verification|security|one[ -]?time|authentication)\s+code|8-character code|confirm you(?:['’]re| are) a human|one-time password|\botp\b|two[ -]?factor|authenticator/i;
+
+/** Answers that are one-shot or job-specific and must never enter the global bank. */
+const NEVER_STORE_QUESTION = new RegExp(
+  `${OTP_VERIFICATION_QUESTION.source}|cover letter|(?:minimum|desired|expected|target).{0,24}(?:salary|compensation|pay)|base salary|salary requirement|salary expectation|compensation expectation|why (?:do you|are you) (?:want|apply|interested)`,
+  'i',
+);
+
 const EEO_PATTERN =
   /gender|race|ethnic|veteran|disab|hispanic|latin|orientation|transgender|pronoun|self.?identif/i;
 
@@ -172,6 +181,8 @@ const DEFAULT_THRESHOLD = 0.75;
  */
 export function findAnswer(normKey, answers, { threshold = DEFAULT_THRESHOLD } = {}) {
   if (!normKey || !answers) return null;
+  if (isEphemeralApplicationQuestion(normKey)) return null;
+  answers = dropEphemeralAnswers(answers);
 
   const exact = answers[normKey];
   if (exact && exact.answer) return { entry: exact, score: 1, method: 'exact' };
@@ -303,12 +314,25 @@ const CONCEPTS = [
   // These answer only an explicit willingness/availability question. They do
   // not infer a location, a preferred workplace, or a response to a negation.
   { id: 'relocation', match: /\brelocat|\bcommuting distance\b/, veto: /\bnot willing|\bnot able/ },
-  { id: 'office-availability', match: /\b(?:office|onsite|on site)\b/, veto: /\b(?:where|which|preference|location)\b/ },
+  {
+    id: 'office-availability',
+    match: /\b(?:able|willing|available|interested|comfortable|prepared|report to)\b.{0,100}\b(?:office|onsite|on[ -]?site|headquarters|\bhq\b|hybrid|working out of)\b|\b(?:office|onsite|on[ -]?site|headquarters|\bhq\b|working out of|hybrid)\b.{0,100}\b(?:able|willing|available|interested|comfortable|prepared|does that work)\b/,
+    veto: /\b(?:where|which|prefer|select all|relocat|commuting distance)\b/,
+  },
   { id: 'sexual-orientation', match: /\bsexual orientation\b/, veto: /\bnot|\bdecline/ },
-  // A candidate-approved no may be reused only for an explicit non-compete or
-  // non-solicitation question. "Agreement" by itself is too broad and could
-  // be a contract, privacy, or arbitration question.
-  { id: 'non-compete', match: /\bnon[ -]?(?:compete|solicit)/, veto: /\bnot applicable\b/ },
+  // A candidate-approved no may be reused only for an explicit non-compete,
+  // non-solicitation, or current/former-employer restriction question.
+  // "Agreement" by itself is too broad and could be privacy or arbitration.
+  { id: 'non-compete', match: /\bnon[ -]?(?:compete|solicit)|(?:agreement|restriction).{0,120}(?:current|former) employer.{0,80}\brestrict|\brestrict your ability to accept/, veto: /\bnot applicable\b|\bprivacy\b|\barbitrat/ },
+  { id: 'employer-relatives', match: /\b(?:relatives?|family members?|close relationships?)\b.{0,120}\b(?:employ|employed|work(?:ing)? (?:at|for|with)|who work)/, veto: /\bemergency contact\b|\breference\b/ },
+  {
+    id: 'essential-functions',
+    match: /\b(?:can|able)\b.{0,100}\bessential (?:functions?|duties|job duties)\b|\bessential (?:functions?|duties|job duties)\b.{0,100}\b(?:can|able|perform)/,
+    veto: /\bdescribe\b|\bplease explain\b|\bwhat accommodation|\blist\b/,
+  },
+  // A stored No may map onto Greenhouse "None of the above" / "Not applicable"
+  // sanctions options. Yes or mixed bank readings stay fail-closed.
+  { id: 'restricted-country', match: /\bcuba\b.*\biran\b|\bsanctions\b|\bexport controls?\b/, veto: /\bnot applicable\b|\bprior question\b/ },
 ];
 
 /** The single concept a question is about, or null if none or more than one. */
@@ -362,11 +386,18 @@ export function matchOption(answerText, options) {
   const target = normalizeKey(answerText);
   if (!target) return null;
 
-  const normed = options.map(o => ({ option: o, key: normalizeKey(o.text || o.value || '') }));
+  const normed = options.map(o => ({ option: o, key: normalizeKey(optionText(o)) }));
 
   const exact = normed.filter(n => n.key === target);
   if (exact.length === 1) return exact[0].option;
   if (exact.length > 1) return exact[0].option;
+
+  const gpaBand = matchGpaBand(answerText, options);
+  if (gpaBand) return gpaBand;
+  const gpaTenth = matchGpaTenth(answerText, options);
+  if (gpaTenth) return gpaTenth;
+  const salaryBand = matchSalaryBand(answerText, options);
+  if (salaryBand) return salaryBand;
 
   // Yes/No: a stored "Yes" should land on "Yes, I am authorized to work".
   // Approved demographic answers can likewise be a full controlled sentence
@@ -378,6 +409,11 @@ export function matchOption(answerText, options) {
   if (leadingYesNo) {
     const starts = normed.filter(n => n.key === leadingYesNo || n.key.startsWith(leadingYesNo + ' '));
     return starts.length === 1 ? starts[0].option : null;
+  }
+
+  if (/^(n\/a|na|none|not applicable)$/.test(target)) {
+    const none = normed.filter(n => /^(n\/a|na|none|not applicable)\b/.test(n.key));
+    return none.length === 1 ? none[0].option : null;
   }
 
   // Take the option that contains every significant token of the stored answer,
@@ -422,6 +458,1193 @@ export function matchOption(answerText, options) {
   // Too close to call: leave it for the human.
   if (scored.length > 1 && scored[0].score - scored[1].score < 0.1) return null;
   return scored[0].option;
+}
+
+const RESTRICTED_COUNTRY = /\bcuba\b.*\biran\b|\biran\b.*\bnorth korea\b|\bnorth korea\b.*\bsyria\b/;
+const SANCTIONS_EXPORT = /\bsanctions\b|\bexport controls?\b/;
+
+function optionText(option) {
+  if (typeof option === 'string') return option;
+  return String(option?.text || option?.value || '');
+}
+
+export function sanctionsPolarity(answer) {
+  const key = normalizeKey(answer);
+  if (!key) return 'ambiguous';
+  if (key === 'none of the above' || /^(no)\b/.test(key)) return 'no';
+  if (/^(yes)\b/.test(key)) return 'yes';
+  return 'ambiguous';
+}
+
+export function isSanctionsFollowUp(question = '') {
+  return /selected a response to the prior question|other than.{0,80}(?:none of the above|none\s*\/?\s*not applicable)|checked any of the boxes above other than|immigration and residency status/i.test(question);
+}
+
+export function restrictedCountryStoredAnswer(answers = {}) {
+  const hits = [];
+  for (const [key, entry] of Object.entries(answers)) {
+    if (!entry?.answer || entry.answerType === 'textarea') continue;
+    const norm = normalizeKey(key);
+    if (!RESTRICTED_COUNTRY.test(norm) && !SANCTIONS_EXPORT.test(norm)) continue;
+    hits.push(entry);
+  }
+  const polarities = new Set(hits.map(item => sanctionsPolarity(item.answer)));
+  if (polarities.size !== 1 || !polarities.has('no')) return null;
+  return hits[0];
+}
+
+function uniqueOption(options, predicate) {
+  const hits = (Array.isArray(options) ? options : []).filter(option => predicate(optionText(option)));
+  return hits.length === 1 ? optionText(hits[0]) : null;
+}
+
+function uniqueNoneLikeOption(options) {
+  return uniqueOption(options, text => {
+    const key = normalizeKey(text);
+    if (!key) return false;
+    if (key === 'none of the above' || key === 'none not applicable' || key === 'none/not applicable') return true;
+    return /^none\b/.test(key) && /\bnot applicable\b/.test(key) && key.length < 48;
+  });
+}
+
+const EMBARGOED_CITIZENSHIP = /\bcuba\b|\biran\b|\bnorth korea\b|\bsyria\b|\bcrimea\b|\bdonetsk\b|\bluhansk\b/;
+
+/**
+ * Map a stored restricted-country No onto Greenhouse select-all options.
+ * Yes, missing, or mixed bank readings return null.
+ */
+export function mapSanctionsChoice(question, options, storedAnswer, profile = {}) {
+  if (sanctionsPolarity(storedAnswer) !== 'no' || !Array.isArray(options) || options.length === 0) return null;
+  const q = String(question || '');
+  if (isSanctionsFollowUp(q)) {
+    const citizenship = String(profile.identity?.citizenship || profile.citizenship || '').trim();
+    if (citizenship && !EMBARGOED_CITIZENSHIP.test(normalizeKey(citizenship))) {
+      const otherCountry = uniqueOption(options, text =>
+        /citizen or legal permanent resident of a different country/i.test(text));
+      if (otherCountry) return otherCountry;
+    }
+    const priorNone = uniqueOption(options, text =>
+      /not applicable/i.test(text) && /none of the above|prior question/i.test(text));
+    if (priorNone) return priorNone;
+    return uniqueOption(options, text => /^not applicable\b/i.test(text.trim()));
+  }
+  const blob = normalizeKey([q, ...options.map(optionText)].join(' '));
+  if (!RESTRICTED_COUNTRY.test(blob) && !SANCTIONS_EXPORT.test(blob)) return null;
+  return uniqueNoneLikeOption(options);
+}
+
+/** Fill the export-control country box once the embargoed-list answer is No. */
+export function exportControlCountryAnswer(question = '', { citizenship = '', storedRestrictedNo = false } = {}) {
+  if (!storedRestrictedNo) return null;
+  const q = String(question || '');
+  if (!/indicate the applicable country|type n\/a if not applicable/i.test(q)) return null;
+  if (!/citizen or legal permanent resident of a different country|reside in a different country/i.test(q)) return null;
+  const country = String(citizenship || '').trim();
+  if (country && !EMBARGOED_CITIZENSHIP.test(normalizeKey(country))) return country;
+  return 'N/A';
+}
+
+/**
+ * ITAR / EAR "U.S. Person" is citizenship, green card, or asylee/refugee.
+ * It is not the Cuba/Iran sanctions checkbox.
+ */
+export function usPersonExportAnswer(question = '', options = [], { usPerson = false } = {}) {
+  const q = String(question || '');
+  if (/\bexplain\b|\bplease describe\b|\badditional (?:information|comments)\b/i.test(q)) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  const blob = `${q}\n${items.join('\n')}`;
+  if (!/export compliance|u\.?s\.? person|united states person|\bitar\b/i.test(blob)) return null;
+  const yes = items.filter(text => /\bi am currently a\b/i.test(text) && /u\.?s\.? person/i.test(text) && !/\bnot a\b/i.test(text));
+  const no = items.filter(text => /\bnot a\b/i.test(text) && /u\.?s\.? person/i.test(text));
+  if (usPerson) {
+    if (yes.length === 1) return yes[0];
+    return items.length ? null : 'Yes';
+  }
+  if (no.length === 1) return no[0];
+  return items.length ? null : 'No';
+}
+
+function storedConceptPolarity(answers = {}, conceptId) {
+  const distinct = new Set();
+  let first = null;
+  for (const [key, entry] of Object.entries(answers || {})) {
+    if (!entry?.answer || entry.answerType === 'textarea') continue;
+    if (conceptOf(key) !== conceptId) continue;
+    const answer = String(entry.answer).trim().toLowerCase();
+    if (!YES_NO.test(answer)) continue;
+    distinct.add(answer);
+    if (!first) first = answer;
+  }
+  return distinct.size === 1 ? first : null;
+}
+
+/**
+ * SpaceX-style status lists are not Yes/No. A stored authorized-Yes must never
+ * land on "any employer"; F-1 plus sponsorship-Yes is "I require sponsorship".
+ */
+export function workAuthorizationStatusAnswer(question = '', options = [], answers = {}, { usPerson = false } = {}) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (/\bwithout sponsorship\b/.test(key)) return null;
+  if (/\bexplain\b|\bplease describe\b/.test(key)) return null;
+  if (!/\bauthoriz|\beligible to work|\blegally (?:work|authorized)/.test(key)) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  const anyEmployer = items.filter(text => /\b(?:any|all) employers?\b/i.test(text) && /\bauthoriz/i.test(text));
+  const sponsorship = items.filter(text => /\brequire sponsorship\b/i.test(text));
+  if (!anyEmployer.length && !sponsorship.length) return null;
+  const needsSponsorship = storedConceptPolarity(answers, 'sponsorship') === 'yes';
+  if (usPerson && !needsSponsorship && anyEmployer.length === 1) return anyEmployer[0];
+  if (needsSponsorship && sponsorship.length === 1) return sponsorship[0];
+  return null;
+}
+
+/**
+ * ITAR "Citizenship Status" is citizen / LPR / asylee / Other, not a country.
+ * Indian citizenship and usPerson No map onto the unique Other option.
+ */
+export function citizenshipStatusAnswer(question = '', options = [], { citizenship = '', usPerson = false } = {}) {
+  const key = normalizeKey(question);
+  if (!key || /\bcountry of citizenship\b/.test(key)) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  const looksLikeStatus = items.some(text => /u\.?s\.? citizen|lawful permanent resident|asylee|refugee|\bdaca\b/i.test(text));
+  if (!looksLikeStatus) return null;
+  if (!/\bcitizenship\b/.test(key) && !/\bcitizen or national\b/.test(key)) return null;
+  if (usPerson) {
+    return uniqueOption(items, text => /u\.?s\.? citizen or national/i.test(text)
+      || (/u\.?s\.? citizen/i.test(text) && !/permanent resident/i.test(text)));
+  }
+  const country = normalizeKey(citizenship);
+  if (country && /united states|u s a|usa/.test(country)) {
+    return uniqueOption(items, text => /u\.?s\.? citizen/i.test(text) && !/permanent resident/i.test(text));
+  }
+  return uniqueOption(items, text => /\bother\b/i.test(text)
+    && !/u\.?s\.? citizen|permanent resident|asylee|refugee|\bdaca\b/i.test(text));
+}
+
+/** Short fact for an ITAR "Other, please explain" follow-up. */
+export function citizenshipOtherExplainAnswer(question = '', { citizenship = '', usPerson = false } = {}) {
+  const key = normalizeKey(question);
+  if (!key || usPerson) return null;
+  if (!/\bexplain\b/.test(key) && !/\bplease specify\b/.test(key)) return null;
+  if (!/\bother\b/.test(key) && !/\bcitizenship\b/.test(key)) return null;
+  const country = String(citizenship || '').trim();
+  if (!country) return null;
+  return `${country} citizen, F-1 student visa`;
+}
+
+/** Never held a US clearance. Do not pick "do not wish to disclose" when never-held exists. */
+export function securityClearanceAnswer(question = '', options = []) {
+  const key = normalizeKey(question);
+  if (!/\b(?:security )?clearance/.test(key)) return null;
+  if (/\bexplain\b|\bplease describe\b/.test(key)) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  const neverHeld = uniqueOption(items, text => {
+    const optionKey = normalizeKey(text);
+    if (/\bwish to disclose\b/.test(optionKey)) return false;
+    if (/\b(?:top secret|secret|confidential|polygraph|public trust|doe level|ts\/sci)\b/.test(optionKey)
+        && !/\bnever\b/.test(optionKey)) {
+      return false;
+    }
+    return /\bnever held\b/.test(optionKey) || /\bno clearance\b/.test(optionKey);
+  });
+  if (neverHeld) return neverHeld;
+  return uniqueOption(items, text => /^(?:none|no|n\/a|not applicable)$/.test(normalizeKey(text)));
+}
+
+/**
+ * "SpaceX & SpaceXAI Employment History" and similar named-employer prompts.
+ * Inventing employment at the named company is not allowed.
+ */
+export function namedEmployerHistoryAnswer(question = '', options = [], work = []) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (!/\bemployment history\b/.test(key) && !/\bpreviously worked\b/.test(key) && !/\bworked for\b/.test(key)) {
+    return null;
+  }
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  const haystack = normalizeKey([question, ...items].join(' '));
+  const employers = (Array.isArray(work) ? work : [])
+    .map(entry => normalizeKey(typeof entry === 'string' ? entry : entry?.company))
+    .filter(Boolean);
+  const overlap = employers.some((employer) => {
+    const tokens = [...tokenize(employer)].filter(token => token.length >= 4);
+    return tokens.some(token => haystack.includes(token));
+  });
+  if (overlap) return null;
+  return uniqueOption(items, text => {
+    const optionKey = normalizeKey(text);
+    return /\bnever worked\b/.test(optionKey) || /\bhave never\b/.test(optionKey);
+  });
+}
+
+function namedOrgTokensOverlap(question, work = []) {
+  const haystack = normalizeKey(question);
+  const employers = (Array.isArray(work) ? work : [])
+    .map(entry => normalizeKey(typeof entry === 'string' ? entry : entry?.company))
+    .filter(Boolean);
+  return employers.some((employer) => {
+    const tokens = [...tokenize(employer)].filter(token => token.length >= 4);
+    return tokens.some(token => haystack.includes(token));
+  });
+}
+
+/**
+ * "Are you currently employed at an NISC Member site?" is not generic
+ * employment status. Inventing a Yes for a named employer is not allowed.
+ */
+export function currentlyEmployedAtNamedOrgAnswer(question = '', options = [], work = []) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (!/\bcurrently (?:employed|working|work)\b/.test(key) && !/\bcurrent employee\b/.test(key)) return null;
+  if (!/\b(?:at|for|with|of)\b/.test(key) && !/\bmember site\b/.test(key)) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  if (namedOrgTokensOverlap(question, work)) return null;
+  return uniqueOption(items, text => /^(no)\b/.test(normalizeKey(text)));
+}
+
+function workHistoryBlob(work = []) {
+  return (Array.isArray(work) ? work : [])
+    .map(entry => (typeof entry === 'string' ? entry : `${entry?.company || ''} ${entry?.title || ''}`))
+    .join(' ');
+}
+
+function workLooksUsGovernmental(work = []) {
+  const key = normalizeKey(workHistoryBlob(work));
+  if (!key) return false;
+  return /\b(?:united states|u s )?(?:government|congress|military|army|navy|air force|marine corps|space force|coast guard|national guard|amtrak|postal service|usaid)\b/.test(key)
+    || /\bdepartment of (?:defense|energy|state|justice|homeland|commerce|labor|education|veterans)\b/.test(key);
+}
+
+function workLooksUsMilitaryService(work = []) {
+  const key = normalizeKey(workHistoryBlob(work));
+  if (!key) return false;
+  return /\b(?:united states|u s )?(?:military|army|navy|air force|marine corps|space force|coast guard|national guard)\b/.test(key)
+    || /\b(?:army|navy|air force|marine) reserves?\b/.test(key);
+}
+
+/**
+ * US Reserves / National Guard service while employed. Never invent Yes.
+ */
+export function militaryReserveOrGuardAnswer(question = '', options = [], work = []) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  const namedService = /\bnational guard\b/.test(key)
+    || (/\breserves?\b/.test(key) && /\b(?:military|national guard|enlisted|armed forces|serving)\b/.test(key))
+    || (/\benlisted personnel\b/.test(key) && /\b(?:reserve|guard|military)\b/.test(key));
+  if (!namedService) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  if (workLooksUsMilitaryService(work)) return null;
+  return uniqueOption(items, text => /^(no)\b/.test(normalizeKey(text)));
+}
+
+/**
+ * Current or past US / state / local government employment. Never invent Yes.
+ */
+export function usGovernmentEmploymentAnswer(question = '', options = [], work = []) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (/\bnational guard\b/.test(key) || (/\breserves?\b/.test(key) && /\benlisted\b/.test(key))) return null;
+  if (!/\b(?:u s |united states |federal |state or local )?government\b/.test(key)
+      && !/\b(?:u s |united states )?congress\b/.test(key)) {
+    return null;
+  }
+  if (!/\b(?:employee|employed|employment|worked for)\b/.test(key)) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  if (workLooksUsGovernmental(work)) return null;
+  return uniqueOption(items, text => /^(no)\b/.test(normalizeKey(text)));
+}
+
+/**
+ * Relatives or close relationships who work at the named employer. Stored No
+ * is reused; Yes is never invented.
+ */
+export function relativesAtNamedOrgAnswer(question = '', options = [], answers = {}) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (!/\b(?:relatives?|family members?|close relationships?)\b/.test(key)) return null;
+  if (!/\b(?:employ|employed|work(?:ing)? (?:at|for|with)|who work)\b/.test(key)) return null;
+  if (/\bemergency contact\b/.test(key) || /\breference\b/.test(key)) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  const stored = findAnswer(key, answers)?.entry?.answer
+    || findAnswer(
+      normalizeKey('Do you have any relatives or family members currently employed at this company?'),
+      answers,
+    )?.entry?.answer;
+  if (stored && /^(yes)\b/.test(normalizeKey(stored))) {
+    const yes = matchOption(stored, items);
+    return yes ? optionText(yes) : null;
+  }
+  return uniqueOption(items, text => /^(no)\b/.test(normalizeKey(text)));
+}
+
+/**
+ * Required accuracy attestation ("Affirmation" / I certify the application)
+ * and ordinary recruiting privacy-notice acknowledgements. Unique I agree /
+ * I certify / Acknowledged only. Marketing consent stays untouched.
+ */
+export function applicationAffirmationAnswer(question = '', options = []) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (/(?:marketing|talent community|job alerts?|newsletters?|sms|text message|contact you about job opportunit)/.test(key)) return null;
+  if (isOtpVerificationQuestion(question)) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  const privacyNotice = /\bprivacy notice\b/.test(key)
+    || (/\b(?:handle|process(?:ing)?)\b/.test(key) && /\b(?:data|personal information)\b/.test(key) && /\brecruit/.test(key));
+  if (privacyNotice) {
+    return uniqueOption(items, text => /^(?:acknowledged|i acknowledge|i agree|agree)$/.test(normalizeKey(text)));
+  }
+  const labeled = /^(?:affirmation|acknowledgement|acknowledgment)$/.test(key)
+    || (
+      /\b(?:i (?:certify|affirm|attest|acknowledge)|certify that|affirm that)\b/.test(key)
+      && /\b(?:information|application|accuracy|foregoing|true and complete|above is true)\b/.test(key)
+    );
+  if (!labeled) return null;
+  return uniqueOption(items, text => /^(?:i (?:agree|certify|acknowledge|attest)|agree|yes|acknowledged)$/.test(normalizeKey(text)));
+}
+
+function educationRank(entry = {}) {
+  const blob = `${entry.degree || ''} ${entry.degreeRaw || ''} ${entry.degreeOption || ''}`.toLowerCase();
+  if (/ph\.?d|doctor/.test(blob)) return 5;
+  if (/master/.test(blob)) return 4;
+  if (/bachelor|b\.?\s*tech|\bb\.s\b/.test(blob)) return 3;
+  if (/associate/.test(blob)) return 2;
+  if (/high school/.test(blob)) return 1;
+  return 0;
+}
+
+/**
+ * Highest completed credential, never an in-progress degree. A current master's
+ * therefore maps onto the finished bachelor's option, including "Masters's".
+ */
+export function completedEducationLevelAnswer(question = '', options = [], education = []) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (!/\beducation\b/.test(key) && !/\bdegree\b/.test(key)) return null;
+  if (!/\b(?:most recently completed|completed form of education|highest (?:completed )?(?:level|form) of education|highest degree (?:earned|completed|obtained)|highest completed)\b/.test(key)
+      && !(/\bmost recent/.test(key) && /\bcompleted\b/.test(key))) {
+    return null;
+  }
+  const completed = (Array.isArray(education) ? education : [])
+    .filter(entry => entry && entry.current !== true);
+  if (!completed.length) return null;
+  const top = [...completed].sort((left, right) => educationRank(right) - educationRank(left))[0];
+  const label = String(top.degreeOption || `${top.degree || ''} Degree`).trim();
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return label || null;
+  const matched = matchOption(label, items) || matchOption(top.degree, items);
+  if (matched) return optionText(matched);
+  const blob = `${top.degree || ''} ${top.degreeRaw || ''} ${top.degreeOption || ''}`.toLowerCase();
+  const degreeWord = /master/.test(blob) ? /masters?/
+    : /bachelor|b\.?\s*tech|\bb\.s\b/.test(blob) ? /bachelors?/
+      : /associate/.test(blob) ? /associates?/
+        : /high school/.test(blob) ? /high school/
+          : null;
+  if (!degreeWord) return null;
+  return uniqueOption(items, text => degreeWord.test(normalizeKey(text)));
+}
+
+function willRelocateFromAnswer(relocateAnswer) {
+  const polar = normalizeKey(relocateAnswer);
+  return /^yes\b/.test(polar) || /\bwilling to relocate\b/.test(polar);
+}
+
+function officeLocationOptions(options = []) {
+  return (Array.isArray(options) ? options : []).map(option => {
+    const text = optionText(option);
+    return { option, text, key: normalizeKey(text) };
+  }).filter(item => item.text && /,\s*[A-Z]{2}\s*$/.test(item.text));
+}
+
+function remoteLocationOptions(options = []) {
+  return (Array.isArray(options) ? options : []).map(option => {
+    const text = optionText(option);
+    return { option, text, key: normalizeKey(text) };
+  }).filter(item => item.text && /\bremot/.test(item.key) && !/\boffice\b/.test(item.key));
+}
+
+function relocationChoiceKind(text) {
+  const raw = String(text || '').trim();
+  const key = normalizeKey(raw);
+  if (!key) return 'other';
+  if (/^(no)\b/.test(key) && /\bremote\b/.test(key)) return 'remote-no';
+  if (/^(no)\b/.test(key)) return 'no';
+  if (/^(yes)\b/.test(key)) return 'yes';
+  if (/\bremote\b/.test(key) && !/,\s*[A-Z]{2}\s*$/.test(raw)) return 'remote';
+  return 'office';
+}
+
+/**
+ * "Are you open to relocation?" can be Yes/No or a list of offices plus No.
+ * Relocate-yes selects every named office. Polar Yes is used only when that
+ * is the unique option. Remote-only / No stay unselected.
+ */
+export function relocationPreferenceAnswer(question = '', options = [], { relocateAnswer } = {}) {
+  const key = normalizeKey(question);
+  if (!key || !/\brelocat/.test(key)) return null;
+  if (/\bcommuting distance\b/.test(key) || /\blocal to\b/.test(key)) return null;
+  const willRelocate = willRelocateFromAnswer(relocateAnswer);
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  const offices = items.filter(text => relocationChoiceKind(text) === 'office');
+  if (offices.length) {
+    if (!willRelocate) return uniqueOption(items, text => relocationChoiceKind(text) === 'no');
+    return joinMulti(offices);
+  }
+  if (willRelocate) return uniqueOption(items, text => relocationChoiceKind(text) === 'yes');
+  return uniqueOption(items, text => relocationChoiceKind(text) === 'no');
+}
+
+/**
+ * Required future-opportunity / marketing prompts may be completed with unique
+ * No. Voluntary opt-ins stay blank.
+ */
+export function futureOpportunityDeclineAnswer(question = '', options = []) {
+  const blob = `${question} ${(Array.isArray(options) ? options : []).map(option => optionText(option)).join(' ')}`;
+  if (!/(?:marketing|talent (?:community|network|pool)|future (?:job|career|employment|opportunit)|future opportunit|job alerts?|newsletters?|promotional|keep (?:me )?informed)/i.test(blob)) {
+    return null;
+  }
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return 'No';
+  return uniqueOption(items, text => {
+    const optionKey = normalizeKey(text);
+    return /^(no)\b/.test(optionKey) && !/\b(?:yes|keep me informed|job alerts?|sign me up|subscribe)\b/.test(optionKey);
+  });
+}
+
+/**
+ * Office-or-remote "select all that apply" lists. Relocate-yes selects every
+ * named office. Remote is only chosen when no office applies.
+ */
+export function workLocationInterestAnswer(question = '', options = [], { location = {}, relocateAnswer } = {}) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (!/\blocations? (?:are you interested|would you (?:like|prefer) to work|interested in working)\b/.test(key)
+      && !(/\bselect all that apply\b/.test(key) && /\b(?:location|office|working from|work from)\b/.test(key))
+      && !/\bwhere (?:would|do) you (?:like|prefer|want) to work\b/.test(key)) {
+    return null;
+  }
+  const offices = officeLocationOptions(options);
+  const remote = remoteLocationOptions(options);
+  if (!offices.length && !remote.length) return null;
+  const localOffices = offices.filter(item => livesNearNamedHubs(location, item.text));
+  const relocate = willRelocateFromAnswer(relocateAnswer);
+  let selected = [];
+  if (localOffices.length) selected = localOffices;
+  else if (relocate && offices.length) selected = offices;
+  else if (remote.length === 1) selected = remote;
+  if (!selected.length) return null;
+  return joinMulti(selected.map(item => item.text));
+}
+
+/**
+ * Follow-up to a remote checkbox. Relocate-yes plus an office-intent option
+ * means the candidate will work from an employer office, not a US state.
+ */
+export function remoteWorkStateAnswer(question = '', options = [], { location = {}, relocateAnswer } = {}) {
+  const key = normalizeKey(question);
+  if (!key || !/\bstate\b/.test(key) || !/\bremot/.test(key)) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return null;
+  const officeIntent = uniqueOption(items, text =>
+    /\bwork in (?:an? )?(?:\w+ )?office\b/i.test(text) || /\bnot remote\b/i.test(text));
+  if (officeIntent && willRelocateFromAnswer(relocateAnswer)) return officeIntent;
+  const stateHit = matchOption(location.state, items) || matchOption(location.stateAbbr, items);
+  if (stateHit) return optionText(stateHit);
+  return uniqueOption(items, text => /\bnot located in the united states\b/.test(normalizeKey(text)));
+}
+
+/** Stored travel-percentage band. Interview-travel Yes is a different question. */
+export function travelPercentageAnswer(question = '', options = [], answers = {}) {
+  const key = normalizeKey(question);
+  if (!key || /\binterview\b/.test(key)) return null;
+  if (!/\bpercent/.test(key) && !(/\bwilling to travel\b/.test(key) && /\btime\b/.test(key))) return null;
+  const stored = findAnswer(key, answers)?.entry?.answer;
+  if (!stored) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return stored;
+  const matched = matchOption(stored, items);
+  return matched ? optionText(matched) : null;
+}
+
+/** First-day / operational SMS opt-in. OTP codes stay ephemeral. */
+export function operationalSmsOptInAnswer(question = '', options = [], answers = {}) {
+  const key = normalizeKey(question);
+  if (!key || isOtpVerificationQuestion(question)) return null;
+  if (!/\b(?:sms|text message)\b/.test(key)) return null;
+  const stored = findAnswer(key, answers)?.entry?.answer
+    || findAnswer(normalizeKey('Would you like to receive information via text message/SMS?'), answers)?.entry?.answer;
+  if (!stored) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (!items.length) return stored;
+  const matched = matchOption(stored, items);
+  return matched ? optionText(matched) : null;
+}
+
+function salaryAmounts(text) {
+  const raw = String(text || '');
+  const amounts = [];
+  for (const match of raw.matchAll(/\$?\s*(\d{1,3}(?:,\d{3}){1,2}|\d{4,7})(?:\.\d{2})?/g)) {
+    amounts.push(Number(match[1].replace(/,/g, '')));
+  }
+  for (const match of raw.matchAll(/\b(\d{2,3})\s*k\b/gi)) {
+    amounts.push(Number(match[1]) * 1000);
+  }
+  return [...new Set(amounts.filter(number => Number.isFinite(number) && number > 0))];
+}
+
+function parseSalaryBand(text) {
+  const compact = String(text || '').toLowerCase().replace(/[$,\s]/g, '');
+  if (!compact) return null;
+  const less = compact.match(/^(?:lessthan|under|below|upto)(\d+)k$/);
+  if (less) return { min: 0, max: Number(less[1]) * 1000 };
+  const plus = compact.match(/^(\d+)k(?:\+|ormore|andabove)$/);
+  if (plus) return { min: Number(plus[1]) * 1000, max: Number.POSITIVE_INFINITY };
+  const range = compact.match(/^(\d+)-(\d+)k$/);
+  if (range) {
+    const min = Number(range[1]) * 1000;
+    const max = Number(range[2]) * 1000;
+    if (min <= max) return { min, max };
+  }
+  return null;
+}
+
+/** Map $125,000 onto the unique "121-130K" band. Abstain when two bands fit. */
+export function matchSalaryBand(answerText, options = []) {
+  const amounts = salaryAmounts(answerText);
+  if (!amounts.length) return null;
+  const value = amounts.length >= 2 ? (amounts[0] + amounts[1]) / 2 : amounts[0];
+  const hits = (Array.isArray(options) ? options : []).filter(option => {
+    const band = parseSalaryBand(optionText(option));
+    return Boolean(band) && value >= band.min && value <= band.max;
+  });
+  return hits.length === 1 ? hits[0] : null;
+}
+
+export function alignSalaryAnswerToOptions(value, options = []) {
+  const text = String(value || '').trim();
+  if (!text || !Array.isArray(options) || !options.length) return text;
+  const mapped = matchOption(text, options);
+  return mapped ? optionText(mapped) : text;
+}
+
+/** True when a committed widget still holds the value we asked it to keep. */
+export function filledValueMatches(actual, requested) {
+  const shown = String(actual || '').trim();
+  const wanted = String(requested || '').trim();
+  if (!shown || !wanted) return false;
+  if (shown === wanted) return true;
+  if (normalizeKey(shown) === normalizeKey(wanted)) return true;
+  if (matchOption(wanted, [shown]) || matchOption(shown, [wanted])) return true;
+  const shownBand = parseSalaryBand(shown);
+  const wantedBand = parseSalaryBand(wanted);
+  if (shownBand && wantedBand && shownBand.min === wantedBand.min && shownBand.max === wantedBand.max) {
+    return true;
+  }
+  return Boolean(matchSalaryBand(wanted, [shown]) || matchSalaryBand(shown, [wanted]));
+}
+
+function gpaQuestionLevel(question = '') {
+  const key = normalizeKey(question);
+  if (!/\b(?:gpa|cgpa|grade point average)\b/.test(key)) return null;
+  if (/\b(?:high school|secondary)\b/.test(key)) return 'high-school';
+  if (/\b(?:doctorate|doctoral|phd|ph d)\b/.test(key)) return 'doctorate';
+  if (/\b(?:undergrad|undergraduate|bachelor|bachelors)\b/.test(key)) return 'bachelor';
+  if (/\b(?:graduate|masters?)\b/.test(key)) return 'master';
+  return null;
+}
+
+function educationForGpaLevel(education = [], level) {
+  const entries = Array.isArray(education) ? education : [];
+  const blob = entry => `${entry?.degree || ''} ${entry?.degreeRaw || ''} ${entry?.degreeOption || ''}`;
+  if (level === 'bachelor') return entries.find(entry => /bachelor|b\.?\s*tech|b\.s/i.test(blob(entry))) || null;
+  if (level === 'master') return entries.find(entry => /master|m\.s|mism/i.test(blob(entry))) || null;
+  if (level === 'doctorate') return entries.find(entry => /ph\.?d|doctor/i.test(blob(entry))) || null;
+  return null;
+}
+
+function uniqueNotApplicableScore(options) {
+  return uniqueOption(options, text => {
+    const key = normalizeKey(text);
+    return /\bnot applicable\b/.test(key) || /\bdo not recall\b/.test(key);
+  });
+}
+
+function uniqueDidNotTakeOption(options) {
+  const hits = (Array.isArray(options) ? options : [])
+    .map(option => optionText(option))
+    .filter((text) => {
+      const key = normalizeKey(text);
+      if (/\bout of\b/.test(key)) return false;
+      return /\bdid not take\b/.test(key) || /\bdo not recall\b/.test(key) || /\bnot applicable\b/.test(key);
+    });
+  if (hits.length === 1) return hits[0];
+  const primary = hits.filter(text => !/\bother\b/.test(normalizeKey(text)));
+  return primary.length === 1 ? primary[0] : null;
+}
+
+/**
+ * Degree-scoped GPA. Undergraduate uses the bachelor's record, graduate the
+ * master's, doctorate N/A when no PhD exists. Never copies the current GPA
+ * onto a different degree.
+ */
+export function degreeGpaAnswer(question = '', options = [], education = []) {
+  const level = gpaQuestionLevel(question);
+  if (!level || level === 'high-school') return null;
+  const items = Array.isArray(options) ? options : [];
+  const entry = educationForGpaLevel(education, level);
+  if (!entry?.gpa) {
+    return level === 'doctorate' || !entry ? uniqueNotApplicableScore(items) : null;
+  }
+  if (!items.length) return String(entry.gpa);
+  const tenth = matchGpaTenth(entry.gpa, items);
+  if (tenth) return optionText(tenth);
+  const band = matchGpaBand(entry.gpa, items);
+  return band ? optionText(band) : null;
+}
+
+/** SAT / ACT / GRE / GMAT. No stored score means the unique did-not-take option. */
+export function standardizedTestAnswer(question = '', options = []) {
+  const key = normalizeKey(question);
+  if (!/^(?:sat|act|gre|gmat)(?: score)?$/.test(key) && !/\b(?:sat|act|gre|gmat) score\b/.test(key)) {
+    return null;
+  }
+  return uniqueDidNotTakeOption(options);
+}
+
+/**
+ * "With or without reasonable accommodations" contains "without", which the
+ * concept matcher treats as a negation. Fill from the stored Yes instead.
+ */
+export function essentialFunctionsAnswer(question = '', options = [], answers = {}) {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (!/\b(?:can|able)\b/.test(key) || !/\bessential (?:functions?|duties|job duties)\b/.test(key)) return null;
+  if (/\bdescribe\b|\bplease explain\b|\bwhat accommodation/.test(key)) return null;
+  const votes = [];
+  for (const [ansKey, entry] of Object.entries(answers || {})) {
+    if (!entry?.answer || entry.answerType === 'textarea') continue;
+    if (!/\bessential (?:functions?|duties|job duties)\b/.test(ansKey)) continue;
+    if (!/\b(?:can|able|perform)\b/.test(ansKey)) continue;
+    const answer = String(entry.answer).trim().toLowerCase();
+    if (YES_NO.test(answer)) votes.push(answer);
+  }
+  if (new Set(votes).size !== 1 || votes[0] !== 'yes') return null;
+  const wanted = 'Yes';
+  if (!Array.isArray(options) || options.length === 0) return wanted;
+  const mapped = matchOption(wanted, options);
+  return mapped ? optionText(mapped) : wanted;
+}
+
+/** Current F-1 OPT/CPT only. "Now or in the future" stays a different question. */
+export function f1OptCptCurrentAnswer(question = '', options = [], stored = '') {
+  const key = normalizeKey(question);
+  if (!key) return null;
+  if (!/\bcurrently\b/.test(key)) return null;
+  if (/\bin the future\b/.test(key)) return null;
+  if (/\bexplain\b|\bplease describe\b|\badditional (?:information|comments)\b/.test(key)) return null;
+  if (!/\b(?:f1|f 1)\b/.test(key) || !/\b(?:opt|cpt)\b/.test(key)) return null;
+  const polar = normalizeKey(stored);
+  if (!/^(yes|no)$/.test(polar)) return null;
+  const wanted = polar === 'yes' ? 'Yes' : 'No';
+  if (!Array.isArray(options) || options.length === 0) return wanted;
+  const mapped = matchOption(wanted, options);
+  return mapped ? optionText(mapped) : wanted;
+}
+
+const NAMED_SCHOOL_AFFILIATION = /(?:currently attending or (?:a )?recent graduate of|currently attending|enrolled at|student (?:at|of)|(?:a )?recent graduate of|graduate of|alumni of|alumnus of|alum of)\s+(.+)$/i;
+const GENERIC_SCHOOL = /^(?:a |an |the )?(?:college|university|school|institution|high school)\??$/i;
+const SCHOOL_STOPWORDS = new Set(['university', 'college', 'institute', 'institution', 'technology', 'the', 'and']);
+const SCHOOL_ALIASES = Object.freeze({
+  'georgia tech': ['georgia institute of technology', 'gatech'],
+  'georgia institute of technology': ['georgia tech', 'gatech'],
+  cmu: ['carnegie mellon university', 'carnegie mellon'],
+  'carnegie mellon': ['carnegie mellon university', 'cmu'],
+  'carnegie mellon university': ['cmu', 'carnegie mellon'],
+  vit: ['vellore institute of technology'],
+  'vellore institute of technology': ['vit'],
+});
+
+export function extractNamedSchool(question = '') {
+  const text = String(question || '').replace(/[?]+$/g, '').trim();
+  const match = NAMED_SCHOOL_AFFILIATION.exec(text);
+  if (!match) return null;
+  const school = match[1].replace(/\s*\([^)]*\)\s*$/, '').trim();
+  if (!school || GENERIC_SCHOOL.test(school) || school.length < 3) return null;
+  return school;
+}
+
+function schoolNameKeys(name) {
+  const key = normalizeKey(name);
+  return new Set([key, ...(SCHOOL_ALIASES[key] || []).map(normalizeKey)]);
+}
+
+function distinctiveSchoolTokens(name) {
+  return [...tokenize(normalizeKey(name))].filter(token => !SCHOOL_STOPWORDS.has(token));
+}
+
+/**
+ * Yes/No for "are you a student/graduate of X". Uses profile education only.
+ * A named school that is not on the record is No; inventing attendance is not
+ * allowed. Abstains when the question is not this shape or education is empty.
+ */
+export function namedSchoolAffiliationAnswer(question = '', education = []) {
+  const asked = extractNamedSchool(question);
+  if (!asked) return null;
+  const schools = (Array.isArray(education) ? education : [])
+    .map(entry => (typeof entry === 'string' ? entry : entry?.school))
+    .filter(Boolean);
+  if (!schools.length) return null;
+  const askedKey = normalizeKey(asked);
+  const attended = schools.some(school => {
+    const have = schoolNameKeys(school);
+    if (have.has(askedKey)) return true;
+    for (const alias of schoolNameKeys(asked)) {
+      if (have.has(alias)) return true;
+    }
+    const askedTokens = distinctiveSchoolTokens(asked);
+    const haveTokens = distinctiveSchoolTokens(school);
+    if (!askedTokens.length || !haveTokens.length) return false;
+    return askedTokens.every(token => haveTokens.includes(token));
+  });
+  return attended ? 'Yes' : 'No';
+}
+
+const CAREER_FAIR_CONTACT = /\bwho did you (?:meet|speak with|talk (?:to|with)|connect with)\b/i;
+const CAREER_FAIR_EVENT = /\b(?:career fair|careers? fair|info session|campus event|recruiting event|booth)\b/i;
+
+/** Candidate-authorized default for recruiter-name prompts at a fair or booth. */
+export function careerFairContactAnswer(question = '') {
+  const text = String(question || '');
+  if (!CAREER_FAIR_CONTACT.test(text) || !CAREER_FAIR_EVENT.test(text)) return null;
+  return 'N/A';
+}
+
+const GRADUATION_SEASON = /\bgraduat(?:ing|e|ion)\b[\s\S]{0,48}\b(spring|summer|fall|autumn|winter)\s+(?:of\s+)?(20\d{2})\b/i;
+const GRADUATION_YEAR = /\bgraduat(?:ing|e|ion)\b[\s\S]{0,48}\b(20\d{2})\b/i;
+const GRADUATION_DATE_WIDGET = /\b(?:date|month|when)\b/i;
+const SEASON_MONTHS = {
+  spring: [3, 5],
+  summer: [5, 8],
+  fall: [9, 11],
+  autumn: [9, 11],
+  winter: [12, 2],
+};
+
+function parseEducationEnd(education = []) {
+  const entries = Array.isArray(education) ? education : [];
+  const current = entries.find(entry => entry?.current) || entries[0];
+  const stamp = String(current?.endMonth || '');
+  const match = /^(\d{4})-(\d{2})$/.exec(stamp);
+  if (!match) return null;
+  return { year: Number(match[1]), month: Number(match[2]) };
+}
+
+function monthMatchesSeason(month, year, season, askedYear) {
+  if (season === 'winter') {
+    if (month === 12) return year === askedYear;
+    if (month === 1 || month === 2) return year === askedYear;
+    return false;
+  }
+  const range = SEASON_MONTHS[season];
+  if (!range) return false;
+  return year === askedYear && month >= range[0] && month <= range[1];
+}
+
+/**
+ * Yes/No for "are you graduating Summer of 2027". Uses the current education
+ * end month. Inventing a later cohort to pass a new-grad screen is not allowed.
+ */
+export function graduationSeasonAnswer(question = '', education = []) {
+  const text = String(question || '');
+  if (!/\bgraduat(?:ing|e|ion)\b/i.test(text)) return null;
+  if (/\bclass of\b|\bcohort\b/i.test(text)) return null;
+  const end = parseEducationEnd(education);
+  if (!end) return null;
+  const seasonHit = GRADUATION_SEASON.exec(text);
+  if (seasonHit) {
+    return monthMatchesSeason(end.month, end.year, seasonHit[1].toLowerCase(), Number(seasonHit[2]))
+      ? 'Yes'
+      : 'No';
+  }
+  if (GRADUATION_DATE_WIDGET.test(text)) return null;
+  const yearHit = GRADUATION_YEAR.exec(text);
+  if (!yearHit) return null;
+  return end.year === Number(yearHit[1]) ? 'Yes' : 'No';
+}
+
+export function isGraduationDateQuestion(question = '') {
+  const key = normalizeKey(question);
+  if (!key) return false;
+  if (isStartAvailabilityQuestion(question)) return false;
+  if (/\b(?:undergrad|undergraduate|bachelor|high school|secondary)\b/.test(key)
+      && !/\b(?:master|current (?:degree|program))\b/.test(key)) {
+    return false;
+  }
+  if (/\bclass of\b|\bcohort\b/.test(key)) return false;
+  if (/\b(?:employment|employer|work history|previous employer|prior employer)\b/.test(key)) return false;
+  if (!/\bgraduat/.test(key)) return false;
+  return /\b(?:date|when|month|term|semester|expected graduation)\b/.test(key);
+}
+
+function optionGraduationTerm(text) {
+  const key = normalizeKey(text);
+  if (!key) return null;
+  if (/\balready graduated\b/.test(key)) return { kind: 'already' };
+  const season = key.match(/\b(spring|summer|fall|autumn|winter)\s+(20\d{2})\b/);
+  if (season) {
+    return {
+      kind: 'season',
+      season: season[1] === 'autumn' ? 'fall' : season[1],
+      year: Number(season[2]),
+    };
+  }
+  const dated = parseStartMonth(text);
+  if (dated) return { kind: 'month', year: dated.year, month: dated.month };
+  const yearOnly = key.match(/^(20\d{2})$/);
+  if (yearOnly) return { kind: 'year', year: Number(yearOnly[1]) };
+  return null;
+}
+
+function scoreGraduationOption(optionLabel, end, now) {
+  const term = optionGraduationTerm(optionLabel);
+  if (!term || !end) return null;
+  const lastDay = new Date(end.year, end.month, 0);
+  const graduated = now.getTime() > lastDay.getTime();
+  if (term.kind === 'already') return graduated ? 100 : null;
+  if (graduated) return null;
+  if (term.kind === 'month') return term.year === end.year && term.month === end.month ? 100 : null;
+  if (term.kind === 'year') return term.year === end.year ? 60 : null;
+  if (term.kind !== 'season') return null;
+  if (term.season === 'winter') {
+    if (end.month === 12 && end.year === term.year) return 100;
+    if ((end.month === 1 || end.month === 2) && end.year === term.year) return 100;
+    return null;
+  }
+  if (term.season === 'fall') {
+    if (end.year === term.year && end.month >= 8 && end.month <= 12) return end.month === 12 ? 80 : 100;
+    return null;
+  }
+  if (term.season === 'spring') {
+    if (end.year === term.year && end.month >= 1 && end.month <= 5) return 100;
+    return null;
+  }
+  if (term.season === 'summer') {
+    if (end.year === term.year && end.month >= 5 && end.month <= 8) return 100;
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Fill "expected graduation date" from the current education end month.
+ * December is Winter when that option exists, otherwise US Fall of that year.
+ */
+export function graduationDateAnswer(question = '', options = [], education = [], { kind, now = new Date() } = {}) {
+  if (!isGraduationDateQuestion(question)) return null;
+  const end = parseEducationEnd(education);
+  if (!end) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (items.length) {
+    const ranked = items
+      .map(text => ({ text, score: scoreGraduationOption(text, end, now) }))
+      .filter(item => item.score != null)
+      .sort((a, b) => b.score - a.score);
+    if (!ranked.length) return null;
+    const top = ranked.filter(item => item.score === ranked[0].score);
+    return top.length === 1 ? top[0].text : null;
+  }
+  if (kind === 'date' || kind === 'date-parts') {
+    return `${end.year}-${String(end.month).padStart(2, '0')}-01`;
+  }
+  if (kind === 'month') return `${end.year}-${String(end.month).padStart(2, '0')}`;
+  return `${MONTH_NUM_TO_NAME[end.month - 1]} ${end.year}`;
+}
+
+function parseGpaNumber(text) {
+  const raw = String(text || '').trim();
+  const match = raw.match(/^(\d+(?:\.\d+)?)\s*(?:\/\s*4(?:\.0+)?)?$/);
+  if (!match) return null;
+  const value = Number(match[1]);
+  if (!Number.isFinite(value) || value < 0 || value > 5) return null;
+  return value;
+}
+
+function optionGpaRange(text) {
+  const raw = String(text || '');
+  if (!/\d+\.\d+/.test(raw)) return null;
+  let match = raw.match(/(\d+(?:\.\d+)?)\s*(?:or higher|\+|and above|or above|or greater)/i);
+  if (match) return { min: Number(match[1]), max: Infinity };
+  match = raw.match(/(\d+(?:\.\d+)?)\s*(?:or below|or less|and below)/i);
+  if (match) return { min: -Infinity, max: Number(match[1]) };
+  match = raw.match(/(\d+(?:\.\d+)?)\s*(?:[-–—]|to)\s*(\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const first = Number(match[1]);
+  const second = Number(match[2]);
+  return { min: Math.min(first, second), max: Math.max(first, second) };
+}
+
+/** Map 3.75 onto a unique GPA band such as "3.5 - 3.99". */
+export function matchGpaBand(answerText, options) {
+  const gpa = parseGpaNumber(answerText);
+  if (gpa == null || !Array.isArray(options) || options.length === 0) return null;
+  const hits = options.filter(option => {
+    const range = optionGpaRange(optionText(option));
+    return range && gpa >= range.min && gpa <= range.max;
+  });
+  return hits.length === 1 ? hits[0] : null;
+}
+
+/** Map 3.75 onto a unique tenth such as "3.8 out of 4.0". */
+export function matchGpaTenth(answerText, options) {
+  const gpa = parseGpaNumber(answerText);
+  if (gpa == null || !Array.isArray(options) || options.length === 0) return null;
+  const tenth = Math.round(gpa * 10) / 10;
+  const hits = options.filter((option) => {
+    const raw = optionText(option).trim();
+    const below = /below\s+(\d+(?:\.\d+)?)\s+out of/i.exec(raw);
+    if (below) return tenth < Number(below[1]);
+    const exact = /^(\d+(?:\.\d+)?)\s+out of\s+(\d+(?:\.\d+)?)$/i.exec(raw);
+    if (!exact) return false;
+    return Number(exact[2]) === 4 && Math.abs(Number(exact[1]) - tenth) < 1e-9;
+  });
+  return hits.length === 1 ? hits[0] : null;
+}
+
+function locationBlob(location = {}) {
+  return normalizeKey([
+    location.city,
+    location.state,
+    location.stateAbbr,
+    location.raw,
+  ].filter(Boolean).join(' '));
+}
+
+function livesNearNamedHubs(location, question) {
+  const here = locationBlob(location);
+  if (!here) return false;
+  const named = String(question || '').match(/[A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)*, [A-Z]{2}/g) || [];
+  return named.some(place => {
+    const city = normalizeKey(String(place).split(',')[0] || '');
+    return city.length >= 4 && here.includes(city);
+  });
+}
+
+/**
+ * "Do you live within commuting distance, or are you willing to relocate?"
+ * often has two Yes sentences. Pittsburgh is not Mountain View or McLean, so
+ * a stored relocate Yes must land on the relocate sentence, never the commute
+ * sentence.
+ */
+export function commuteOrRelocateOption(question = '', options = [], { location = {}, relocateAnswer } = {}) {
+  if (!Array.isArray(options) || options.length === 0) return null;
+  const text = String(question || '');
+  if (!/\brelocat/i.test(text) || !/\bcommuting distance\b/i.test(text)) return null;
+  const items = options.map(option => {
+    const optionLabel = optionText(option);
+    return { option, text: optionLabel, key: normalizeKey(optionLabel) };
+  }).filter(item => item.key);
+  const commute = items.filter(item =>
+    /\bcurrently live within commuting distance\b/.test(item.key)
+    && !/\bdo not currently live\b/.test(item.key));
+  const relocate = items.filter(item =>
+    /\bwilling to relocate\b/.test(item.key) && /\bdo not currently live\b/.test(item.key));
+  const no = items.filter(item => /^(no)\b/.test(item.key));
+  if (commute.length !== 1 || relocate.length !== 1) return null;
+  if (livesNearNamedHubs(location, text)) return commute[0].text;
+  const polar = normalizeKey(relocateAnswer);
+  if (/^yes\b/.test(polar) || /\bwilling to relocate\b/.test(polar)) return relocate[0].text;
+  if (/^no\b/.test(polar) && no.length === 1) return no[0].text;
+  return null;
+}
+
+/**
+ * "Are you local to Ann Arbor, MI?" is not a relocate question. Pittsburgh is
+ * not Ann Arbor. A stored relocate-Yes may only land on an option that actually
+ * says relocate; otherwise the honest answer is No.
+ */
+export function localOrRelocateAnswer(question = '', options = [], { location = {}, relocateAnswer } = {}) {
+  const text = String(question || '');
+  const named = text.match(/[A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)*, [A-Z]{2}/g) || [];
+  if (!/\blocal to\b/i.test(text) || named.length === 0) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => {
+    const optionLabel = optionText(option);
+    return { text: optionLabel, key: normalizeKey(optionLabel) };
+  }).filter(item => item.key);
+  const local = livesNearNamedHubs(location, text);
+  const yes = items.filter(item => /^(yes)\b/.test(item.key) && !/\brelocat\b/.test(item.key));
+  const no = items.filter(item => /^(no)\b/.test(item.key) && !/\brelocat\b/.test(item.key));
+  const relocate = items.filter(item =>
+    /\brelocat\b/.test(item.key) && !/^(no)\b/.test(item.key));
+  if (local) {
+    if (yes.length === 1) return yes[0].text;
+    return items.length ? null : 'Yes';
+  }
+  const polar = normalizeKey(relocateAnswer);
+  const willRelocate = /^yes\b/.test(polar) || /\bwilling to relocate\b/.test(polar);
+  if (willRelocate && relocate.length === 1) return relocate[0].text;
+  if (no.length === 1) return no[0].text;
+  return items.length ? null : 'No';
+}
+
+const MONTH_NAME_TO_NUM = {
+  january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+  july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+};
+const MONTH_NUM_TO_NAME = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/** Earliest-start / how-soon questions. Never employment-history date parts. */
+export function isStartAvailabilityQuestion(question = '') {
+  const key = normalizeKey(question);
+  if (!key) return false;
+  if (/\b(?:end date|previous|prior employer|employment history|start date month|start date year|notice period)\b/.test(key)) {
+    return false;
+  }
+  if (/\bhow soon\b/.test(key) && /\b(?:start|begin)\b/.test(key)) return true;
+  if (/\b(?:able|available) to start\b/.test(key)) return true;
+  if (/\bwhen (?:can|would|will|are) you\b/.test(key) && /\bstart\b/.test(key)) return true;
+  if (/\bearliest start\b/.test(key) || /\bdesired start date\b/.test(key) || /\bavailable start date\b/.test(key)) return true;
+  if (/\blook to start\b/.test(key)) return true;
+  return false;
+}
+
+export function parseStartMonth(text = '') {
+  const s = String(text || '').trim();
+  if (!s) return null;
+  const named = s.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})\b/i);
+  if (named) {
+    return { year: Number(named[2]), month: MONTH_NAME_TO_NUM[named[1].toLowerCase()], day: 1 };
+  }
+  const iso = s.match(/\b(20\d{2})-(\d{2})(?:-(\d{2}))?\b/);
+  if (iso) return { year: Number(iso[1]), month: Number(iso[2]), day: iso[3] ? Number(iso[3]) : 1 };
+  const us = s.match(/\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/);
+  if (us) return { year: Number(us[3]), month: Number(us[1]), day: Number(us[2]) };
+  const usMonth = s.match(/\b(\d{1,2})\/(20\d{2})\b/);
+  if (usMonth) return { year: Number(usMonth[2]), month: Number(usMonth[1]), day: 1 };
+  return null;
+}
+
+function durationToWeeks(amount, unit) {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return null;
+  if (String(unit).startsWith('day')) return n / 7;
+  if (String(unit).startsWith('week')) return n;
+  if (String(unit).startsWith('month')) return n * 4.345;
+  return null;
+}
+
+function optionStartWindow(optionLabel) {
+  const key = normalizeKey(optionLabel);
+  const dated = parseStartMonth(optionLabel);
+  if (dated) return { kind: 'date', year: dated.year, month: dated.month };
+  if (/^(immediately|asap|right away|now)\b/.test(key) || /\bimmediately available\b/.test(key)) {
+    return { kind: 'weeks', min: 0, max: 1 };
+  }
+  if (/\bafter graduation\b|\bpost[- ]?grad/.test(key)) return { kind: 'graduation' };
+  const more = /\+|or more|more than|greater than|at least|\bover\b/.test(key);
+  const range = key.match(/(\d+)\s*(?:to|-)\s*(\d+)\s*(days?|weeks?|months?)/);
+  if (range) {
+    const lo = durationToWeeks(range[1], range[3]);
+    const hi = durationToWeeks(range[2], range[3]);
+    if (lo == null || hi == null) return null;
+    return { kind: 'weeks', min: Math.min(lo, hi), max: Math.max(lo, hi) };
+  }
+  const single = key.match(/(\d+)\s*(days?|weeks?|months?)/);
+  if (!single) return null;
+  const weeks = durationToWeeks(single[1], single[2]);
+  if (weeks == null) return null;
+  return more ? { kind: 'weeks', min: weeks, max: Infinity } : { kind: 'weeks', min: 0, max: weeks };
+}
+
+function scoreStartOption(optionLabel, month, now) {
+  const window = optionStartWindow(optionLabel);
+  if (!window) return null;
+  if (window.kind === 'date') {
+    return window.year === month.year && window.month === month.month ? 100 : null;
+  }
+  const target = new Date(month.year, month.month - 1, month.day || 1);
+  const weeks = (target.getTime() - now.getTime()) / (7 * 24 * 3600 * 1000);
+  if (window.kind === 'graduation') return weeks > 4 ? 70 : null;
+  if (window.kind === 'weeks') {
+    if (weeks + 0.01 < window.min || weeks - 0.01 > window.max) return null;
+    const span = window.max - window.min;
+    return 80 - Math.min(30, span === Infinity ? 30 : span);
+  }
+  return null;
+}
+
+function storedStartMonth(answers = {}) {
+  const parsed = [];
+  for (const [key, entry] of Object.entries(answers || {})) {
+    if (!isStartAvailabilityQuestion(key) && !isStartAvailabilityQuestion(entry?.key || '')) continue;
+    const month = parseStartMonth(entry?.answer);
+    if (month) parsed.push({ ...month, text: String(entry.answer).trim() });
+  }
+  if (!parsed.length) return null;
+  const stamp = item => `${item.year}-${item.month}`;
+  if (new Set(parsed.map(stamp)).size !== 1) return null;
+  return parsed.find(item => /^available\b/i.test(item.text)) || parsed[0];
+}
+
+/**
+ * Fill "how soon can you start" from the stored January-2027 availability.
+ * Select options are mapped only when exactly one window covers that date.
+ */
+export function startAvailabilityAnswer(question = '', options = [], answers = {}, { now = new Date(), kind } = {}) {
+  if (!isStartAvailabilityQuestion(question)) return null;
+  const month = storedStartMonth(answers);
+  if (!month) return null;
+  const items = (Array.isArray(options) ? options : []).map(option => optionText(option)).filter(Boolean);
+  if (items.length) {
+    const ranked = items
+      .map(text => ({ text, score: scoreStartOption(text, month, now) }))
+      .filter(item => item.score != null)
+      .sort((a, b) => b.score - a.score);
+    if (!ranked.length) return null;
+    const top = ranked.filter(item => item.score === ranked[0].score);
+    return top.length === 1 ? top[0].text : null;
+  }
+  if (kind === 'date') {
+    return `${month.year}-${String(month.month).padStart(2, '0')}-${String(month.day || 1).padStart(2, '0')}`;
+  }
+  if (kind === 'month') return `${month.year}-${String(month.month).padStart(2, '0')}`;
+  const preferred = month.text && /^available\b/i.test(month.text) ? month.text : null;
+  if (preferred) return preferred;
+  const first = storedStartMonth(answers)?.text;
+  return first || `Available ${MONTH_NUM_TO_NAME[month.month - 1]} ${month.year}`;
+}
+
+const NONE_LIKE = /^(none|n\/a|not applicable|never|i (?:do not|don't|have not)|0)\b/i;
+
+function isTwitchNoneLikeOption(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return false;
+  if (NONE_LIKE.test(raw)) return true;
+  const key = normalizeKey(raw);
+  if (/\bnon[ -]?user\b/.test(key) && /\b(?:do not have|no personal|never)\b/.test(key)) return true;
+  if (/\bdo not have any (?:personal )?twitch experience\b/.test(key)) return true;
+  if (/\bno (?:personal )?twitch experience\b/.test(key)) return true;
+  return false;
+}
+
+/** Stored None maps onto the unique none-like option of Twitch experience prompts. */
+export function mapNoneLikeChoice(question, options, storedAnswer) {
+  if (normalizeKey(storedAnswer) !== 'none') return null;
+  if (!/experience with twitch|active on the platform|creator economy/i.test(String(question || ''))) return null;
+  if (!Array.isArray(options) || options.length === 0) return null;
+  const hits = options.filter(option => isTwitchNoneLikeOption(optionText(option)));
+  return hits.length === 1 ? optionText(hits[0]) : null;
 }
 
 /**
@@ -525,13 +1748,14 @@ const DEMOGRAPHIC_MAX_TOKENS = 8;
  * as a prefix, and here it is the second sentence.
  */
 const GPA_PATTERN = /\b(?:gpa|cgpa|grade point average)\b/;
+const YOUR_GPA = /(?:\b(?:your|applicant(?:'s)?)\b[\s\S]{0,40}\b(?:gpa|cgpa|grade point average)\b|^(?:gpa|cgpa|grade point average)\b)/;
 
 /**
  * A GPA belongs to one degree, and the profile's is the current one. When the
  * question names a different level, the number we hold is the wrong number, so
  * abstain rather than report a bachelor's GPA off the master's record.
  */
-const OTHER_DEGREE_GPA = /\b(?:undergrad|undergraduate|bachelor|bachelors|high school|secondary|previous|prior)\b/;
+const OTHER_DEGREE_GPA = /\b(?:undergrad|undergraduate|bachelor|bachelors|high school|secondary|previous|prior|doctorate|doctoral|phd|ph d)\b/;
 
 /**
  * Links and state of residence, matched by pattern for the same reason as the
@@ -578,18 +1802,63 @@ function phrasedFieldFor(normKey, kind) {
   // Greenhouse. They are profile facts, not prose generation prompts.
   if (/\bcurrent country of residence\b/.test(normKey)) return 'location.country';
   if (/\blocated in (?:the )?us or canada\b/.test(normKey)) return 'application.usOrCanada';
-  if (/\bsubject to any employment agreements?\b|\bpost employment restrictions?\b/.test(normKey)) {
+  if (/\bsubject to any employment agreements?\b|\bpost employment restrictions?\b/.test(normKey)
+      || (/\bagreement\b/.test(normKey) && /\b(?:current|former) employer\b/.test(normKey) && /\brestrict\b/.test(normKey))) {
     return 'application.employmentRestrictions';
+  }
+  if (/\b(?:relatives?|family members?|close relationships?)\b/.test(normKey)
+      && /\b(?:employ|employed|work(?:ing)? (?:at|for|with)|who work)\b/.test(normKey)) {
+    return 'application.relativesAtEmployer';
+  }
+  if (/\bhow did you (?:first )?(?:hear|learn|find) about\b/.test(normKey)
+      || /\blist the site.{0,40}event.{0,40}person\b/.test(normKey)) {
+    return 'application.heardAbout';
   }
   if (/\brequire sponsorship for a visa to remain in (?:your )?current location\b/.test(normKey)) {
     return 'application.sponsorshipCurrentLocation';
   }
-  if (/\bpreviously worked at or consulted for gitlab\b/i.test(normKey)) return 'application.previouslyWorkedAtGitLab';
+  if (/\bpreviously applied\b/.test(normKey) && /\bamazon\b/.test(normKey)) {
+    return 'application.previouslyAppliedAmazon';
+  }
+  if (/\b(?:sms|text message)\b/.test(normKey) && /\b(?:number|cell|phone)\b/.test(normKey)) {
+    return 'phone.raw';
+  }
+  if (/\bpreviously worked\b|\bworked (?:for|at) .{0,60} in the past\b|\bconsulted for\b/.test(normKey)) {
+    return 'application.previouslyWorkedHere';
+  }
+  if (/\bcurrent employee\b|\bcurrently a\b.{0,40}\bemployee\b|\bemployee with\b.{0,40}\b(?:amazon|subsidiary|twitch)\b/.test(normKey)) {
+    return 'application.currentCompanyEmployee';
+  }
+  if (/\bh\s*1b\b/.test(normKey) && /\b(?:held|petition|approved on your behalf|preceding \d+ years)\b/.test(normKey)
+      && !/\bsponsor|\brequire|\bneed\b/.test(normKey)) {
+    return 'application.h1bPetitionLastSixYears';
+  }
+  if (/\bpermanent resident\b/.test(normKey) && /\b(?:afterwards|any other country|other country)\b/.test(normKey)) {
+    return 'application.laterPermanentResident';
+  }
+  if (/\bexport licens/.test(normKey) && /\b(?:citizenship|permanent residence)\b/.test(normKey)) {
+    return 'identity.citizenship';
+  }
+  if (/\bcurrently\b/.test(normKey) && /\b(?:f1|f 1)\b/.test(normKey) && /\b(?:opt|cpt)\b/.test(normKey)
+      && !/\bfuture\b/.test(normKey)) {
+    return 'application.currentlyOnF1OptCpt';
+  }
+  if (/\bexport compliance\b/.test(normKey)
+      || (/\bu s person\b/.test(normKey) && !/\bcuba|iran|north korea|syria\b/.test(normKey))) {
+    return 'application.usPerson';
+  }
+  if (/\bcitizenship\b/.test(normKey) && !/\bpermanent resident\b/.test(normKey) && !/\bauthorized\b/.test(normKey)
+      && !/\bcitizenship status\b/.test(normKey)) {
+    return 'identity.citizenship';
+  }
+  if (/\bexperience with twitch\b/.test(normKey)) return 'application.twitchExperience';
+  if (/\byears have you been active on the platform\b/.test(normKey)) return 'application.twitchYearsActive';
+  if (/\bcreator economy\b/.test(normKey)) return 'application.creatorEconomyBeyondTwitch';
   if (/\b(?:links? of )?any open source projects?\b/.test(normKey)) return 'application.openSourceLinks';
   if (/\bprimary programming language and(?:\/?or)? framework\b/.test(normKey)) return 'application.primaryProgramming';
   // A free-text box asking for links is a question in its own right ("list any
   // public technical work"), answered from the bank as prose, not from a
-  // single profile field.
+  // single profile field. Source-attribution still maps above for textarea.
   if (kind === 'textarea') return null;
 
   const links = LINK_PATTERNS.filter(([pattern]) => pattern.test(normKey));
@@ -600,10 +1869,8 @@ function phrasedFieldFor(normKey, kind) {
     return 'location.state';
   }
   // Source attribution is a stable candidate preference, even though boards
-  // interpolate their company name into the question.
-  if (kind !== 'textarea' && /\bhow did you (?:hear|learn|find) about\b/.test(normKey)) {
-    return 'application.heardAbout';
-  }
+  // interpolate their company name into the question. Handled above so a
+  // "list the site" textarea can still use the stored LinkedIn answer.
   return null;
 }
 
@@ -619,6 +1886,9 @@ function demographicFieldFor(normKey, kind) {
   }
   // Other consent statements remain deliberate review actions.
   if (/\b(?:consent|survey|collect|store|process)\b/.test(normKey)) return null;
+  // "What is your cumulative GPA" is a profile fact even when a board wraps it
+  // in extra sentences that blow the demographic token cap.
+  if (YOUR_GPA.test(normKey) && !OTHER_DEGREE_GPA.test(normKey)) return 'education[0].gpa';
   if (tokenize(normKey).size > DEMOGRAPHIC_MAX_TOKENS) return null;
   for (const [pattern, path] of DEMOGRAPHIC_PATTERNS) {
     if (pattern.test(normKey)) return path;
@@ -630,21 +1900,26 @@ function demographicFieldFor(normKey, kind) {
 /** Map a normalized question key to a profile path, or null. */
 export function canonicalFieldFor(normKey, kind) {
   if (!normKey) return null;
+  const stripped = String(normKey).replace(/^(?:what is your|what s your|whats your|what is the)\s+/, '');
   const hit = CANONICAL_INDEX.get(normKey)
+    || (stripped !== normKey ? CANONICAL_INDEX.get(stripped) : null)
     || demographicFieldFor(normKey, kind)
     || phrasedFieldFor(normKey, kind);
   if (!hit) return null;
+  if (kind === 'textarea' && (hit === 'application.usPerson' || hit === 'application.currentlyOnF1OptCpt')) return null;
 
   // Boards increasingly render these as comboboxes rather than plain inputs,
   // so a combobox is allowed anywhere a text input is.
-  const TEXTISH = ['text', 'combobox-input'];
+  const TEXTISH = ['text', 'combobox-input', 'combobox'];
   // "Website" on a URL input is the portfolio; on a textarea it is a question.
   if (hit.startsWith('links.') && kind && ![...TEXTISH, 'url', 'email'].includes(kind)) return null;
   if (hit === 'email' && kind && ![...TEXTISH, 'email'].includes(kind)) return null;
   if (hit === 'phone.raw' && kind && ![...TEXTISH, 'tel', 'number'].includes(kind)) return null;
   // "Company" as a plain dropdown is almost never "your current employer".
   if (hit.startsWith('work[0]') && kind && !TEXTISH.includes(kind)) return null;
-  if (hit.startsWith('education[0]') && kind && ![...TEXTISH, 'number'].includes(kind)) return null;
+  // Greenhouse custom questions are native selects or react-select comboboxes.
+  // GPA, school, and degree still have to land on one option via matchOption.
+  if (hit.startsWith('education[0]') && kind && ![...TEXTISH, 'number', 'select', 'radio'].includes(kind)) return null;
   return hit;
 }
 
@@ -689,6 +1964,25 @@ export function fitsKind(kind, value) {
   if (kind === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(v);
   if (kind === 'month') return /^\d{4}-\d{2}$/.test(v);
   return true;
+}
+
+/** True for a rotating verification or security-code prompt. */
+export function isOtpVerificationQuestion(text) {
+  return OTP_VERIFICATION_QUESTION.test(String(text || ''));
+}
+
+/** True for a rotating code, salary prompt, cover letter, or other answer that cannot be reused. */
+export function isEphemeralApplicationQuestion(text) {
+  return NEVER_STORE_QUESTION.test(String(text || ''));
+}
+
+export function isEphemeralAnswerEntry(entry) {
+  const parts = [entry?.key, ...(entry?.questions || []), entry?.rawQuestion];
+  return parts.some(part => isEphemeralApplicationQuestion(part));
+}
+
+export function dropEphemeralAnswers(answers = {}) {
+  return Object.fromEntries(Object.entries(answers).filter(([, entry]) => !isEphemeralAnswerEntry(entry)));
 }
 
 /** True for questions we never want to seed or fuzzy-reuse across companies. */

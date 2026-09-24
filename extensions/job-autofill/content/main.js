@@ -8,14 +8,29 @@ import {
 } from './engine.js';
 import {
   findAnswer, matchOption, canonicalFieldFor, fitsKind, readPath, splitMulti,
+  mapSanctionsChoice, restrictedCountryStoredAnswer, mapNoneLikeChoice,
+  namedSchoolAffiliationAnswer, careerFairContactAnswer, graduationSeasonAnswer,
+  commuteOrRelocateOption, localOrRelocateAnswer, exportControlCountryAnswer, normalizeKey,
+  startAvailabilityAnswer, usPersonExportAnswer, f1OptCptCurrentAnswer, graduationDateAnswer,
+  workAuthorizationStatusAnswer, citizenshipStatusAnswer, citizenshipOtherExplainAnswer,
+  securityClearanceAnswer, namedEmployerHistoryAnswer, currentlyEmployedAtNamedOrgAnswer,
+  militaryReserveOrGuardAnswer, usGovernmentEmploymentAnswer, relativesAtNamedOrgAnswer,
+  applicationAffirmationAnswer,
+  completedEducationLevelAnswer, workLocationInterestAnswer, remoteWorkStateAnswer,
+  relocationPreferenceAnswer, futureOpportunityDeclineAnswer,
+  travelPercentageAnswer, operationalSmsOptInAnswer,
+  degreeGpaAnswer, standardizedTestAnswer,
+  essentialFunctionsAnswer,
+  isEphemeralApplicationQuestion, isOtpVerificationQuestion,
+  filledValueMatches,
 } from './matcher.js';
 import {
   fillText, fillNativeSelect, fillRadio, fillCheckbox, fillListbox, fillCombobox, simulateTyping,
-  fillDateParts, fillFileInput, isResumeInput,
+  fillDateParts, fillFileInput, isResumeInput, attachRequiredComboboxOptions, setNativeValue,
 } from './filler.js';
 import { loadAll, recordUse, getResumeFor } from './store.js';
 import { detectBoard } from './adapters/index.js';
-import { fieldDescriptors, navigationState, isOptionalMarketingConsent, riskCategory } from './application-descriptors.js';
+import { fieldDescriptors, navigationState, isOptionalMarketingConsent, riskCategory, mapFutureOpportunityChoice } from './application-descriptors.js';
 import { armCapture } from './capture.js';
 import {
   markFilled, markUnknown, markFailed, markLearned, clearMark, clearMarks, showPanel, showCaptured,
@@ -23,9 +38,8 @@ import {
 
 const adapter = detectBoard(location.href);
 
-// MV3 workers are demand-started. The headed runner needs a worker in order to
-// open the extension options page and seed the selected local resume, so let a
-// mounted content script wake it without performing any form action.
+// MV3 workers are demand-started. The headed runner seeds through the worker
+// itself, so a mounted content script wakes it without performing any form action.
 chrome.runtime.sendMessage({ type: 'contentReady' }).catch(() => {});
 
 /**
@@ -216,15 +230,21 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   if (msg?.type === 'inspect') {
     const fields = detectFields(document, adapter);
-    sendResponse({ ...baseDetect(fields), fields: fieldDescriptors(fields), navigation: navigationState(document) });
-    return false;
+    attachRequiredComboboxOptions(fields, adapter)
+      .then(ready => sendResponse({
+        ...baseDetect(ready), fields: fieldDescriptors(ready), navigation: navigationState(document),
+      }))
+      .catch(error => sendResponse({ ok: false, error: String(error) }));
+    return true;
   }
 
   if (msg?.type === 'readback') {
     const fields = detectFields(document, adapter);
-    uploadedFileReadback(fields).then(files => sendResponse({
-      ...baseDetect(fields), fields: fieldDescriptors(fields), files, navigation: navigationState(document),
-    }));
+    Promise.all([attachRequiredComboboxOptions(fields, adapter), uploadedFileReadback(fields)])
+      .then(([ready, files]) => sendResponse({
+        ...baseDetect(ready), fields: fieldDescriptors(ready), files, navigation: navigationState(document),
+      }))
+      .catch(error => sendResponse({ ok: false, error: String(error) }));
     return true;
   }
 
@@ -244,16 +264,23 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         // before it reaches that descriptor when an SPA re-renders its form.
         // Retry a still-empty exact target once, never overwrite a value the
         // candidate supplied, then report what the DOM actually retained.
+        // Prefer the live control from the pre-fill scan: a committed
+        // react-select input may drop out of a fresh detectFields pass.
         const currentFields = detectFields(document, adapter);
         const currentDescriptors = fieldDescriptors(currentFields);
         const overrideResults = [];
         for (const requested of msg.overrides || []) {
-          const index = currentDescriptors.findIndex(item => item.field_id === requested.field_id);
-          if (index < 0) {
+          let field = null;
+          const originalIndex = descriptors.findIndex(item => item.field_id === requested.field_id);
+          if (originalIndex >= 0) field = fields[originalIndex];
+          if (!field) {
+            const index = currentDescriptors.findIndex(item => item.field_id === requested.field_id);
+            if (index >= 0) field = currentFields[index];
+          }
+          if (!field) {
             overrideResults.push({ field_id: requested.field_id, matched: false, accepted: false });
             continue;
           }
-          const field = currentFields[index];
           const before = readValue(field);
           // An existing candidate-entered value has priority over automation.
           if (!before) {
@@ -265,7 +292,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           overrideResults.push({
             field_id: requested.field_id,
             matched: true,
-            accepted: actual === requested.value,
+            accepted: filledValueMatches(actual, requested.value),
             preserved_candidate_value: Boolean(before && !holdsOurValue(field)),
           });
         }
@@ -345,16 +372,31 @@ async function doFill({ auto = false, overrides = null, resumeKind = 'default' }
   for (const field of fields) {
     // A local answer bank can contain a valid answer from a previous form, but
     // it cannot authorize opting into talent communities, job alerts, or other
-    // future-contact marketing. Leave voluntary controls untouched. Required
-    // variants remain visibly blank and are handled by the runtime review gate.
-    if (isOptionalMarketingConsent(field.rawLabel, (field.options || []).map(option => option.text || option.value))) {
+    // future-contact marketing. Leave voluntary controls untouched. A required
+    // future-opportunity control may still be completed with unique No.
+    if (isOptionalMarketingConsent(field.rawLabel, (field.options || []).map(option => option.text || option.value))
+        && field.required !== true) {
+      clearMark(field);
+      continue;
+    }
+    const risk = riskCategory(field.rawLabel, (field.options || []).map(option => option.text || option.value));
+    // Rotating email codes must never come from the answer bank. A leftover
+    // value from a previous posting would look complete and get submitted.
+    if (risk === 'EPHEMERAL' || isOtpVerificationQuestion(field.rawLabel)) {
+      if (field.control && (TEXTISH_KINDS.has(field.kind) || field.kind === 'textarea')) {
+        try { setNativeValue(field.control, ''); } catch { /* leave the control as-is if it refuses a clear */ }
+      }
+      clearMark(field);
+      continue;
+    }
+    if (isEphemeralApplicationQuestion(field.rawLabel)) {
       clearMark(field);
       continue;
     }
     // Compensation is role-specific. Current compensation is never supplied,
     // while desired compensation is handled by the runner's bounded,
     // job-scoped preference policy rather than a global answer-bank match.
-    if (['SALARY', 'CURRENT_COMPENSATION'].includes(riskCategory(field.rawLabel, (field.options || []).map(option => option.text || option.value)))) {
+    if (['SALARY', 'CURRENT_COMPENSATION'].includes(risk)) {
       clearMark(field);
       continue;
     }
@@ -428,7 +470,7 @@ async function doFill({ auto = false, overrides = null, resumeKind = 'default' }
       resolved = candidate;
       noteWritten(field.control, candidate.value);
       try {
-        outcome = await applyValue(field, candidate.value);
+        outcome = await applyValue(field, candidate.value, data);
       } catch {
         outcome = 'failed';
       }
@@ -622,6 +664,12 @@ function resolveCandidates(field, data, threshold) {
   if (attrPath) push(readPath(data.profile, attrPath), `adapter:${attrPath}`);
 
   const canonPath = canonicalFieldFor(field.normKey, field.kind);
+  const noneLike = mapNoneLikeChoice(
+    field.rawLabel,
+    field.options,
+    canonPath ? readPath(data.profile, canonPath) : '',
+  );
+  if (noneLike) push(noneLike, 'profile:none-preference');
   // Stored acknowledgements are intentionally narrow.  Optional policy and
   // marketing consent must remain untouched even when this company words an
   // otherwise known acknowledgement similarly.
@@ -629,11 +677,19 @@ function resolveCandidates(field, data, threshold) {
     push(readPath(data.profile, canonPath), `profile:${canonPath}`);
   }
 
+  // Ashby marks `__systemfield_data_consent_ack` without HTML required, but
+  // Submit still fails closed until it is checked. Treat the known system-field
+  // Affirmation label the same as a required privacy acknowledgement.
+  const privacyAck = field.kind === 'checkbox'
+    && (
+      /\bapplicant privacy policy\b/.test(field.normKey)
+      || /^(?:affirmation|acknowledgement|acknowledgment)$/.test(field.normKey)
+    );
+  if (privacyAck && (field.required || /^(?:affirmation|acknowledgement|acknowledgment)$/.test(field.normKey))) {
+    push(readPath(data.profile, 'application.acknowledgements.requiredPrivacyPolicy') || 'I agree',
+      'profile:application.acknowledgements.requiredPrivacyPolicy');
+  }
   if (field.kind === 'checkbox' && field.required) {
-    if (/\bapplicant privacy policy\b/.test(field.normKey)) {
-      push(readPath(data.profile, 'application.acknowledgements.requiredPrivacyPolicy'),
-        'profile:application.acknowledgements.requiredPrivacyPolicy');
-    }
     if (/\bcandidate ai responsible use policy\b/.test(field.normKey)
         && /\bown work and experience\b/.test(field.normKey)) {
       push(readPath(data.profile, 'application.acknowledgements.requiredCandidateAiResponsibleUse'),
@@ -648,8 +704,115 @@ function resolveCandidates(field, data, threshold) {
   // wrong date on an employment history.
   if (field.groupIndex != null) return out;
 
+  const schoolAffiliation = namedSchoolAffiliationAnswer(field.rawLabel, data.profile?.education);
+  if (schoolAffiliation) push(schoolAffiliation, 'profile:education-affiliation');
+
+  const graduationSeason = graduationSeasonAnswer(field.rawLabel, data.profile?.education);
+  if (graduationSeason) push(graduationSeason, 'profile:education-graduation-season');
+  const graduationDate = graduationDateAnswer(field.rawLabel, field.options, data.profile?.education, {
+    kind: field.kind,
+  });
+  if (graduationDate) push(graduationDate, 'profile:education-graduation-date');
+  const degreeGpa = degreeGpaAnswer(field.rawLabel, field.options, data.profile?.education);
+  if (degreeGpa) push(degreeGpa, 'profile:education-degree-gpa');
+  const testScore = standardizedTestAnswer(field.rawLabel, field.options);
+  if (testScore) push(testScore, 'profile:standardized-test');
+  const clearance = securityClearanceAnswer(field.rawLabel, field.options);
+  if (clearance) push(clearance, 'profile:security-clearance');
+  const employerHistory = namedEmployerHistoryAnswer(field.rawLabel, field.options, data.profile?.work);
+  if (employerHistory) push(employerHistory, 'profile:named-employer-history');
   const hit = findAnswer(field.normKey, data.answers, { threshold });
-  if (hit) push(hit.entry.answer, `answers:${hit.method}`, hit.entry.key);
+  const relocateAnswer = hit?.entry?.answer
+    || findAnswer(normalizeKey('Are you willing to relocate?'), data.answers, { threshold })?.entry?.answer;
+  const namedEmployerNow = currentlyEmployedAtNamedOrgAnswer(field.rawLabel, field.options, data.profile?.work);
+  if (namedEmployerNow) push(namedEmployerNow, 'profile:currently-employed-named-org');
+  const reserveOrGuard = militaryReserveOrGuardAnswer(field.rawLabel, field.options, data.profile?.work);
+  if (reserveOrGuard) push(reserveOrGuard, 'profile:military-reserve-or-guard');
+  const usGovEmployment = usGovernmentEmploymentAnswer(field.rawLabel, field.options, data.profile?.work);
+  if (usGovEmployment) push(usGovEmployment, 'profile:us-government-employment');
+  const relativesNamedOrg = relativesAtNamedOrgAnswer(field.rawLabel, field.options, data.answers);
+  if (relativesNamedOrg) push(relativesNamedOrg, 'profile:relatives-at-named-org');
+  const affirmation = applicationAffirmationAnswer(field.rawLabel, field.options);
+  if (affirmation) push(affirmation, 'profile:application-affirmation');
+  const completedEducation = completedEducationLevelAnswer(field.rawLabel, field.options, data.profile?.education);
+  if (completedEducation) push(completedEducation, 'profile:completed-education');
+  const locationInterest = workLocationInterestAnswer(field.rawLabel, field.options, {
+    location: data.profile?.location,
+    relocateAnswer,
+  });
+  if (locationInterest) push(locationInterest, 'profile:work-locations');
+  const relocationPref = relocationPreferenceAnswer(field.rawLabel, field.options, { relocateAnswer });
+  if (relocationPref) push(relocationPref, 'profile:relocation-preference');
+  const futureDecline = futureOpportunityDeclineAnswer(field.rawLabel, field.options);
+  if (futureDecline) push(futureDecline, 'policy:future-opportunity-no');
+  const remoteState = remoteWorkStateAnswer(field.rawLabel, field.options, {
+    location: data.profile?.location,
+    relocateAnswer,
+  });
+  if (remoteState) push(remoteState, 'profile:remote-work-state');
+  const travelPercent = travelPercentageAnswer(field.rawLabel, field.options, data.answers);
+  if (travelPercent) push(travelPercent, 'answers:travel-percentage');
+  const smsOptIn = operationalSmsOptInAnswer(field.rawLabel, field.options, data.answers);
+  if (smsOptIn) push(smsOptIn, 'answers:sms-opt-in');
+  const usPersonFlag = /^(yes|true)$/i.test(String(readPath(data.profile, 'application.usPerson') || ''));
+  const workAuthStatus = workAuthorizationStatusAnswer(field.rawLabel, field.options, data.answers, {
+    usPerson: usPersonFlag,
+  });
+  if (workAuthStatus) push(workAuthStatus, 'profile:work-authorization-status');
+  const citizenStatus = citizenshipStatusAnswer(field.rawLabel, field.options, {
+    citizenship: readPath(data.profile, 'identity.citizenship'),
+    usPerson: usPersonFlag,
+  });
+  if (citizenStatus) push(citizenStatus, 'profile:citizenship-status');
+  const citizenExplain = citizenshipOtherExplainAnswer(field.rawLabel, {
+    citizenship: readPath(data.profile, 'identity.citizenship'),
+    usPerson: usPersonFlag,
+  });
+  if (citizenExplain) push(citizenExplain, 'profile:citizenship-other-explain');
+  const essentialFunctions = essentialFunctionsAnswer(field.rawLabel, field.options, data.answers);
+  if (essentialFunctions) push(essentialFunctions, 'answers:essential-functions');
+
+  const careerFair = careerFairContactAnswer(field.rawLabel);
+  if (careerFair) push(careerFair, 'policy:career-fair-na');
+
+  const decline = mapFutureOpportunityChoice(field.rawLabel, field.options);
+  if (decline) push(decline, 'policy:future-opportunity-no');
+
+  const commuteRelocate = commuteOrRelocateOption(field.rawLabel, field.options, {
+    location: data.profile?.location,
+    relocateAnswer,
+  });
+  if (commuteRelocate) push(commuteRelocate, 'profile:commute-or-relocate');
+  const localRelocate = localOrRelocateAnswer(field.rawLabel, field.options, {
+    location: data.profile?.location,
+    relocateAnswer,
+  });
+  if (localRelocate) push(localRelocate, 'profile:local-or-relocate');
+  const startAvail = startAvailabilityAnswer(field.rawLabel, field.options, data.answers, { kind: field.kind });
+  if (startAvail) push(startAvail, 'answers:start-availability');
+  const sanctions = mapSanctionsChoice(
+    field.rawLabel,
+    field.options,
+    hit?.entry?.answer || restrictedCountryStoredAnswer(data.answers)?.answer,
+    data.profile,
+  );
+  if (sanctions) push(sanctions, 'answers:sanctions');
+  const exportCountry = exportControlCountryAnswer(field.rawLabel, {
+    citizenship: data.profile?.identity?.citizenship,
+    storedRestrictedNo: Boolean(restrictedCountryStoredAnswer(data.answers)),
+  });
+  if (exportCountry) push(exportCountry, 'profile:export-control-country');
+  const usPerson = usPersonExportAnswer(field.rawLabel, field.options, {
+    usPerson: /^(yes|true)$/i.test(String(readPath(data.profile, 'application.usPerson') || '')),
+  });
+  if (usPerson) push(usPerson, 'profile:us-person-export');
+  const f1OptCpt = f1OptCptCurrentAnswer(
+    field.rawLabel,
+    field.options,
+    readPath(data.profile, 'application.currentlyOnF1OptCpt'),
+  );
+  if (f1OptCpt) push(f1OptCpt, 'profile:f1-opt-cpt');
+  else if (!sanctions && !exportCountry && !usPerson && hit) push(hit.entry.answer, `answers:${hit.method}`, hit.entry.key);
 
   return out;
 }
@@ -688,8 +851,73 @@ function resolveValue(field, data, threshold) {
  * @returns {Promise<'filled'|'unmapped'|'failed'>} 'unmapped' means the stored
  *   answer doesn't map onto this form's options and we chose not to guess.
  */
-async function applyValue(field, value) {
-  const pickOption = options => matchOption(value, options);
+async function applyValue(field, value, data = {}) {
+  const mappedChoice = (options, answer = value) => {
+    const relocateStored = findAnswer(normalizeKey('Are you willing to relocate?'), data.answers || {})?.entry?.answer
+      || answer;
+    const local = localOrRelocateAnswer(field.rawLabel, options, {
+      location: data.profile?.location,
+      relocateAnswer: relocateStored,
+    });
+    const commute = commuteOrRelocateOption(field.rawLabel, options, {
+      location: data.profile?.location,
+      relocateAnswer: relocateStored,
+    });
+    const sanctions = mapSanctionsChoice(field.rawLabel, options, answer, data.profile);
+    const usPerson = usPersonExportAnswer(field.rawLabel, options, {
+      usPerson: /^(yes|true)$/i.test(String(readPath(data.profile, 'application.usPerson') || '')),
+    });
+    const f1OptCpt = f1OptCptCurrentAnswer(
+      field.rawLabel,
+      options,
+      readPath(data.profile, 'application.currentlyOnF1OptCpt') || answer,
+    );
+    const graduationDate = graduationDateAnswer(field.rawLabel, options, data.profile?.education, {
+      kind: field.kind,
+    });
+    const degreeGpa = degreeGpaAnswer(field.rawLabel, options, data.profile?.education);
+    const testScore = standardizedTestAnswer(field.rawLabel, options);
+    const clearance = securityClearanceAnswer(field.rawLabel, options);
+    const employerHistory = namedEmployerHistoryAnswer(field.rawLabel, options, data.profile?.work);
+    const namedEmployerNow = currentlyEmployedAtNamedOrgAnswer(field.rawLabel, options, data.profile?.work);
+    const reserveOrGuard = militaryReserveOrGuardAnswer(field.rawLabel, options, data.profile?.work);
+    const usGovEmployment = usGovernmentEmploymentAnswer(field.rawLabel, options, data.profile?.work);
+    const relativesNamedOrg = relativesAtNamedOrgAnswer(field.rawLabel, options, data.answers);
+    const affirmation = applicationAffirmationAnswer(field.rawLabel, options);
+    const completedEducation = completedEducationLevelAnswer(field.rawLabel, options, data.profile?.education);
+    const locationInterest = workLocationInterestAnswer(field.rawLabel, options, {
+      location: data.profile?.location,
+      relocateAnswer: relocateStored,
+    });
+    const relocationPref = relocationPreferenceAnswer(field.rawLabel, options, {
+      relocateAnswer: relocateStored,
+    });
+    const futureDecline = futureOpportunityDeclineAnswer(field.rawLabel, options);
+    const noneLike = mapNoneLikeChoice(field.rawLabel, options, answer);
+    const remoteState = remoteWorkStateAnswer(field.rawLabel, options, {
+      location: data.profile?.location,
+      relocateAnswer: relocateStored,
+    });
+    const travelPercent = travelPercentageAnswer(field.rawLabel, options, data.answers);
+    const smsOptIn = operationalSmsOptInAnswer(field.rawLabel, options, data.answers);
+    const workAuthStatus = workAuthorizationStatusAnswer(field.rawLabel, options, data.answers, {
+      usPerson: /^(yes|true)$/i.test(String(readPath(data.profile, 'application.usPerson') || '')),
+    });
+    const citizenStatus = citizenshipStatusAnswer(field.rawLabel, options, {
+      citizenship: readPath(data.profile, 'identity.citizenship'),
+      usPerson: /^(yes|true)$/i.test(String(readPath(data.profile, 'application.usPerson') || '')),
+    });
+    const essentialFunctions = essentialFunctionsAnswer(field.rawLabel, options, data.answers);
+    return matchOption(local || commute || sanctions || usPerson || f1OptCpt || graduationDate
+      || degreeGpa || testScore || clearance || employerHistory || namedEmployerNow
+      || reserveOrGuard || usGovEmployment || relativesNamedOrg || affirmation
+      || completedEducation
+      || locationInterest || relocationPref || futureDecline || noneLike || remoteState || travelPercent || smsOptIn
+      || workAuthStatus || citizenStatus
+      || essentialFunctions
+      || answer, options);
+  };
+  const pickOption = options => mappedChoice(options);
   const done = ok => (ok ? 'filled' : 'failed');
 
   switch (field.kind) {
@@ -699,13 +927,13 @@ async function applyValue(field, value) {
     case 'date-parts':
       return fillDateParts(field, value) ? 'filled' : 'unmapped';
     case 'select': {
-      const option = matchOption(value, field.options);
+      const option = mappedChoice(field.options);
       if (!option) return 'unmapped';
       return done(fillNativeSelect(field, option));
     }
     case 'radio':
     case 'buttongroup': {
-      const option = matchOption(value, field.options);
+      const option = mappedChoice(field.options);
       if (!option) return 'unmapped';
       if (field.kind === 'radio') return done(fillRadio(field, option));
       option.el.click();
@@ -723,7 +951,9 @@ async function applyValue(field, value) {
         }
         return ticked > 0 ? 'filled' : 'unmapped';
       }
-      const option = matchOption(value, field.options);
+      const mapped = mapSanctionsChoice(field.rawLabel, field.options, value, data.profile)
+        || mapNoneLikeChoice(field.rawLabel, field.options, value);
+      const option = matchOption(mapped || value, field.options) || matchOption(value, field.options);
       if (option) return done(fillCheckbox(field, option, true));
       if (!/^(yes|no|true|false|checked)$/i.test(value)) return 'unmapped';
       return done(fillCheckbox(field, null, /^(yes|true|checked)$/i.test(value)));
