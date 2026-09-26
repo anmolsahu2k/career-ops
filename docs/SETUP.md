@@ -14,23 +14,28 @@ Gemini CLI, and OpenCode files remain only as compatibility adapters.
 ## Install
 
 ```bash
-npm install
+npm ci
 npx playwright install chromium
-python -m pip install -U -r requirements-discovery.txt
-npm run doctor
 ```
 
 `requirements-discovery.txt` installs JobSpy from GitHub `main` (preferred over
 PyPI so LinkedIn and other scraper fixes land before the next package bump).
+Install those optional Python adapters only when you use them; on macOS, use a
+virtual environment rather than installing packages into the system Python.
+
+For a MacBook setup and safe Windows/macOS syncing, follow the [multi-machine guide](MULTI_MACHINE.md). Cloning upstream `main` will not include this workspace's changes.
 
 ## Configure
 
-This private workspace is already personalized. For a fresh clone of the upstream tool:
+This checkout has local personal files that are excluded from Git. For a fresh setup, start from the examples:
 
 ```bash
 cp config/profile.example.yml config/profile.yml
 cp templates/portals.example.yml portals.yml
 ```
+
+Add your maintained CV as `cv.md`, then run `npm run doctor` to check the local
+setup.
 
 Maintain these inputs:
 

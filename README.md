@@ -1,6 +1,6 @@
 # Career-Ops
 
-A Codex-first, model-agnostic job-search command center that evaluates roles, scans sources, and tracks applications. Antigravity CLI supplies Google and partner-model review; Claude Code, Gemini CLI, and OpenCode files remain only as compatibility adapters. Private fork of [santifer/career-ops](https://github.com/santifer/career-ops) with upstream marketing assets removed.
+A Codex-first, model-agnostic job-search command center that evaluates roles, scans sources, and tracks applications. Antigravity CLI supplies Google and partner-model review; Claude Code, Gemini CLI, and OpenCode files remain only as compatibility adapters. Personalized fork of [santifer/career-ops](https://github.com/santifer/career-ops) with upstream marketing assets removed.
 
 ## What Is This
 
@@ -36,22 +36,23 @@ Career-ops is agentic: Codex verifies career pages, evaluates fit by reasoning a
 ## Quick Start
 
 ```bash
-# 1. Clone and install
-git clone https://github.com/santifer/career-ops.git
-cd career-ops && npm install
+# 1. Clone this working branch and install
+git clone --branch codex/model-agnostic-runtime https://github.com/anmolsahu2k/career-ops.git
+cd career-ops
+npm ci
 npx playwright install chromium   # Required for liveness and job-page verification
 
-# 2. Check setup
-npm run doctor                     # Validates all prerequisites
-
-# 3. Configure
+# 2. Configure your local personal files
 cp config/profile.example.yml config/profile.yml  # Edit with your details
 cp templates/portals.example.yml portals.yml       # Customize companies
 
-# 4. Add your CV
+# Add your CV
 # Create cv.md in the project root with your CV in markdown
 
-# 5. Open this folder in the ChatGPT desktop app with Codex
+# 3. Check setup
+npm run doctor                     # Validates prerequisites and local files
+
+# 4. Open this folder in the ChatGPT desktop app with Codex
 # Or run `codex` after the Codex CLI is installed and working
 
 # Then ask Codex to adapt the system to you:
@@ -59,7 +60,7 @@ cp templates/portals.example.yml portals.yml       # Customize companies
 # "Add these 5 companies to portals.yml"
 # "Update my profile with this CV I'm pasting"
 
-# 6. Start using
+# 5. Start using
 # Paste a job URL or invoke $career-ops
 ```
 
@@ -67,7 +68,7 @@ Playwright Chromium is used for liveness checks and job-page verification, not f
 
 > **The system is designed to be customized by the coding agent itself.** Modes, archetypes, scoring weights, and negotiation scripts are plain repository files, so Codex can update the same logic it executes.
 
-See [docs/CODEX.md](docs/CODEX.md) for Codex usage and [docs/SETUP.md](docs/SETUP.md) for the full setup guide.
+See [docs/CODEX.md](docs/CODEX.md) for Codex usage, [docs/SETUP.md](docs/SETUP.md) for installation, and [docs/MULTI_MACHINE.md](docs/MULTI_MACHINE.md) for Windows/macOS syncing and personal-data handling. This public fork excludes personal files; use the guide before setting up personalized data.
 
 ## Antigravity CLI Integration
 
@@ -120,7 +121,7 @@ machine, and a consequential provider enabled (for example
 `antigravity-gemini-flash-high` via Antigravity/`agy`). Details:
 [docs/SCRIPTS.md](docs/SCRIPTS.md#manual-workflow-no-agent).
 
-```powershell
+```bash
 # 0) One-time / occasional checks
 npm run doctor
 npm run runtime:doctor
@@ -133,11 +134,7 @@ npm run evaluate
 npm run evaluate -- --file ft/data/scan-results-2026-09-12.tsv --max 25
 
 # 3) Commit evaluations (1 provider call per live/uncertain URL)
-npm run evaluate -- `
-  --config config/runtime.local.yml `
-  --provider antigravity-gemini-flash-high `
-  --acknowledge-quota `
-  --apply
+npm run evaluate -- --config config/runtime.local.yml --provider antigravity-gemini-flash-high --acknowledge-quota --apply
 
 # 4) Tracker hygiene
 npm run verify

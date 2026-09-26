@@ -53,6 +53,8 @@ modes/_profile.md
 # Python bytecode
 __pycache__/
 *.pyc
+.venv/
+venv/
 
 # Secrets (never commit — use .env.example as template)
 .env
