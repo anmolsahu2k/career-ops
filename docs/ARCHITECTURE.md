@@ -282,7 +282,11 @@ Canonical statuses come from `templates/states.yml`:
 - `SKIP`: a legacy-compatible state and alias; current workflow code should use the exact status rules in `templates/states.yml`.
 
 [verify-pipeline.mjs](../verify-pipeline.mjs) checks status vocabulary, exact
-row shape, score cells, report links, and duplicate-risk signals.
+row shape, score cells, report links, duplicate-risk signals, and the
+Evaluated ≥4.0 queue contract (Notes `APPLY.` / `CONSIDER.` or a report
+`## Recommendation` starting with Apply / Consider). Missing enqueue authority
+is a verify error. [merge-tracker.mjs](../merge-tracker.mjs) applies the same
+contract when ingesting agent TSV additions.
 [stats.mjs](../stats.mjs) produces the lifetime tracker and scanner roll-up,
 while [source-analytics.mjs](../source-analytics.mjs) groups funnel results by
 canonical discovery source.
@@ -293,10 +297,13 @@ Application attempts are disabled by default and are not scheduled. They use
 the existing Job Autofill extension plus the application modules under
 `lib/applications/`.
 
-The normal queue accepts an `Evaluated` row with an explicit `APPLY` or
-`CONSIDER` recommendation, a score of at least 4.0, and a valid canonical URL. A separately
-audited user-selected override can queue one row outside that gate. Attempts
-are keyed by tracker number plus canonical URL and persist under
+The normal queue accepts an `Evaluated` row with enqueue authority (Notes
+`APPLY.` / `CONSIDER.`, or a report `## Recommendation` starting with Apply /
+Consider), a score of at least 4.0, and a valid canonical URL on a locally
+allowlisted ATS (`applications.supported_ats`). Handshake live apply is a
+separate CDP path with its own floor (default 3.5). A separately audited
+user-selected override can queue one dedicated-profile row outside that gate.
+Attempts are keyed by tracker number plus canonical URL and persist under
 `ft/.career-ops-runtime/applications/`.
 
 The runner uses a dedicated persistent Chrome profile by default, enforces a
@@ -307,11 +314,13 @@ handoff is enabled only by ignored local runtime configuration and processes
 only the rows committed by that scan.
 
 Candidate-facing cover letters and application answers remain explicit-request
-work. The separately qualified local-prose path can fill the exact Greenhouse
-manual cover-letter control when explicitly enabled; it never uploads a PDF or
-falls back to a hosted provider. Salary intent, generated-content disclosure,
-optional marketing consent, and sensitive or ambiguous questions remain
-deterministically gated as described in [RUNTIME.md](RUNTIME.md).
+work for agents; the optional application runner may draft Greenhouse
+cover-letter text and other prose when filling a form. Local prose is optional
+and off by default; when disabled, configured Antigravity
+`hosted_fallback_providers` draft that prose. Neither path uploads a resume
+PDF. Salary intent, generated-content disclosure, optional marketing consent,
+and sensitive or ambiguous questions remain deterministically gated as
+described in [RUNTIME.md](RUNTIME.md).
 
 ## Dashboard and supporting tools
 

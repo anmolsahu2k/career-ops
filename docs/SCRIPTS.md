@@ -12,10 +12,10 @@ archive operation. Shared configuration stays at the repository root.
 |---|---|
 | `npm run doctor` | Check Node, dependencies, Chromium, profile inputs, portals, and legacy setup directories |
 | `npm test` | Run the quick repository test suite |
-| `npm run verify` | Validate tracker rows, statuses, scores, report links, and pending additions |
+| `npm run verify` | Validate tracker rows, statuses, scores, report links, pending additions, and the Evaluated ≥4.0 queue contract |
 | `npm run normalize` | Normalize tracker status formatting and aliases |
 | `npm run dedup` | Detect and remove duplicate tracker rows |
-| `npm run merge` | Merge tracker-addition TSVs into the selected tracker |
+| `npm run merge` | Merge tracker-addition TSVs into the selected tracker (skips incomplete Evaluated ≥4.0 rows) |
 | `npm run liveness -- <urls>` | Check one or more URLs with the shared liveness classifier |
 | `npm run liveness:bulk -- <file>` | Run liveness over a URL list |
 | `npm run liveness:batch` | Check TSV additions under the selected `batch/` tree |
@@ -166,7 +166,13 @@ dry run before applying a broad cleanup.
 
 Checks the selected tracker against `templates/states.yml`, the fixed
 9-column row shape, score formatting, report links, pending tracker additions,
-and duplicate-risk signals. Warnings do not make the command fail.
+and duplicate-risk signals. Most hygiene findings are warnings and do not fail
+the command. One check is fail-closed: an `Evaluated` row at score **4.0+**
+must carry enqueue authority via Notes `APPLY.` / `CONSIDER.` **or** a report
+`## Recommendation` whose first line starts with Apply / Consider. Missing both
+is an **error** (applier near-miss `MISSING_APPLY_TOKEN`). Informal wording in
+Block G does not count. Runtime commits already write both; agent-written rows
+must match `modes/offer.md` and `modes/_shared.md`.
 
 ```bash
 npm run verify
@@ -209,9 +215,13 @@ npm run merge -- --verify
 Successfully processed additions move to
 `batch/tracker-additions/merged/` under the selected data root. Workers must
 never edit `applications.md` directly. Merge refuses unevaluated placeholders
-(`reports/pending.md`, status `Triaged`, "not yet evaluated" Notes). Those
-candidates belong in `data/scan-results-*.tsv` triage until a real A-G report
-exists. To demote legacy placeholder tracker rows:
+(`reports/pending.md`, status `Triaged`, "not yet evaluated" Notes). It also
+**skips** `Evaluated` additions at score **4.0+** that lack Notes
+`APPLY.` / `CONSIDER.` and whose linked report has no Apply/Consider
+`## Recommendation` first line, so incomplete agent evals cannot land as
+permanent `MISSING_APPLY_TOKEN` near-misses. Those candidates belong in
+`data/scan-results-*.tsv` triage until a real A-G report exists. To demote
+legacy placeholder tracker rows:
 
 ```bash
 node backfill-unevaluated-to-triage.mjs --dry-run
